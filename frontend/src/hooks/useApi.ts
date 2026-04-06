@@ -33,6 +33,27 @@ export function useSubmission(id: string) {
   })
 }
 
+export function useJudgingRuns(submissionId: string) {
+  return useQuery({
+    queryKey: ['judgingRuns', submissionId],
+    queryFn: () => bffClient.getJudgingRuns(submissionId),
+    enabled: !!submissionId,
+  })
+}
+
+export function useRejudgeSubmission() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (submissionId: string) => bffClient.rejudgeSubmission(submissionId),
+    onSuccess: (_, submissionId) => {
+      queryClient.invalidateQueries({ queryKey: ['submission', submissionId] })
+      queryClient.invalidateQueries({ queryKey: ['judgingRuns', submissionId] })
+      queryClient.invalidateQueries({ queryKey: ['submissions'] })
+    },
+  })
+}
+
 export function useCreateSubmission() {
   const queryClient = useQueryClient()
 

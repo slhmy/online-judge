@@ -452,3 +452,44 @@ func (s *SubmissionService) InternalCreateJudgingRun(ctx context.Context, req *p
 		Status: "created",
 	}, nil
 }
+
+// RejudgeSubmission re-runs the judging for a submission
+func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.RejudgeSubmissionRequest) (*pb.RejudgeSubmissionResponse, error) {
+	// Get the submission
+	sub, err := s.store.GetByID(ctx, req.SubmissionId)
+	if err != nil {
+		return nil, fmt.Errorf("submission not found: %w", err)
+	}
+
+	// Invalidate the previous judging (mark as invalid)
+	judging, err := s.store.GetJudging(ctx, req.SubmissionId)
+	if err == nil && judging != nil {
+		s.store.InvalidateJudging(ctx, judging.ID)
+	}
+
+	// Clear Redis cache for this submission's judging
+	judgingKey := "judging:judging-" + req.SubmissionId + ":meta"
+	s.redis.Del(ctx, judgingKey)
+
+	// Push to judge queue again
+	job := JudgeJob{
+		SubmissionID: req.SubmissionId,
+		ProblemID:    sub.ProblemID,
+		Language:     sub.LanguageID,
+		Priority:     10, // Higher priority for rejudges
+		SubmitTime:   time.Now(),
+	}
+
+	if err := s.pushToQueue(ctx, &job); err != nil {
+		return nil, fmt.Errorf("failed to queue rejudge: %w", err)
+	}
+
+	// Re-cache source code if not already cached
+	sourceKey := "submission:" + req.SubmissionId + ":source"
+	s.redis.Set(ctx, sourceKey, sub.SourceCode, 24*time.Hour)
+
+	return &pb.RejudgeSubmissionResponse{
+		SubmissionId: req.SubmissionId,
+		Status:       "queued",
+	}, nil
+}

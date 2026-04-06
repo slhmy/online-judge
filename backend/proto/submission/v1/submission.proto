@@ -45,6 +45,13 @@ service SubmissionService {
     };
   }
 
+  // Rejudge submission (admin only)
+  rpc RejudgeSubmission(RejudgeSubmissionRequest) returns (RejudgeSubmissionResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/submissions/{submission_id}/rejudge"
+    };
+  }
+
   // Internal: Create judging record (for judge daemon)
   rpc InternalCreateJudging(InternalCreateJudgingRequest) returns (InternalCreateJudgingResponse) {
     option (google.api.http) = {
@@ -211,6 +218,16 @@ message GetJudgingRunsRequest {
 
 message GetJudgingRunsResponse {
   repeated JudgingRun runs = 1;
+}
+
+message RejudgeSubmissionRequest {
+  string submission_id = 1;
+}
+
+message RejudgeSubmissionResponse {
+  string submission_id = 1;
+  string judging_id = 2;
+  string status = 3;           // "queued" or "pending"
 }
 
 // Internal API messages

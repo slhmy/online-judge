@@ -110,3 +110,20 @@ func (h *SubmissionHandler) GetRuns(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(resp)
 }
+
+func (h *SubmissionHandler) Rejudge(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	submissionID := chi.URLParam(r, "id")
+
+	// TODO: Add admin authorization check
+
+	resp, err := h.client.RejudgeSubmission(ctx, &pb.RejudgeSubmissionRequest{
+		SubmissionId: submissionID,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(resp)
+}

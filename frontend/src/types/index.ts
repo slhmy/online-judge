@@ -38,6 +38,20 @@ export interface Submission {
   submitTime: string
 }
 
+export interface JudgingRun {
+  id: string
+  judgingId: string
+  testCaseId: string
+  rank: number
+  runtime: number
+  wallTime?: number
+  memory: number
+  verdict: Verdict
+  outputRunPath?: string
+  outputDiffPath?: string
+  outputErrorPath?: string
+}
+
 export interface Judging {
   id: string
   submissionId: string
@@ -45,6 +59,10 @@ export interface Judging {
   maxRuntime: number
   maxMemory: number
   verified: boolean
+  compileSuccess?: boolean
+  compileOutput?: string
+  startTime?: string
+  endTime?: string
 }
 
 export interface Language {
@@ -81,16 +99,16 @@ export interface ProblemScore {
   isPending: boolean
 }
 
-// Verdict display config
-export const VERDICT_CONFIG: Record<Verdict, { color: string; label: string }> = {
-  correct: { color: 'bg-green-500', label: 'Accepted' },
-  'wrong-answer': { color: 'bg-red-500', label: 'Wrong Answer' },
-  timelimit: { color: 'bg-yellow-500', label: 'Time Limit Exceeded' },
-  'memory-limit': { color: 'bg-orange-500', label: 'Memory Limit Exceeded' },
-  'run-error': { color: 'bg-purple-500', label: 'Runtime Error' },
-  'compiler-error': { color: 'bg-blue-500', label: 'Compilation Error' },
-  'output-limit': { color: 'bg-pink-500', label: 'Output Limit Exceeded' },
-  presentation: { color: 'bg-gray-500', label: 'Presentation Error' },
+// Verdict display config with icons
+export const VERDICT_CONFIG: Record<Verdict, { color: string; label: string; icon: string; bgColor: string }> = {
+  correct: { color: 'bg-green-500', label: 'Accepted', icon: '✓', bgColor: 'bg-green-50' },
+  'wrong-answer': { color: 'bg-red-500', label: 'Wrong Answer', icon: '✗', bgColor: 'bg-red-50' },
+  timelimit: { color: 'bg-yellow-500', label: 'Time Limit Exceeded', icon: '⏱', bgColor: 'bg-yellow-50' },
+  'memory-limit': { color: 'bg-orange-500', label: 'Memory Limit Exceeded', icon: '💾', bgColor: 'bg-orange-50' },
+  'run-error': { color: 'bg-purple-500', label: 'Runtime Error', icon: '⚠', bgColor: 'bg-purple-50' },
+  'compiler-error': { color: 'bg-blue-500', label: 'Compilation Error', icon: '⚙', bgColor: 'bg-blue-50' },
+  'output-limit': { color: 'bg-pink-500', label: 'Output Limit Exceeded', icon: '📋', bgColor: 'bg-pink-50' },
+  presentation: { color: 'bg-gray-500', label: 'Presentation Error', icon: '📝', bgColor: 'bg-gray-50' },
 }
 
 // Supported languages

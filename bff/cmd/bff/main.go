@@ -155,6 +155,8 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.RequireAuth)
 			adminHandler.RegisterRoutes(r)
+			// Rejudge submission (admin only)
+			r.Post("/submissions/{id}/rejudge", submissionHandler.Rejudge)
 		})
 	})
 

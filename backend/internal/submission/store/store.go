@@ -456,3 +456,16 @@ func (s *SubmissionStore) UpdateSubmissionStatus(ctx context.Context, submission
 	`, status, parsedID)
 	return err
 }
+
+// InvalidateJudging marks a judging as invalid (for rejudges)
+func (s *SubmissionStore) InvalidateJudging(ctx context.Context, judgingID string) error {
+	parsedID, err := uuid.Parse(judgingID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(ctx, `
+		UPDATE judgings SET valid = false WHERE id = $1
+	`, parsedID)
+	return err
+}

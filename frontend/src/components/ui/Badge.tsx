@@ -8,7 +8,7 @@ interface VerdictBadgeProps {
 }
 
 export function VerdictBadge({ verdict, size = 'md', showLabel = true }: VerdictBadgeProps) {
-  const config = VERDICT_CONFIG[verdict] || { color: 'bg-gray-500', label: verdict }
+  const config = VERDICT_CONFIG[verdict] || { color: 'bg-gray-500', label: verdict, icon: '?' }
 
   const sizeClasses = {
     sm: 'text-xs px-1.5 py-0.5',
@@ -19,12 +19,19 @@ export function VerdictBadge({ verdict, size = 'md', showLabel = true }: Verdict
   return (
     <span
       className={cn(
-        'rounded font-medium text-white',
+        'rounded font-medium text-white inline-flex items-center gap-1',
         config.color,
         sizeClasses[size]
       )}
     >
-      {showLabel ? config.label : verdict.toUpperCase()}
+      {showLabel ? (
+        <>
+          <span className="text-xs">{config.icon}</span>
+          {config.label}
+        </>
+      ) : (
+        verdict.toUpperCase()
+      )}
     </span>
   )
 }

@@ -57,6 +57,20 @@ export class BFFClient {
     return this.fetch(`/api/v1/submissions?page=${page}&page_size=${pageSize}`)
   }
 
+  async getJudgingRuns(submissionId: string) {
+    return this.fetch(`/api/v1/submissions/${submissionId}/runs`)
+  }
+
+  async getTestCaseOutput(testCaseId: string, type: 'output' | 'diff' | 'error') {
+    return this.fetch(`/api/v1/testcases/${testCaseId}/${type}`)
+  }
+
+  async rejudgeSubmission(submissionId: string) {
+    return this.fetch(`/api/v1/submissions/${submissionId}/rejudge`, {
+      method: 'POST',
+    })
+  }
+
   // Contests
   async getContests(page = 1, pageSize = 20) {
     return this.fetch(`/api/v1/contests?page=${page}&page_size=${pageSize}`)
