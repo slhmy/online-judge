@@ -171,19 +171,94 @@ build-seed:
 # Testing
 # ============================================
 
+# Run all unit tests
 test-backend:
-	cd backend && go test ./... -v
+	@echo "Running backend tests..."
+	cd backend && go test ./... -v -race
 
 test-bff:
-	cd bff && go test ./... -v
+	@echo "Running BFF tests..."
+	cd bff && go test ./... -v -race
 
 test-judge:
-	cd judge && go test ./... -v
+	@echo "Running judge tests..."
+	cd judge && go test ./... -v -race
 
 test-frontend:
 	cd frontend && npm test
 
 test: test-backend test-bff test-judge
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	cd backend && go test ./... -coverprofile=coverage.out -covermode=atomic
+	cd backend && go tool cover -html=coverage.out -o coverage.html
+	cd bff && go test ./... -coverprofile=coverage.out -covermode=atomic
+	cd bff && go tool cover -html=coverage.out -o coverage.html
+	cd judge && go test ./... -coverprofile=coverage.out -covermode=atomic
+	cd judge && go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage reports generated: backend/coverage.html, bff/coverage.html, judge/coverage.html"
+
+# Run tests with coverage summary
+test-coverage-summary:
+	@echo "=== Backend Coverage ==="
+	cd backend && go test ./... -coverprofile=coverage.out -covermode=atomic 2>/dev/null && go tool cover -func=coverage.out | tail -1
+	@echo "=== BFF Coverage ==="
+	cd bff && go test ./... -coverprofile=coverage.out -covermode=atomic 2>/dev/null && go tool cover -func=coverage.out | tail -1
+	@echo "=== Judge Coverage ==="
+	cd judge && go test ./... -coverprofile=coverage.out -covermode=atomic 2>/dev/null && go tool cover -func=coverage.out | tail -1
+
+# Run specific package tests
+test-problem-service:
+	cd backend && go test ./internal/problem/... -v -race
+
+test-submission-service:
+	cd backend && go test ./internal/submission/... -v -race
+
+test-contest-service:
+	cd backend && go test ./internal/contest/... -v -race
+
+test-bff-handlers:
+	cd bff && go test ./internal/handler/... -v -race
+
+test-judge-queue:
+	cd judge && go test ./internal/queue/... -v -race
+
+test-judge-validator:
+	cd judge && go test ./internal/validator/... -v -race
+
+# Run integration tests (requires running services)
+test-integration:
+	@echo "Running integration tests..."
+	$(MAKE) test-backend
+	$(MAKE) test-bff
+	$(MAKE) test-judge
+
+# Run tests in short mode (skip slow tests)
+test-short:
+	cd backend && go test ./... -v -short -race
+	cd bff && go test ./... -v -short -race
+	cd judge && go test ./... -v -short -race
+
+# Run tests with verbose output and timeout
+test-verbose:
+	cd backend && go test ./... -v -race -timeout 5m
+	cd bff && go test ./... -v -race -timeout 5m
+	cd judge && go test ./... -v -race -timeout 5m
+
+# Generate test mocks (if using mockery)
+generate-mocks:
+	@echo "Generating test mocks..."
+	cd backend && go generate ./...
+	cd bff && go generate ./...
+	cd judge && go generate ./...
+
+# Clean test artifacts
+test-clean:
+	rm -f backend/coverage.out backend/coverage.html
+	rm -f bff/coverage.out bff/coverage.html
+	rm -f judge/coverage.out judge/coverage.html
 
 # ============================================
 # Docker

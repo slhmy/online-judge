@@ -15,13 +15,13 @@ import (
 
 type SubmissionService struct {
 	pb.UnimplementedSubmissionServiceServer
-	store *store.SubmissionStore
+	store store.SubmissionStoreInterface
 	redis *redis.Client
 }
 
-func NewSubmissionService(store *store.SubmissionStore, redis *redis.Client) *SubmissionService {
+func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client) *SubmissionService {
 	return &SubmissionService{
-		store: store,
+		store: s,
 		redis: redis,
 	}
 }
@@ -67,7 +67,7 @@ func (s *SubmissionService) GetSubmission(ctx context.Context, req *pb.GetSubmis
 
 	// Get latest judging from database first, then fallback to Redis cache
 	judging, err := s.store.GetJudging(ctx, req.Id)
-	if err != nil {
+	if err != nil && s.redis != nil {
 		// Try Redis cache (from judge daemon)
 		judgingKey := "judging:judging-" + req.Id + ":meta"
 		result := s.redis.HGetAll(ctx, judgingKey)
@@ -102,6 +102,8 @@ func (s *SubmissionService) GetSubmission(ctx context.Context, req *pb.GetSubmis
 		} else {
 			judging = nil
 		}
+	} else if err != nil {
+		judging = nil
 	}
 
 	response := &pb.GetSubmissionResponse{
@@ -156,7 +158,7 @@ func (s *SubmissionService) ListSubmissions(ctx context.Context, req *pb.ListSub
 			verdict = mapVerdictToProto(judging.Verdict)
 			runtime = judging.MaxRuntime
 			memory = judging.MaxMemory
-		} else {
+		} else if s.redis != nil {
 			// Fallback to Redis cache
 			judgingKey := "judging:judging-" + sub.ID + ":meta"
 			result := s.redis.HGetAll(ctx, judgingKey)
@@ -220,6 +222,9 @@ func (s *SubmissionService) GetJudging(ctx context.Context, req *pb.GetJudgingRe
 
 	// If not found in database, try Redis cache (from judge daemon)
 	if err != nil {
+		if s.redis == nil {
+			return nil, err
+		}
 		judgingKey := "judging:judging-" + req.SubmissionId + ":meta"
 		result := s.redis.HGetAll(ctx, judgingKey)
 		if result.Err() != nil || len(result.Val()) == 0 {
@@ -392,14 +397,16 @@ func (s *SubmissionService) InternalCreateJudging(ctx context.Context, req *pb.I
 	}
 
 	// Also cache in Redis for fast lookup
-	judgingKey := "judging:judging-" + req.SubmissionId + ":meta"
-	s.redis.HSet(ctx, judgingKey, map[string]interface{}{
-		"submission_id": req.SubmissionId,
-		"judgehost_id":  req.JudgehostId,
-		"judging_id":    judgingID,
-		"status":        "judging",
-	})
-	s.redis.Expire(ctx, judgingKey, 24*time.Hour)
+	if s.redis != nil {
+		judgingKey := "judging:judging-" + req.SubmissionId + ":meta"
+		s.redis.HSet(ctx, judgingKey, map[string]interface{}{
+			"submission_id": req.SubmissionId,
+			"judgehost_id":  req.JudgehostId,
+			"judging_id":    judgingID,
+			"status":        "judging",
+		})
+		s.redis.Expire(ctx, judgingKey, 24*time.Hour)
+	}
 
 	return &pb.InternalCreateJudgingResponse{
 		JudgingId: judgingID,
@@ -417,14 +424,16 @@ func (s *SubmissionService) InternalUpdateJudging(ctx context.Context, req *pb.I
 	}
 
 	// Also update Redis cache
-	judgingKey := "judging:" + req.JudgingId + ":meta"
-	s.redis.HSet(ctx, judgingKey, map[string]interface{}{
-		"verdict":        req.Verdict,
-		"max_runtime":    req.MaxRuntime,
-		"max_memory":     req.MaxMemory,
-		"compile_success": compileSuccess,
-		"status":         "completed",
-	})
+	if s.redis != nil {
+		judgingKey := "judging:" + req.JudgingId + ":meta"
+		s.redis.HSet(ctx, judgingKey, map[string]interface{}{
+			"verdict":        req.Verdict,
+			"max_runtime":    req.MaxRuntime,
+			"max_memory":     req.MaxMemory,
+			"compile_success": compileSuccess,
+			"status":         "completed",
+		})
+	}
 
 	return &pb.InternalUpdateJudgingResponse{
 		JudgingId: req.JudgingId,

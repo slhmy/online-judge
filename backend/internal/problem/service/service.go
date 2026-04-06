@@ -13,13 +13,13 @@ import (
 
 type ProblemService struct {
 	pb.UnimplementedProblemServiceServer
-	store *store.ProblemStore
+	store store.ProblemStoreInterface
 	cache *redis.Client
 }
 
-func NewProblemService(store *store.ProblemStore, cache *redis.Client) *ProblemService {
+func NewProblemService(s store.ProblemStoreInterface, cache *redis.Client) *ProblemService {
 	return &ProblemService{
-		store: store,
+		store: s,
 		cache: cache,
 	}
 }

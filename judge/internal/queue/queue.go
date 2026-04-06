@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -139,7 +140,7 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 	var job JudgeJob
 	memberStr, ok := result[0].Member.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid queue member type")
+		return nil, errors.New("invalid job data type")
 	}
 	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
 		return nil, err

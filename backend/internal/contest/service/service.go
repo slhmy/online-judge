@@ -16,13 +16,13 @@ var ErrUnauthorized = errors.New("unauthorized")
 
 type ContestService struct {
 	pb.UnimplementedContestServiceServer
-	store *store.ContestStore
+	store store.ContestStoreInterface
 	redis *redis.Client
 }
 
-func NewContestService(store *store.ContestStore, redis *redis.Client) *ContestService {
+func NewContestService(s store.ContestStoreInterface, redis *redis.Client) *ContestService {
 	return &ContestService{
-		store: store,
+		store: s,
 		redis: redis,
 	}
 }
