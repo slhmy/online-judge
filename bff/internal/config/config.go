@@ -25,6 +25,15 @@ type Config struct {
 	IdentraGRPCHost string `mapstructure:"identra_grpc_host"`
 	IdentraHTTPHost  string `mapstructure:"identra_http_host"`
 	AdminEmail       string `mapstructure:"admin_email"`
+
+	// Rate Limiting
+	RateLimitEnabled                   bool `mapstructure:"rate_limit_enabled"`
+	RateLimitRequestsPerMinute         int  `mapstructure:"rate_limit_requests_per_minute"`
+	RateLimitBurstSize                 int  `mapstructure:"rate_limit_burst_size"`
+	RateLimitSubmissionRequestsPerMin  int  `mapstructure:"rate_limit_submission_requests_per_minute"`
+	RateLimitSubmissionBurstSize       int  `mapstructure:"rate_limit_submission_burst_size"`
+	RateLimitIPRequestsPerMinute       int  `mapstructure:"rate_limit_ip_requests_per_minute"`
+	RateLimitIPBurstSize               int  `mapstructure:"rate_limit_ip_burst_size"`
 }
 
 func Load() (*Config, error) {
@@ -42,6 +51,15 @@ func Load() (*Config, error) {
 	v.SetDefault("identra_grpc_host", "localhost:50051")
 	v.SetDefault("identra_http_host", "localhost:8081")
 	v.SetDefault("admin_email", "")
+
+	// Rate Limiting defaults
+	v.SetDefault("rate_limit_enabled", true)
+	v.SetDefault("rate_limit_requests_per_minute", 60)
+	v.SetDefault("rate_limit_burst_size", 10)
+	v.SetDefault("rate_limit_submission_requests_per_minute", 5)
+	v.SetDefault("rate_limit_submission_burst_size", 2)
+	v.SetDefault("rate_limit_ip_requests_per_minute", 30)
+	v.SetDefault("rate_limit_ip_burst_size", 5)
 
 	v.AutomaticEnv()
 

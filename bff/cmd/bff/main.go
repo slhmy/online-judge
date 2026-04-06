@@ -77,6 +77,18 @@ func main() {
 	// Create auth middleware
 	authMiddleware := middleware.NewAuth("")
 
+	// Create rate limiter
+	rateLimitConfig := middleware.RateLimitConfig{
+		Enabled:                     cfg.RateLimitEnabled,
+		RequestsPerMinute:           cfg.RateLimitRequestsPerMinute,
+		BurstSize:                   cfg.RateLimitBurstSize,
+		SubmissionRequestsPerMinute: cfg.RateLimitSubmissionRequestsPerMin,
+		SubmissionBurstSize:         cfg.RateLimitSubmissionBurstSize,
+		IPRequestsPerMinute:         cfg.RateLimitIPRequestsPerMinute,
+		IPBurstSize:                 cfg.RateLimitIPBurstSize,
+	}
+	rateLimiter := middleware.NewRateLimiter(rdb, rateLimitConfig)
+
 	// Create handlers
 	problemHandler := handler.NewProblemHandler(problemClient)
 	submissionHandler := handler.NewSubmissionHandler(submissionClient)
@@ -100,6 +112,8 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+	// General rate limiting middleware (per-user and per-IP)
+	r.Use(rateLimiter.RateLimitMiddleware)
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +139,7 @@ func main() {
 			})
 
 		// Submissions (mixed - some public, some protected)
-		r.Post("/submissions", submissionHandler.Create) // TODO: Add auth
+		r.With(rateLimiter.SubmissionRateLimitMiddleware).Post("/submissions", submissionHandler.Create)
 		r.Get("/submissions", submissionHandler.List)
 		r.Get("/submissions/{id}", submissionHandler.Get)
 		r.Get("/submissions/{id}/judging", submissionHandler.GetJudging)
