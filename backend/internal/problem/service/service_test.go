@@ -465,3 +465,70 @@ func TestProblemService_CreateTestCase(t *testing.T) {
 		})
 	}
 }
+
+func TestProblemService_ListLanguages(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*store.MockProblemStore)
+		want  func(t *testing.T, resp *pb.ListLanguagesResponse, err error)
+	}{
+		{
+			name:  "list default languages",
+			setup: func(m *store.MockProblemStore) {},
+			want: func(t *testing.T, resp *pb.ListLanguagesResponse, err error) {
+				require.NoError(t, err)
+				assert.NotEmpty(t, resp.Languages)
+				// Verify all required languages are present
+				langNames := make(map[string]bool)
+				for _, lang := range resp.Languages {
+					langNames[lang.Name] = true
+					assert.True(t, lang.AllowSubmit)
+					assert.True(t, lang.AllowJudge)
+					assert.NotEmpty(t, lang.Extensions)
+				}
+				assert.True(t, langNames["C++17"])
+				assert.True(t, langNames["Python 3"])
+				assert.True(t, langNames["Java 17"])
+				assert.True(t, langNames["Go 1.21"])
+				assert.True(t, langNames["Rust"])
+				assert.True(t, langNames["Node.js 18"])
+			},
+		},
+		{
+			name: "list custom languages",
+			setup: func(m *store.MockProblemStore) {
+				m.Languages = []*pb.Language{
+					{
+						Id:             "custom",
+						ExternalId:     "custom",
+						Name:           "Custom Lang",
+						TimeFactor:     1.0,
+						Extensions:     []string{".custom"},
+						AllowSubmit:    true,
+						AllowJudge:     true,
+						CompileCommand: "custom-compile",
+						RunCommand:     "custom-run",
+						Version:        "1.0",
+					},
+				}
+			},
+			want: func(t *testing.T, resp *pb.ListLanguagesResponse, err error) {
+				require.NoError(t, err)
+				assert.Len(t, resp.Languages, 1)
+				assert.Equal(t, "Custom Lang", resp.Languages[0].Name)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockStore := store.NewMockProblemStore()
+			tt.setup(mockStore)
+
+			service := NewProblemService(mockStore, nil)
+			resp, err := service.ListLanguages(context.Background(), &emptypb.Empty{})
+
+			tt.want(t, resp, err)
+		})
+	}
+}

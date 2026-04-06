@@ -17,12 +17,14 @@ type ProblemStoreInterface interface {
 	Delete(ctx context.Context, id string) error
 	ListTestCases(ctx context.Context, problemID string, samplesOnly bool) ([]*pb.TestCase, error)
 	CreateTestCase(ctx context.Context, req *pb.CreateTestCaseRequest) (string, string, string, error)
+	ListLanguages(ctx context.Context) ([]*pb.Language, error)
 }
 
 // MockProblemStore is a mock implementation of ProblemStoreInterface for testing
 type MockProblemStore struct {
 	Problems    map[string]*pb.Problem
 	TestCases   map[string][]*pb.TestCase
+	Languages   []*pb.Language
 	CreateError error
 	GetError    error
 	ListError   error
@@ -187,4 +189,83 @@ func (m *MockProblemStore) CreateTestCase(ctx context.Context, req *pb.CreateTes
 
 	m.TestCases[req.GetProblemId()] = append(m.TestCases[req.GetProblemId()], tc)
 	return id, "input/path", "output/path", nil
+}
+
+func (m *MockProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, error) {
+	if len(m.Languages) == 0 {
+		// Return default mock languages
+		return []*pb.Language{
+			{
+				Id:             "cpp",
+				ExternalId:     "cpp",
+				Name:           "C++17",
+				TimeFactor:     1.0,
+				Extensions:     []string{".cpp", ".cc", ".cxx"},
+				AllowSubmit:    true,
+				AllowJudge:     true,
+				CompileCommand: "g++ -std=c++17 -O2 -o {executable} {source}",
+				RunCommand:     "./{executable}",
+				Version:        "g++ (GCC) 13",
+			},
+			{
+				Id:             "python3",
+				ExternalId:     "python3",
+				Name:           "Python 3",
+				TimeFactor:     2.0,
+				Extensions:     []string{".py", ".py3"},
+				AllowSubmit:    true,
+				AllowJudge:     true,
+				RunCommand:     "python3 {source}",
+				Version:        "Python 3.12",
+			},
+			{
+				Id:             "java",
+				ExternalId:     "java",
+				Name:           "Java 17",
+				TimeFactor:     1.5,
+				Extensions:     []string{".java"},
+				AllowSubmit:    true,
+				AllowJudge:     true,
+				CompileCommand: "javac -J-Xmx1024m -source 17 -target 17 {source}",
+				RunCommand:     "java -Xmx512m {mainclass}",
+				Version:        "OpenJDK 17",
+			},
+			{
+				Id:             "go",
+				ExternalId:     "go",
+				Name:           "Go 1.21",
+				TimeFactor:     1.2,
+				Extensions:     []string{".go"},
+				AllowSubmit:    true,
+				AllowJudge:     true,
+				CompileCommand: "go build -o {executable} {source}",
+				RunCommand:     "./{executable}",
+				Version:        "Go 1.21",
+			},
+			{
+				Id:             "rust",
+				ExternalId:     "rust",
+				Name:           "Rust",
+				TimeFactor:     1.0,
+				Extensions:     []string{".rs"},
+				AllowSubmit:    true,
+				AllowJudge:     true,
+				CompileCommand: "rustc -O -o {executable} {source}",
+				RunCommand:     "./{executable}",
+				Version:        "Rust 1.75",
+			},
+			{
+				Id:             "nodejs",
+				ExternalId:     "nodejs",
+				Name:           "Node.js 18",
+				TimeFactor:     2.0,
+				Extensions:     []string{".js", ".mjs"},
+				AllowSubmit:    true,
+				AllowJudge:     true,
+				RunCommand:     "node {source}",
+				Version:        "Node.js 18.19",
+			},
+		}, nil
+	}
+	return m.Languages, nil
 }
