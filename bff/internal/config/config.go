@@ -41,6 +41,11 @@ type Config struct {
 	CacheProblemTTL      int  `mapstructure:"cache_problem_ttl"`      // seconds
 	CacheContestTTL      int  `mapstructure:"cache_contest_ttl"`      // seconds
 	CacheScoreboardTTL   int  `mapstructure:"cache_scoreboard_ttl"`   // seconds
+
+	// OAuth Configuration
+	GitHubClientID     string `mapstructure:"github_client_id"`
+	GitHubClientSecret string `mapstructure:"github_client_secret"`
+	OAuthRedirectURL   string `mapstructure:"oauth_redirect_url"`
 }
 
 func Load() (*Config, error) {
@@ -74,6 +79,11 @@ func Load() (*Config, error) {
 	v.SetDefault("cache_problem_ttl", 300)      // 5 minutes
 	v.SetDefault("cache_contest_ttl", 120)      // 2 minutes
 	v.SetDefault("cache_scoreboard_ttl", 10)    // 10 seconds
+
+	// OAuth defaults (disabled by default)
+	v.SetDefault("github_client_id", "")
+	v.SetDefault("github_client_secret", "")
+	v.SetDefault("oauth_redirect_url", "http://localhost:3000/auth/callback")
 
 	v.AutomaticEnv()
 

@@ -103,6 +103,10 @@ export class BFFClient {
     return this.fetch(`/api/v1/auth/oauth/url?provider=${provider}`)
   }
 
+  async oauthCallback(code: string, state: string) {
+    return this.fetch(`/api/v1/auth/oauth/callback?code=${code}&state=${state}`)
+  }
+
   async getMe() {
     return this.fetch('/api/v1/auth/me')
   }

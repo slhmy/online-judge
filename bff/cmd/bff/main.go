@@ -112,7 +112,16 @@ func main() {
 	submissionHandler := handler.NewSubmissionHandler(submissionClient)
 	contestHandler := handler.NewContestHandler(contestClient, cacheService)
 	userHandler := handler.NewUserHandler(userClient)
-	authHandler := handler.NewAuthHandler(cfg.IdentraGRPCHost, cfg.IdentraHTTPHost, cfg.DatabaseURL, cfg.AdminEmail)
+	authHandler := handler.NewAuthHandler(
+		cfg.IdentraGRPCHost,
+		cfg.IdentraHTTPHost,
+		cfg.DatabaseURL,
+		cfg.AdminEmail,
+		cfg.GitHubClientID,
+		cfg.GitHubClientSecret,
+		cfg.OAuthRedirectURL,
+		rdb,
+	)
 	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL, nil) // TODO: wire up rejudge service client
 	sseHandler := handler.NewSSEHandler(sseHub)
 	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb, cacheService, cfg.DatabaseURL)
