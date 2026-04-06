@@ -39,8 +39,15 @@ func (s *NotificationStore) Create(ctx context.Context, notification *pb.Notific
 		Member: string(data),
 	})
 
-	// Set expiration for old notifications (7 days)
-	s.redis.Expire(ctx, key, 7*24*60*60)
+	// Set expiration for old notifications (30 days)
+	s.redis.Expire(ctx, key, 30*24*60*60*time.Second)
+
+	// Increment unread count for the user
+	s.redis.Incr(ctx, "notifications:"+notification.UserId+":unread")
+
+	// Increment unread count by type
+	typeKey := "notifications:" + notification.UserId + ":unread:" + notification.Type.String()
+	s.redis.Incr(ctx, typeKey)
 
 	return nil
 }
@@ -89,7 +96,7 @@ func (s *NotificationStore) MarkAsRead(ctx context.Context, userID string, notif
 			continue
 		}
 
-		if notification.Id == notificationID {
+		if notification.Id == notificationID && !notification.Read {
 			notification.Read = true
 			data, err := json.Marshal(&notification)
 			if err != nil {
@@ -97,16 +104,128 @@ func (s *NotificationStore) MarkAsRead(ctx context.Context, userID string, notif
 			}
 
 			// Remove old and add updated
+			score, _ := s.redis.ZScore(ctx, key, result).Result()
 			s.redis.ZRem(ctx, key, result)
 			s.redis.ZAdd(ctx, key, redis.Z{
-				Score:  float64(time.Now().Unix()),
+				Score:  score,
 				Member: string(data),
 			})
+
+			// Decrement unread count
+			s.redis.Decr(ctx, "notifications:"+userID+":unread")
+			typeKey := "notifications:" + userID + ":unread:" + notification.Type.String()
+			s.redis.Decr(ctx, typeKey)
+
 			break
 		}
 	}
 
 	return nil
+}
+
+// MarkAllAsRead marks all notifications as read for a user
+// Optionally filters by type
+func (s *NotificationStore) MarkAllAsRead(ctx context.Context, userID string, filterType pb.NotificationType) (int32, error) {
+	key := "notifications:" + userID
+
+	// Get all notifications
+	results, err := s.redis.ZRange(ctx, key, 0, -1).Result()
+	if err != nil {
+		return 0, err
+	}
+
+	var count int32
+	for _, result := range results {
+		var notification pb.Notification
+		if err := json.Unmarshal([]byte(result), &notification); err != nil {
+			continue
+		}
+
+		// Skip if already read
+		if notification.Read {
+			continue
+		}
+
+		// Skip if type filter doesn't match
+		if filterType != pb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED && notification.Type != filterType {
+			continue
+		}
+
+		notification.Read = true
+		data, err := json.Marshal(&notification)
+		if err != nil {
+			continue
+		}
+
+		// Remove old and add updated
+		score, _ := s.redis.ZScore(ctx, key, result).Result()
+		s.redis.ZRem(ctx, key, result)
+		s.redis.ZAdd(ctx, key, redis.Z{
+			Score:  score,
+			Member: string(data),
+		})
+
+		count++
+	}
+
+	// Reset unread counts
+	if count > 0 {
+		if filterType == pb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED {
+			// Reset all unread counts
+			s.redis.Set(ctx, "notifications:"+userID+":unread", 0, 0)
+			// Reset all type counts
+			for i := 1; i <= 5; i++ {
+				typeKey := "notifications:" + userID + ":unread:" + pb.NotificationType(i).String()
+				s.redis.Set(ctx, typeKey, 0, 0)
+			}
+		} else {
+			// Only decrement the filtered type count
+			s.redis.DecrBy(ctx, "notifications:"+userID+":unread", int64(count))
+			typeKey := "notifications:" + userID + ":unread:" + filterType.String()
+			s.redis.Set(ctx, typeKey, 0, 0)
+		}
+	}
+
+	return count, nil
+}
+
+// GetUnreadCount gets the unread notification count for a user
+func (s *NotificationStore) GetUnreadCount(ctx context.Context, userID string) (int32, map[string]int32, error) {
+	// Get total unread count
+	total, err := s.redis.Get(ctx, "notifications:"+userID+":unread").Int()
+	if err != nil {
+		if err == redis.Nil {
+			total = 0
+		} else {
+			return 0, nil, err
+		}
+	}
+
+	// Get counts by type
+	countByType := make(map[string]int32)
+	for i := 1; i <= 5; i++ {
+		nt := pb.NotificationType(i)
+		typeKey := "notifications:" + userID + ":unread:" + nt.String()
+		count, err := s.redis.Get(ctx, typeKey).Int()
+		if err != nil && err != redis.Nil {
+			continue
+		}
+		if count > 0 {
+			countByType[nt.String()] = int32(count)
+		}
+	}
+
+	return int32(total), countByType, nil
+}
+
+// PublishNotification publishes a notification to the user's notification channel
+func (s *NotificationStore) PublishNotification(ctx context.Context, userID string, notification *pb.Notification) error {
+	channel := "notifications:user:" + userID
+	data, err := json.Marshal(notification)
+	if err != nil {
+		return err
+	}
+	return s.redis.Publish(ctx, channel, string(data)).Err()
 }
 
 // AddSubscriber adds a user to a channel's subscriber list

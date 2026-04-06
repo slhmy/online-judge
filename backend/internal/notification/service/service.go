@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,22 +21,29 @@ type NotificationService struct {
 	redis *redis.Client
 	store *store.NotificationStore
 
-	// Local subscriber management for WebSocket connections
+	// Local subscriber management for judging progress updates
 	// channel -> userID -> progressChan
-	subscribers map[string]map[string]chan *pb.JudgeProgress
-	mu          sync.RWMutex
+	progressSubscribers map[string]map[string]chan *pb.JudgeProgress
+	progressMu          sync.RWMutex
+
+	// Stream subscribers for SSE notification streaming
+	// userID -> notificationChan
+	streamSubscribers map[string]chan *pb.Notification
+	streamMu          sync.RWMutex
 }
 
 // NewNotificationService creates a new notification service
 func NewNotificationService(redis *redis.Client) *NotificationService {
 	s := &NotificationService{
-		redis:      redis,
-		store:      store.NewNotificationStore(redis),
-		subscribers: make(map[string]map[string]chan *pb.JudgeProgress),
+		redis:               redis,
+		store:               store.NewNotificationStore(redis),
+		progressSubscribers: make(map[string]map[string]chan *pb.JudgeProgress),
+		streamSubscribers:   make(map[string]chan *pb.Notification),
 	}
 
 	// Start Redis pub/sub listener for cross-instance communication
 	go s.listenToRedisPubSub()
+	go s.listenToNotificationChannels()
 
 	return s
 }
@@ -78,11 +86,92 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, req *pb.MarkAsRead
 	return &pb.MarkAsReadResponse{Success: true}, nil
 }
 
+// MarkAllAsRead marks all notifications as read for a user
+func (s *NotificationService) MarkAllAsRead(ctx context.Context, req *pb.MarkAllAsReadRequest) (*pb.MarkAllAsReadResponse, error) {
+	userID := ctx.Value("user_id")
+	if userID == nil {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+
+	count, err := s.store.MarkAllAsRead(ctx, userID.(string), req.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.MarkAllAsReadResponse{Count: count}, nil
+}
+
+// GetUnreadCount gets the unread notification count
+func (s *NotificationService) GetUnreadCount(ctx context.Context, req *pb.GetUnreadCountRequest) (*pb.GetUnreadCountResponse, error) {
+	userID := ctx.Value("user_id")
+	if userID == nil {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+
+	total, countByType, err := s.store.GetUnreadCount(ctx, userID.(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetUnreadCountResponse{
+		Count:       total,
+		CountByType: countByType,
+	}, nil
+}
+
+// StreamNotifications streams notifications via SSE for a user
+func (s *NotificationService) StreamNotifications(req *pb.StreamNotificationsRequest, stream pb.NotificationService_StreamNotificationsServer) error {
+	userID := stream.Context().Value("user_id")
+	if userID == nil {
+		return fmt.Errorf("user not authenticated")
+	}
+
+	userIDStr := userID.(string)
+
+	// Register stream subscriber
+	s.streamMu.Lock()
+	notifChan := make(chan *pb.Notification, 100)
+	s.streamSubscribers[userIDStr] = notifChan
+	s.streamMu.Unlock()
+
+	log.Printf("SSE stream started for user %s", userIDStr)
+
+	defer func() {
+		s.streamMu.Lock()
+		delete(s.streamSubscribers, userIDStr)
+		close(notifChan)
+		s.streamMu.Unlock()
+		log.Printf("SSE stream ended for user %s", userIDStr)
+	}()
+
+	// Send initial unread count
+	total, _, _ := s.store.GetUnreadCount(stream.Context(), userIDStr)
+	stream.Send(&pb.Notification{
+		Id:     "system:unread-count",
+		Type:   pb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED,
+		Title:  "Unread Count",
+		Body:   fmt.Sprintf("%d", total),
+		Data:   map[string]string{"total": fmt.Sprintf("%d", total)},
+	})
+
+	// Stream notifications
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case notif := <-notifChan:
+			if err := stream.Send(notif); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // Subscribe subscribes a user to a notification channel
 // Returns a channel that will receive progress updates
 func (s *NotificationService) Subscribe(ctx context.Context, userID string, channel string) (chan *pb.JudgeProgress, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
 
 	// Add to Redis subscriber list for cross-instance communication
 	if err := s.store.AddSubscriber(ctx, channel, userID); err != nil {
@@ -90,12 +179,12 @@ func (s *NotificationService) Subscribe(ctx context.Context, userID string, chan
 	}
 
 	// Create local channel for this user
-	if s.subscribers[channel] == nil {
-		s.subscribers[channel] = make(map[string]chan *pb.JudgeProgress)
+	if s.progressSubscribers[channel] == nil {
+		s.progressSubscribers[channel] = make(map[string]chan *pb.JudgeProgress)
 	}
 
 	progressChan := make(chan *pb.JudgeProgress, 100)
-	s.subscribers[channel][userID] = progressChan
+	s.progressSubscribers[channel][userID] = progressChan
 
 	log.Printf("User %s subscribed to channel %s", userID, channel)
 
@@ -104,8 +193,8 @@ func (s *NotificationService) Subscribe(ctx context.Context, userID string, chan
 
 // Unsubscribe removes a user from a notification channel
 func (s *NotificationService) Unsubscribe(ctx context.Context, userID string, channel string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
 
 	// Remove from Redis subscriber list
 	if err := s.store.RemoveSubscriber(ctx, channel, userID); err != nil {
@@ -113,13 +202,13 @@ func (s *NotificationService) Unsubscribe(ctx context.Context, userID string, ch
 	}
 
 	// Close and remove local channel
-	if s.subscribers[channel] != nil {
-		if progressChan, ok := s.subscribers[channel][userID]; ok {
+	if s.progressSubscribers[channel] != nil {
+		if progressChan, ok := s.progressSubscribers[channel][userID]; ok {
 			close(progressChan)
-			delete(s.subscribers[channel], userID)
+			delete(s.progressSubscribers[channel], userID)
 		}
-		if len(s.subscribers[channel]) == 0 {
-			delete(s.subscribers, channel)
+		if len(s.progressSubscribers[channel]) == 0 {
+			delete(s.progressSubscribers, channel)
 		}
 	}
 
@@ -136,10 +225,10 @@ func (s *NotificationService) Broadcast(ctx context.Context, channel string, mes
 	}
 
 	// Also broadcast to local subscribers
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.progressMu.RLock()
+	defer s.progressMu.RUnlock()
 
-	if users, ok := s.subscribers[channel]; ok {
+	if users, ok := s.progressSubscribers[channel]; ok {
 		for userID, progressChan := range users {
 			select {
 			case progressChan <- message:
@@ -206,8 +295,8 @@ func (s *NotificationService) listenToRedisPubSub() {
 			}
 			// Broadcast run to local subscribers
 			channel := msg.Channel
-			s.mu.RLock()
-			if users, ok := s.subscribers[channel]; ok {
+			s.progressMu.RLock()
+			if users, ok := s.progressSubscribers[channel]; ok {
 				for _, progressChan := range users {
 					// Convert run to progress format
 					runProgress := &pb.JudgeProgress{
@@ -224,14 +313,14 @@ func (s *NotificationService) listenToRedisPubSub() {
 					}
 				}
 			}
-			s.mu.RUnlock()
+			s.progressMu.RUnlock()
 			continue
 		}
 
 		// Broadcast progress to local subscribers
 		channel := msg.Channel
-		s.mu.RLock()
-		if users, ok := s.subscribers[channel]; ok {
+		s.progressMu.RLock()
+		if users, ok := s.progressSubscribers[channel]; ok {
 			for _, progressChan := range users {
 				select {
 				case progressChan <- &progress:
@@ -239,8 +328,51 @@ func (s *NotificationService) listenToRedisPubSub() {
 				}
 			}
 		}
-		s.mu.RUnlock()
+		s.progressMu.RUnlock()
 	}
+}
+
+// listenToNotificationChannels listens to user notification channels for SSE streaming
+func (s *NotificationService) listenToNotificationChannels() {
+	ctx := context.Background()
+
+	// Subscribe to all user notification channels
+	pubsub := s.redis.PSubscribe(ctx, "notifications:user:*")
+	defer pubsub.Close()
+
+	ch := pubsub.Channel()
+	for msg := range ch {
+		var notification pb.Notification
+		if err := json.Unmarshal([]byte(msg.Payload), &notification); err != nil {
+			log.Printf("Failed to unmarshal notification: %v", err)
+			continue
+		}
+
+		// Extract user ID from channel name
+		// Channel format: notifications:user:{userID}
+		userID := extractUserIDFromChannel(msg.Channel)
+
+		// Send to stream subscribers
+		s.streamMu.RLock()
+		if notifChan, ok := s.streamSubscribers[userID]; ok {
+			select {
+			case notifChan <- &notification:
+			default:
+				log.Printf("Notification channel full for user %s", userID)
+			}
+		}
+		s.streamMu.RUnlock()
+	}
+}
+
+// extractUserIDFromChannel extracts user ID from channel name
+func extractUserIDFromChannel(channel string) string {
+	// Channel format: notifications:user:{userID}
+	parts := strings.Split(channel, ":")
+	if len(parts) >= 3 {
+		return parts[2]
+	}
+	return ""
 }
 
 // CreateNotification creates a new notification for a user
@@ -249,7 +381,13 @@ func (s *NotificationService) CreateNotification(ctx context.Context, notificati
 		notification.Id = fmt.Sprintf("notif-%d", time.Now().UnixNano())
 	}
 
-	return s.store.Create(ctx, notification)
+	// Save to store
+	if err := s.store.Create(ctx, notification); err != nil {
+		return err
+	}
+
+	// Publish to user's notification channel for real-time delivery
+	return s.store.PublishNotification(ctx, notification.UserId, notification)
 }
 
 // NotifySubmissionJudged sends a notification when a submission is judged
@@ -262,6 +400,89 @@ func (s *NotificationService) NotifySubmissionJudged(ctx context.Context, userID
 		Data: map[string]string{
 			"submission_id": submissionID,
 			"verdict":       verdict,
+		},
+	}
+
+	return s.CreateNotification(ctx, notification)
+}
+
+// NotifyContestAnnouncement sends a contest announcement to all participants
+func (s *NotificationService) NotifyContestAnnouncement(ctx context.Context, contestID string, title string, message string, recipients []string) error {
+	for _, userID := range recipients {
+		notification := &pb.Notification{
+			UserId: userID,
+			Type:   pb.NotificationType_NOTIFICATION_TYPE_CONTEST_ANNOUNCEMENT,
+			Title:  title,
+			Body:   message,
+			Data: map[string]string{
+				"contest_id": contestID,
+			},
+		}
+
+		if err := s.CreateNotification(ctx, notification); err != nil {
+			log.Printf("Failed to send contest announcement to user %s: %v", userID, err)
+		}
+	}
+
+	return nil
+}
+
+// NotifyContestStarting sends a notification when a contest is about to start
+func (s *NotificationService) NotifyContestStarting(ctx context.Context, contestID string, contestName string, minutesBefore int32, recipients []string) error {
+	for _, userID := range recipients {
+		notification := &pb.Notification{
+			UserId: userID,
+			Type:   pb.NotificationType_NOTIFICATION_TYPE_CONTEST_STARTING,
+			Title:  "Contest Starting Soon",
+			Body:   fmt.Sprintf("%s will start in %d minutes", contestName, minutesBefore),
+			Data: map[string]string{
+				"contest_id":     contestID,
+				"contest_name":   contestName,
+				"minutes_before": fmt.Sprintf("%d", minutesBefore),
+			},
+		}
+
+		if err := s.CreateNotification(ctx, notification); err != nil {
+			log.Printf("Failed to send contest starting notification to user %s: %v", userID, err)
+		}
+	}
+
+	return nil
+}
+
+// NotifySystemAlert sends a system alert notification to specified users (or all users if empty)
+func (s *NotificationService) NotifySystemAlert(ctx context.Context, title string, message string, severity string, recipients []string) error {
+	// If no recipients specified, this should broadcast to all users
+	// For now, we require explicit recipients
+	for _, userID := range recipients {
+		notification := &pb.Notification{
+			UserId: userID,
+			Type:   pb.NotificationType_NOTIFICATION_TYPE_SYSTEM_ALERT,
+			Title:  title,
+			Body:   message,
+			Data: map[string]string{
+				"severity": severity,
+			},
+		}
+
+		if err := s.CreateNotification(ctx, notification); err != nil {
+			log.Printf("Failed to send system alert to user %s: %v", userID, err)
+		}
+	}
+
+	return nil
+}
+
+// NotifyClarification sends a clarification notification
+func (s *NotificationService) NotifyClarification(ctx context.Context, userID string, contestID string, problemID string, clarification string) error {
+	notification := &pb.Notification{
+		UserId: userID,
+		Type:   pb.NotificationType_NOTIFICATION_TYPE_CLARIFICATION,
+		Title:  "Clarification Update",
+		Body:   clarification,
+		Data: map[string]string{
+			"contest_id": contestID,
+			"problem_id": problemID,
 		},
 	}
 

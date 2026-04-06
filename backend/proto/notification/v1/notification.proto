@@ -22,6 +22,28 @@ service NotificationService {
       body: "*"
     };
   }
+
+  // Mark all notifications as read
+  rpc MarkAllAsRead(MarkAllAsReadRequest) returns (MarkAllAsReadResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/notifications/read-all"
+      body: "*"
+    };
+  }
+
+  // Stream notifications via SSE (returns stream of notifications)
+  rpc StreamNotifications(StreamNotificationsRequest) returns (stream Notification) {
+    option (google.api.http) = {
+      get: "/api/v1/notifications/stream"
+    };
+  }
+
+  // Get unread notification count
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/notifications/unread-count"
+    };
+  }
 }
 
 // Notification types
@@ -31,6 +53,7 @@ enum NotificationType {
   NOTIFICATION_TYPE_CONTEST_STARTING = 2;
   NOTIFICATION_TYPE_CONTEST_ANNOUNCEMENT = 3;
   NOTIFICATION_TYPE_CLARIFICATION = 4;
+  NOTIFICATION_TYPE_SYSTEM_ALERT = 5;
 }
 
 // Notification
@@ -73,4 +96,25 @@ message MarkAsReadRequest {
 
 message MarkAsReadResponse {
   bool success = 1;
+}
+
+message MarkAllAsReadRequest {
+  // Optional: filter by type
+  NotificationType type = 1;
+}
+
+message MarkAllAsReadResponse {
+  int32 count = 1; // Number of notifications marked as read
+}
+
+message StreamNotificationsRequest {
+  // Stream all notifications for the authenticated user
+}
+
+message GetUnreadCountRequest {
+}
+
+message GetUnreadCountResponse {
+  int32 count = 1;
+  map<string, int32> count_by_type = 2; // Count grouped by notification type
 }
