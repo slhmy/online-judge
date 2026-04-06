@@ -62,6 +62,29 @@ service ProblemService {
     };
   }
 
+  // Update testcase (admin)
+  rpc UpdateTestCase(UpdateTestCaseRequest) returns (UpdateTestCaseResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/testcases/{id}"
+      body: "*"
+    };
+  }
+
+  // Delete testcase (admin)
+  rpc DeleteTestCase(DeleteTestCaseRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/testcases/{id}"
+    };
+  }
+
+  // Batch upload testcases (admin)
+  rpc BatchUploadTestCases(BatchUploadTestCasesRequest) returns (BatchUploadTestCasesResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/problems/{problem_id}/testcases/batch"
+      body: "*"
+    };
+  }
+
   // List languages
   rpc ListLanguages(google.protobuf.Empty) returns (ListLanguagesResponse) {
     option (google.api.http) = {
@@ -226,6 +249,38 @@ message CreateTestCaseResponse {
   string id = 1;
   string input_path = 2;
   string output_path = 3;
+}
+
+message UpdateTestCaseRequest {
+  string id = 1;
+  int32 rank = 2;
+  bool is_sample = 3;
+  string description = 4;
+}
+
+message UpdateTestCaseResponse {
+  TestCase test_case = 1;
+}
+
+message DeleteTestCaseRequest {
+  string id = 1;
+}
+
+message BatchUploadTestCasesRequest {
+  string problem_id = 1;
+  repeated TestCaseData test_cases = 2;
+}
+
+message TestCaseData {
+  int32 rank = 1;
+  bool is_sample = 2;
+  string input_content = 3;      // Raw content (not base64)
+  string output_content = 4;     // Raw content (not base64)
+  string description = 5;
+}
+
+message BatchUploadTestCasesResponse {
+  repeated TestCase test_cases = 1;
 }
 
 message ListLanguagesResponse {

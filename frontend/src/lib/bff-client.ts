@@ -159,7 +159,7 @@ export class BFFClient {
     })
   }
 
-// User profile
+  // User profile
   async getUserProfile(userId: string) {
     return this.fetch(`/api/v1/users/${userId}/profile`)
   }
@@ -200,6 +200,66 @@ export class BFFClient {
         source: data.source,
       }),
     })
+  }
+
+  // Admin - Test Case management
+  async getTestCases(problemId: string) {
+    return this.fetch(`/api/v1/problems/${problemId}/testcases`)
+  }
+
+  async createTestCase(problemId: string, data: {
+    rank: number
+    is_sample: boolean
+    input_content: string
+    output_content: string
+    description?: string
+  }) {
+    return this.fetch(`/api/v1/problems/${problemId}/testcases`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateTestCase(testCaseId: string, data: {
+    rank?: number
+    is_sample?: boolean
+    description?: string
+  }) {
+    return this.fetch(`/api/v1/testcases/${testCaseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteTestCase(testCaseId: string) {
+    return this.fetch(`/api/v1/testcases/${testCaseId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async toggleTestCaseSample(testCaseId: string) {
+    return this.fetch(`/api/v1/testcases/${testCaseId}/toggle-sample`, {
+      method: 'PUT',
+    })
+  }
+
+  async batchUploadTestCases(problemId: string, data: FormData) {
+    const headers: HeadersInit = {}
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`
+    }
+
+    const res = await fetch(`${this.baseUrl}/api/v1/problems/${problemId}/testcases/batch`, {
+      method: 'POST',
+      headers,
+      body: data,
+    })
+
+    if (!res.ok) {
+      throw new Error(`BFF error: ${res.status}`)
+    }
+
+    return res.json()
   }
 }
 

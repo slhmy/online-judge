@@ -109,6 +109,31 @@ func (s *ProblemService) CreateTestCase(ctx context.Context, req *pb.CreateTestC
 	}, nil
 }
 
+func (s *ProblemService) UpdateTestCase(ctx context.Context, req *pb.UpdateTestCaseRequest) (*pb.UpdateTestCaseResponse, error) {
+	tc, err := s.store.UpdateTestCase(ctx, req.GetId(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.UpdateTestCaseResponse{TestCase: tc}, nil
+}
+
+func (s *ProblemService) DeleteTestCase(ctx context.Context, req *pb.DeleteTestCaseRequest) (*emptypb.Empty, error) {
+	if err := s.store.DeleteTestCase(ctx, req.GetId()); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *ProblemService) BatchUploadTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) (*pb.BatchUploadTestCasesResponse, error) {
+	testCases, err := s.store.BatchCreateTestCases(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.BatchUploadTestCasesResponse{TestCases: testCases}, nil
+}
+
 func (s *ProblemService) ListLanguages(ctx context.Context, req *emptypb.Empty) (*pb.ListLanguagesResponse, error) {
 	languages, err := s.store.ListLanguages(ctx)
 	if err != nil {

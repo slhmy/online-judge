@@ -1,10 +1,16 @@
 package handler
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -346,6 +352,357 @@ func (h *AdminHandler) GetRejudgeSubmissions(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(resp)
 }
 
+// ListTestCases returns all test cases for a problem
+func (h *AdminHandler) ListTestCases(w http.ResponseWriter, r *http.Request) {
+	problemID := chi.URLParam(r, "problemId")
+
+	rows, err := h.db.QueryContext(r.Context(), `
+		SELECT id, problem_id, rank, is_sample, input_path, output_path, description, is_interactive, input_content, output_content
+		FROM test_cases
+		WHERE problem_id = $1
+		ORDER BY rank
+	`, problemID)
+	if err != nil {
+		http.Error(w, `{"error": "database error"}`, http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type TestCase struct {
+		ID            string `json:"id"`
+		ProblemID     string `json:"problem_id"`
+		Rank          int    `json:"rank"`
+		IsSample      bool   `json:"is_sample"`
+		InputPath     string `json:"input_path"`
+		OutputPath    string `json:"output_path"`
+		InputContent  string `json:"input_content"`
+		OutputContent string `json:"output_content"`
+		Description   string `json:"description"`
+		IsInteractive bool   `json:"is_interactive"`
+	}
+
+	var testCases []TestCase
+	for rows.Next() {
+		var tc TestCase
+		var inputContent, outputContent, description sql.NullString
+		if err := rows.Scan(&tc.ID, &tc.ProblemID, &tc.Rank, &tc.IsSample, &tc.InputPath, &tc.OutputPath, &description, &tc.IsInteractive, &inputContent, &outputContent); err != nil {
+			continue
+		}
+		if inputContent.Valid {
+			tc.InputContent = inputContent.String
+		}
+		if outputContent.Valid {
+			tc.OutputContent = outputContent.String
+		}
+		if description.Valid {
+			tc.Description = description.String
+		}
+		testCases = append(testCases, tc)
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"test_cases": testCases,
+	})
+}
+
+// CreateTestCase creates a new test case
+func (h *AdminHandler) CreateTestCase(w http.ResponseWriter, r *http.Request) {
+	problemID := chi.URLParam(r, "problemId")
+
+	var req struct {
+		Rank          int    `json:"rank"`
+		IsSample      bool   `json:"is_sample"`
+		InputContent  string `json:"input_content"`
+		OutputContent string `json:"output_content"`
+		Description   string `json:"description"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var id string
+	err := h.db.QueryRowContext(r.Context(), `
+		INSERT INTO test_cases (problem_id, rank, is_sample, input_content, output_content, description)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`, problemID, req.Rank, req.IsSample, req.InputContent, req.OutputContent, req.Description).Scan(&id)
+	if err != nil {
+		http.Error(w, `{"error": "failed to create test case"}`, http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"id": id})
+}
+
+// UpdateTestCase updates a test case
+func (h *AdminHandler) UpdateTestCase(w http.ResponseWriter, r *http.Request) {
+	testCaseID := chi.URLParam(r, "id")
+
+	var req struct {
+		Rank        int    `json:"rank"`
+		IsSample    bool   `json:"is_sample"`
+		Description string `json:"description"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err := h.db.ExecContext(r.Context(), `
+		UPDATE test_cases
+		SET rank = $2, is_sample = $3, description = $4, updated_at = NOW()
+		WHERE id = $1
+	`, testCaseID, req.Rank, req.IsSample, req.Description)
+	if err != nil {
+		http.Error(w, `{"error": "failed to update test case"}`, http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// DeleteTestCase deletes a test case
+func (h *AdminHandler) DeleteTestCase(w http.ResponseWriter, r *http.Request) {
+	testCaseID := chi.URLParam(r, "id")
+
+	_, err := h.db.ExecContext(r.Context(), "DELETE FROM test_cases WHERE id = $1", testCaseID)
+	if err != nil {
+		http.Error(w, `{"error": "failed to delete test case"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// BatchUploadTestCases handles batch upload of test cases (ZIP or separate files)
+func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Request) {
+	problemID := chi.URLParam(r, "problemId")
+
+	// Parse multipart form
+	err := r.ParseMultipartForm(50 << 20) // 50MB max
+	if err != nil {
+		http.Error(w, `{"error": "failed to parse form"}`, http.StatusBadRequest)
+		return
+	}
+
+	var testCases []struct {
+		Rank          int
+		IsSample      bool
+		InputContent  string
+		OutputContent string
+	}
+
+	// Check if ZIP file is uploaded
+	zipFile, _, err := r.FormFile("zip_file")
+	if err == nil {
+		defer zipFile.Close()
+
+		// Read ZIP file
+		buf := new(bytes.Buffer)
+		if _, err := io.Copy(buf, zipFile); err != nil {
+			http.Error(w, `{"error": "failed to read zip file"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Extract test cases from ZIP
+		zipReader, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+		if err != nil {
+			http.Error(w, `{"error": "failed to parse zip file"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Find all .in and .out files
+		inputFiles := make(map[int][]byte)
+		outputFiles := make(map[int][]byte)
+
+		for _, file := range zipReader.File {
+			name := file.Name
+			ext := strings.ToLower(filepath.Ext(name))
+			baseName := strings.TrimSuffix(name, ext)
+
+			// Extract rank number from filename (e.g., "1.in" -> 1)
+			rank, err := strconv.Atoi(baseName)
+			if err != nil {
+				continue // Skip files with non-numeric names
+			}
+
+			reader, err := file.Open()
+			if err != nil {
+				continue
+			}
+
+			content, err := io.ReadAll(reader)
+			reader.Close()
+			if err != nil {
+				continue
+			}
+
+			if ext == ".in" {
+				inputFiles[rank] = content
+			} else if ext == ".out" {
+				outputFiles[rank] = content
+			}
+		}
+
+		// Match input/output pairs
+		for rank, input := range inputFiles {
+			if output, ok := outputFiles[rank]; ok {
+				testCases = append(testCases, struct {
+					Rank          int
+					IsSample      bool
+					InputContent  string
+					OutputContent string
+				}{
+					Rank:          rank,
+					InputContent:  string(input),
+					OutputContent: string(output),
+				})
+			}
+		}
+
+		// Sort by rank
+		sort.Slice(testCases, func(i, j int) bool {
+			return testCases[i].Rank < testCases[j].Rank
+		})
+	} else {
+		// Handle separate file uploads
+		inputFiles := r.MultipartForm.File["input_files"]
+		outputFiles := r.MultipartForm.File["output_files"]
+
+		// Parse input files
+		inputContents := make(map[int]string)
+		for _, fileHeader := range inputFiles {
+			file, err := fileHeader.Open()
+			if err != nil {
+				continue
+			}
+			content, err := io.ReadAll(file)
+			file.Close()
+			if err != nil {
+				continue
+			}
+
+			// Extract rank from filename
+			ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+			baseName := strings.TrimSuffix(fileHeader.Filename, ext)
+			rank, err := strconv.Atoi(baseName)
+			if err != nil {
+				continue
+			}
+			inputContents[rank] = string(content)
+		}
+
+		// Parse output files
+		outputContents := make(map[int]string)
+		for _, fileHeader := range outputFiles {
+			file, err := fileHeader.Open()
+			if err != nil {
+				continue
+			}
+			content, err := io.ReadAll(file)
+			file.Close()
+			if err != nil {
+				continue
+			}
+
+			// Extract rank from filename
+			ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+			baseName := strings.TrimSuffix(fileHeader.Filename, ext)
+			rank, err := strconv.Atoi(baseName)
+			if err != nil {
+				continue
+			}
+			outputContents[rank] = string(content)
+		}
+
+		// Match input/output pairs
+		for rank, input := range inputContents {
+			if output, ok := outputContents[rank]; ok {
+				testCases = append(testCases, struct {
+					Rank          int
+					IsSample      bool
+					InputContent  string
+					OutputContent string
+				}{
+					Rank:          rank,
+					InputContent:  input,
+					OutputContent: output,
+				})
+			}
+		}
+
+		// Sort by rank
+		sort.Slice(testCases, func(i, j int) bool {
+			return testCases[i].Rank < testCases[j].Rank
+		})
+	}
+
+	// Get is_sample checkbox values
+	isSampleStr := r.FormValue("is_sample")
+	defaultIsSample := isSampleStr == "true"
+
+	// Get custom is_sample values per rank
+	for i := range testCases {
+		customIsSample := r.FormValue("is_sample_" + strconv.Itoa(testCases[i].Rank))
+		if customIsSample == "true" {
+			testCases[i].IsSample = true
+		} else if customIsSample == "false" {
+			testCases[i].IsSample = false
+		} else {
+			testCases[i].IsSample = defaultIsSample
+		}
+	}
+
+	// Insert test cases into database
+	var createdIDs []string
+	for _, tc := range testCases {
+		var id string
+		err := h.db.QueryRowContext(r.Context(), `
+			INSERT INTO test_cases (problem_id, rank, is_sample, input_content, output_content)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		`, problemID, tc.Rank, tc.IsSample, tc.InputContent, tc.OutputContent).Scan(&id)
+		if err != nil {
+			http.Error(w, `{"error": "failed to insert test case"}`, http.StatusInternalServerError)
+			return
+		}
+		createdIDs = append(createdIDs, id)
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"ids":        createdIDs,
+		"count":      len(createdIDs),
+		"test_cases": testCases,
+	})
+}
+
+// ToggleTestCaseSample toggles the is_sample flag for a test case
+func (h *AdminHandler) ToggleTestCaseSample(w http.ResponseWriter, r *http.Request) {
+	testCaseID := chi.URLParam(r, "id")
+
+	// Get current is_sample value
+	var currentIsSample bool
+	err := h.db.QueryRowContext(r.Context(), "SELECT is_sample FROM test_cases WHERE id = $1", testCaseID).Scan(&currentIsSample)
+	if err != nil {
+		http.Error(w, `{"error": "test case not found"}`, http.StatusNotFound)
+		return
+	}
+
+	// Toggle the value
+	_, err = h.db.ExecContext(r.Context(), "UPDATE test_cases SET is_sample = $2 WHERE id = $1", testCaseID, !currentIsSample)
+	if err != nil {
+		http.Error(w, `{"error": "failed to update test case"}`, http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]bool{
+		"is_sample": !currentIsSample,
+	})
+}
+
 // RegisterRoutes registers admin routes
 func (h *AdminHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/admin", func(r chi.Router) {
@@ -363,4 +720,14 @@ func (h *AdminHandler) RegisterRoutes(r chi.Router) {
 			r.Get("/{rejudge_id}/submissions", h.GetRejudgeSubmissions)
 		})
 	})
+
+	// Test case admin routes
+	r.Route("/problems/{problemId}/testcases", func(r chi.Router) {
+		r.Get("/", h.ListTestCases)
+		r.Post("/", h.CreateTestCase)
+		r.Post("/batch", h.BatchUploadTestCases)
+	})
+	r.Put("/testcases/{id}", h.UpdateTestCase)
+	r.Delete("/testcases/{id}", h.DeleteTestCase)
+	r.Put("/testcases/{id}/toggle-sample", h.ToggleTestCaseSample)
 }

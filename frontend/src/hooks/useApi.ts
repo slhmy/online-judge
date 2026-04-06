@@ -217,3 +217,80 @@ export function useUpdateUserProfile(userId: string) {
     },
   })
 }
+
+// Admin - Test Case CRUD
+export function useTestCases(problemId: string) {
+  return useQuery({
+    queryKey: ['testCases', problemId],
+    queryFn: () => bffClient.getTestCases(problemId),
+    enabled: !!problemId,
+  })
+}
+
+export function useCreateTestCase() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { problemId: string; rank: number; is_sample: boolean; input_content: string; output_content: string; description?: string }) =>
+      bffClient.createTestCase(data.problemId, {
+        rank: data.rank,
+        is_sample: data.is_sample,
+        input_content: data.input_content,
+        output_content: data.output_content,
+        description: data.description,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['testCases', variables.problemId] })
+    },
+  })
+}
+
+export function useUpdateTestCase() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { testCaseId: string; rank?: number; is_sample?: boolean; description?: string }) =>
+      bffClient.updateTestCase(data.testCaseId, {
+        rank: data.rank,
+        is_sample: data.is_sample,
+        description: data.description,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['testCases'] })
+    },
+  })
+}
+
+export function useDeleteTestCase() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (testCaseId: string) => bffClient.deleteTestCase(testCaseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['testCases'] })
+    },
+  })
+}
+
+export function useToggleTestCaseSample() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (testCaseId: string) => bffClient.toggleTestCaseSample(testCaseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['testCases'] })
+    },
+  })
+}
+
+export function useBatchUploadTestCases() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { problemId: string; formData: FormData }) =>
+      bffClient.batchUploadTestCases(data.problemId, data.formData),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['testCases', variables.problemId] })
+    },
+  })
+}

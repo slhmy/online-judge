@@ -17,6 +17,9 @@ type ProblemStoreInterface interface {
 	Delete(ctx context.Context, id string) error
 	ListTestCases(ctx context.Context, problemID string, samplesOnly bool) ([]*pb.TestCase, error)
 	CreateTestCase(ctx context.Context, req *pb.CreateTestCaseRequest) (string, string, string, error)
+	UpdateTestCase(ctx context.Context, id string, req *pb.UpdateTestCaseRequest) (*pb.TestCase, error)
+	DeleteTestCase(ctx context.Context, id string) error
+	BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error)
 	ListLanguages(ctx context.Context) ([]*pb.Language, error)
 }
 
@@ -189,6 +192,51 @@ func (m *MockProblemStore) CreateTestCase(ctx context.Context, req *pb.CreateTes
 
 	m.TestCases[req.GetProblemId()] = append(m.TestCases[req.GetProblemId()], tc)
 	return id, "input/path", "output/path", nil
+}
+
+func (m *MockProblemStore) UpdateTestCase(ctx context.Context, id string, req *pb.UpdateTestCaseRequest) (*pb.TestCase, error) {
+	for _, tcs := range m.TestCases {
+		for i, tc := range tcs {
+			if tc.Id == id {
+				tcs[i].Rank = req.GetRank()
+				tcs[i].IsSample = req.GetIsSample()
+				tcs[i].Description = req.GetDescription()
+				return tcs[i], nil
+			}
+		}
+	}
+	return nil, errors.New("test case not found")
+}
+
+func (m *MockProblemStore) DeleteTestCase(ctx context.Context, id string) error {
+	for problemID, tcs := range m.TestCases {
+		for i, tc := range tcs {
+			if tc.Id == id {
+				m.TestCases[problemID] = append(tcs[:i], tcs[i+1:]...)
+				return nil
+			}
+		}
+	}
+	return errors.New("test case not found")
+}
+
+func (m *MockProblemStore) BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error) {
+	var testCases []*pb.TestCase
+	for _, tcData := range req.GetTestCases() {
+		id := uuid.New().String()
+		tc := &pb.TestCase{
+			Id:           id,
+			ProblemId:    req.GetProblemId(),
+			Rank:         tcData.GetRank(),
+			IsSample:     tcData.GetIsSample(),
+			InputContent: tcData.GetInputContent(),
+			OutputContent: tcData.GetOutputContent(),
+			Description:  tcData.GetDescription(),
+		}
+		testCases = append(testCases, tc)
+		m.TestCases[req.GetProblemId()] = append(m.TestCases[req.GetProblemId()], tc)
+	}
+	return testCases, nil
 }
 
 func (m *MockProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, error) {

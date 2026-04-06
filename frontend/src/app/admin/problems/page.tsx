@@ -424,6 +424,12 @@ export default function AdminProblemsPage() {
                       >
                         Edit
                       </button>
+                      <button
+                        onClick={() => router.push(`/admin/problems/${problem.id}/testcases`)}
+                        className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 font-medium"
+                      >
+                        Test Cases
+                      </button>
                       {deleteConfirmId === problem.id ? (
                         <div className="flex gap-1">
                           <button

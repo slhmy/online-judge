@@ -337,3 +337,111 @@ func (s *ProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, error
 
 	return languages, nil
 }
+
+func (s *ProblemStore) UpdateTestCase(ctx context.Context, id string, req *pb.UpdateTestCaseRequest) (*pb.TestCase, error) {
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		UPDATE test_cases
+		SET rank = $2, is_sample = $3, description = $4, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, problem_id, rank, is_sample, input_path, output_path, description, is_interactive, input_content, output_content
+	`
+
+	var tc pb.TestCase
+	var tcID, tcProblemID pgtype.UUID
+	var description, inputContent, outputContent pgtype.Text
+	err = s.db.QueryRow(ctx, query,
+		parsedID, req.GetRank(), req.GetIsSample(), req.GetDescription(),
+	).Scan(
+		&tcID, &tcProblemID, &tc.Rank, &tc.IsSample,
+		&tc.InputPath, &tc.OutputPath, &description, &tc.IsInteractive,
+		&inputContent, &outputContent,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if tcID.Valid {
+		tc.Id = uuid.UUID(tcID.Bytes).String()
+	}
+	if tcProblemID.Valid {
+		tc.ProblemId = uuid.UUID(tcProblemID.Bytes).String()
+	}
+	if description.Valid {
+		tc.Description = description.String
+	}
+	if inputContent.Valid {
+		tc.InputContent = inputContent.String
+	}
+	if outputContent.Valid {
+		tc.OutputContent = outputContent.String
+	}
+
+	return &tc, nil
+}
+
+func (s *ProblemStore) DeleteTestCase(ctx context.Context, id string) error {
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(ctx, "DELETE FROM test_cases WHERE id = $1", parsedID)
+	return err
+}
+
+func (s *ProblemStore) BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error) {
+	parsedProblemID, err := uuid.Parse(req.GetProblemId())
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		INSERT INTO test_cases (problem_id, rank, is_sample, input_content, output_content, description)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, problem_id, rank, is_sample, input_path, output_path, description, is_interactive, input_content, output_content
+	`
+
+	var testCases []*pb.TestCase
+	for _, tcData := range req.GetTestCases() {
+		var tc pb.TestCase
+		var tcID, tcProblemID pgtype.UUID
+		var description, inputContent, outputContent pgtype.Text
+
+		err := s.db.QueryRow(ctx, query,
+			parsedProblemID, tcData.GetRank(), tcData.GetIsSample(),
+			tcData.GetInputContent(), tcData.GetOutputContent(), tcData.GetDescription(),
+		).Scan(
+			&tcID, &tcProblemID, &tc.Rank, &tc.IsSample,
+			&tc.InputPath, &tc.OutputPath, &description, &tc.IsInteractive,
+			&inputContent, &outputContent,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if tcID.Valid {
+			tc.Id = uuid.UUID(tcID.Bytes).String()
+		}
+		if tcProblemID.Valid {
+			tc.ProblemId = uuid.UUID(tcProblemID.Bytes).String()
+		}
+		if description.Valid {
+			tc.Description = description.String
+		}
+		if inputContent.Valid {
+			tc.InputContent = inputContent.String
+		}
+		if outputContent.Valid {
+			tc.OutputContent = outputContent.String
+		}
+
+		testCases = append(testCases, &tc)
+	}
+
+	return testCases, nil
+}
