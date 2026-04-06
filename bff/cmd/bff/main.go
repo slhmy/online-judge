@@ -21,7 +21,7 @@ import (
 	"github.com/online-judge/bff/internal/config"
 	"github.com/online-judge/bff/internal/handler"
 	"github.com/online-judge/bff/internal/middleware"
-	"github.com/online-judge/bff/internal/websocket"
+	"github.com/online-judge/bff/internal/sse"
 )
 
 func main() {
@@ -70,9 +70,8 @@ func main() {
 	submissionClient := pbSubmission.NewSubmissionServiceClient(submissionConn)
 	contestClient := pbContest.NewContestServiceClient(contestConn)
 
-	// Create WebSocket hub (automatically subscribes to Redis pub/sub)
-	hub := websocket.NewHub(rdb)
-	go hub.Run()
+	// Create SSE hub (manages real-time updates via Server-Sent Events)
+	sseHub := sse.NewHub(rdb)
 
 	// Create auth middleware
 	authMiddleware := middleware.NewAuth("")
@@ -95,7 +94,7 @@ func main() {
 	contestHandler := handler.NewContestHandler(contestClient)
 	authHandler := handler.NewAuthHandler(cfg.IdentraGRPCHost, cfg.IdentraHTTPHost, cfg.DatabaseURL, cfg.AdminEmail)
 	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL)
-	wsHandler := handler.NewWebSocketHandler(hub, rdb)
+	sseHandler := handler.NewSSEHandler(sseHub)
 	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb)
 
 	// Setup router
@@ -159,8 +158,8 @@ func main() {
 		})
 	})
 
-	// WebSocket endpoint
-	wsHandler.RegisterRoutes(r)
+	// SSE endpoint for real-time submission updates
+	sseHandler.RegisterRoutes(r)
 
 	// Internal API routes (for judge daemon)
 	internalHandler.RegisterRoutes(r)
@@ -172,7 +171,7 @@ func main() {
 	go func() {
 		<-sigChan
 		log.Println("Shutting down BFF...")
-		hub.Stop()
+		sseHub.Stop()
 		os.Exit(0)
 	}()
 
