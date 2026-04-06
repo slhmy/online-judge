@@ -18,6 +18,7 @@ import (
 	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
 	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
 	pbContest "github.com/online-judge/backend/gen/go/contest/v1"
+	pbUser "github.com/online-judge/backend/gen/go/user/v1"
 	"github.com/online-judge/bff/internal/config"
 	"github.com/online-judge/bff/internal/handler"
 	"github.com/online-judge/bff/internal/middleware"
@@ -65,10 +66,17 @@ func main() {
 	}
 	defer contestConn.Close()
 
+	userConn, err := grpc.Dial(cfg.UserServiceAddr, opts...)
+	if err != nil {
+		log.Fatalf("Failed to connect to user service: %v", err)
+	}
+	defer userConn.Close()
+
 	// Create gRPC clients
 	problemClient := pbProblem.NewProblemServiceClient(problemConn)
 	submissionClient := pbSubmission.NewSubmissionServiceClient(submissionConn)
 	contestClient := pbContest.NewContestServiceClient(contestConn)
+	userClient := pbUser.NewUserServiceClient(userConn)
 
 	// Create SSE hub (manages real-time updates via Server-Sent Events)
 	sseHub := sse.NewHub(rdb)
@@ -92,6 +100,7 @@ func main() {
 	problemHandler := handler.NewProblemHandler(problemClient)
 	submissionHandler := handler.NewSubmissionHandler(submissionClient)
 	contestHandler := handler.NewContestHandler(contestClient)
+	userHandler := handler.NewUserHandler(userClient)
 	authHandler := handler.NewAuthHandler(cfg.IdentraGRPCHost, cfg.IdentraHTTPHost, cfg.DatabaseURL, cfg.AdminEmail)
 	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL)
 	sseHandler := handler.NewSSEHandler(sseHub)
@@ -150,6 +159,17 @@ func main() {
 		r.Get("/contests/{id}/problems", contestHandler.GetProblems)
 		r.Get("/contests/{id}/scoreboard", contestHandler.GetScoreboard)
 		r.Post("/contests/{id}/register", contestHandler.Register)
+
+		// Users (public profile stats, protected update)
+		r.Get("/users/{id}/profile", userHandler.GetProfile)
+		r.Get("/users/{id}/stats", userHandler.GetStats)
+		r.Get("/users/{id}/submissions", userHandler.GetSubmissions)
+
+		// User profile update (protected)
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.RequireAuth)
+			r.Put("/users/{id}/profile", userHandler.UpdateProfile)
+		})
 
 		// Admin routes (protected)
 		r.Group(func(r chi.Router) {

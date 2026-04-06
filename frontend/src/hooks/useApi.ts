@@ -163,3 +163,44 @@ export function useDeleteProblem() {
     },
   })
 }
+
+// User profile
+export function useUserProfile(userId: string) {
+  return useQuery({
+    queryKey: ['userProfile', userId],
+    queryFn: () => bffClient.getUserProfile(userId),
+    enabled: !!userId,
+  })
+}
+
+export function useUserStats(userId: string) {
+  return useQuery({
+    queryKey: ['userStats', userId],
+    queryFn: () => bffClient.getUserStats(userId),
+    enabled: !!userId,
+  })
+}
+
+export function useUserSubmissions(userId: string, page = 1, pageSize = 20, verdict?: string, problemId?: string) {
+  return useQuery({
+    queryKey: ['userSubmissions', userId, page, pageSize, verdict, problemId],
+    queryFn: () => bffClient.getUserSubmissions(userId, page, pageSize, verdict, problemId),
+    enabled: !!userId,
+  })
+}
+
+export function useUpdateUserProfile(userId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: {
+      display_name?: string
+      avatar_url?: string
+      bio?: string
+      country?: string
+    }) => bffClient.updateUserProfile(userId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userProfile', userId] })
+    },
+  })
+}

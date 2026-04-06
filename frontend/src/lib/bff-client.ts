@@ -151,6 +151,37 @@ export class BFFClient {
       body: JSON.stringify({ role }),
     })
   }
+
+  // User profile
+  async getUserProfile(userId: string) {
+    return this.fetch(`/api/v1/users/${userId}/profile`)
+  }
+
+  async updateUserProfile(userId: string, data: {
+    display_name?: string
+    avatar_url?: string
+    bio?: string
+    country?: string
+  }) {
+    return this.fetch(`/api/v1/users/${userId}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getUserStats(userId: string) {
+    return this.fetch(`/api/v1/users/${userId}/stats`)
+  }
+
+  async getUserSubmissions(userId: string, page = 1, pageSize = 20, verdict?: string, problemId?: string) {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+    })
+    if (verdict) params.append('verdict', verdict)
+    if (problemId) params.append('problem_id', problemId)
+    return this.fetch(`/api/v1/users/${userId}/submissions?${params.toString()}`)
+  }
 }
 
 export const bffClient = new BFFClient()
