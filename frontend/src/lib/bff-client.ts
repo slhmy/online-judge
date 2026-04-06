@@ -84,6 +84,13 @@ export class BFFClient {
     return this.fetch(`/api/v1/contests/${contestId}/scoreboard`)
   }
 
+  async registerContest(contestId: string, data: { team_name: string; affiliation?: string }) {
+    return this.fetch(`/api/v1/contests/${contestId}/register`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   // Auth
   async login(email: string, password: string) {
     return this.fetch('/api/v1/auth/login', {

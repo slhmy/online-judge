@@ -91,6 +91,19 @@ export function useScoreboard(contestId: string) {
   })
 }
 
+export function useRegisterContest(contestId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { team_name: string; affiliation?: string }) =>
+      bffClient.registerContest(contestId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contest', contestId] })
+      queryClient.invalidateQueries({ queryKey: ['scoreboard', contestId] })
+    },
+  })
+}
+
 // Auth
 export function useLogin() {
   const queryClient = useQueryClient()
