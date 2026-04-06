@@ -128,6 +128,20 @@ COPY --from=builder /judgedaemon /judgedaemon
 # Create directories for sandbox work
 RUN mkdir -p /var/lib/judgehost/work /var/lib/judgehost/chroot
 
+# Copy compile scripts
+COPY scripts/compile/*.sh /usr/local/bin/compile/
+RUN chmod +x /usr/local/bin/compile/*.sh
+
+# Create symlinks for easier access
+RUN ln -sf /usr/local/bin/compile/cpp.sh /usr/local/bin/compile-cpp && \
+    ln -sf /usr/local/bin/compile/c.sh /usr/local/bin/compile-c && \
+    ln -sf /usr/local/bin/compile/python3.sh /usr/local/bin/compile-python3 && \
+    ln -sf /usr/local/bin/compile/java.sh /usr/local/bin/compile-java && \
+    ln -sf /usr/local/bin/compile/go.sh /usr/local/bin/compile-go && \
+    ln -sf /usr/local/bin/compile/rust.sh /usr/local/bin/compile-rust && \
+    ln -sf /usr/local/bin/compile/nodejs.sh /usr/local/bin/compile-nodejs && \
+    ln -sf /usr/local/bin/compile/compile-runner.sh /usr/local/bin/compile-runner
+
 # Set timezone
 ENV TZ=UTC
 

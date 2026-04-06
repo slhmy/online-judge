@@ -73,7 +73,10 @@ type CompileResult struct {
 	MemoryUsed  int64
 }
 
-// Language-specific compilation configurations
+// bt is a helper to create a regex pattern with backtick character
+const bt = "`"
+
+// Language-specific compilation configurations with comprehensive error patterns
 var compileConfigs = map[string]CompileConfig{
 	"cpp": {
 		ID:           "cpp",
@@ -93,6 +96,9 @@ var compileConfigs = map[string]CompileConfig{
 			"-DONLINE_JUDGE",
 			"-pipe",
 			"-fno-stack-limit",
+			"-Wall",
+			"-Wextra",
+			"-Wno-unused-result",
 			"-o", "main",
 			"main.cpp",
 		},
@@ -103,6 +109,7 @@ var compileConfigs = map[string]CompileConfig{
 		RunArgs:    []string{},
 
 		ErrorPatterns: []ErrorPattern{
+			// Standard GCC error format with column
 			{
 				Pattern:      regexp.MustCompile(`main\.cpp:(\d+):(\d+): error: (.+)$`),
 				Type:         "error",
@@ -111,6 +118,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  2,
 			},
+			// Standard GCC error format without column
 			{
 				Pattern:      regexp.MustCompile(`main\.cpp:(\d+): error: (.+)$`),
 				Type:         "error",
@@ -119,6 +127,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// Warning format with column
 			{
 				Pattern:      regexp.MustCompile(`main\.cpp:(\d+):(\d+): warning: (.+)$`),
 				Type:         "warning",
@@ -127,6 +136,16 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  2,
 			},
+			// Warning format without column
+			{
+				Pattern:      regexp.MustCompile(`main\.cpp:(\d+): warning: (.+)$`),
+				Type:         "warning",
+				MessageGroup: 2,
+				LineGroup:    1,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Generic error without location
 			{
 				Pattern:      regexp.MustCompile(`^error: (.+)$`),
 				Type:         "error",
@@ -135,10 +154,40 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// Linker error - undefined reference
 			{
-				Pattern:      regexp.MustCompile(`undefined reference to .+`),
+				Pattern:      regexp.MustCompile(`undefined reference to ` + bt + `(.+?)` + bt),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Template instantiation error
+			{
+				Pattern:      regexp.MustCompile(`required from here$`),
 				Type:         "error",
 				MessageGroup: 0,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Multiple definition error
+			{
+				Pattern:      regexp.MustCompile(`multiple definition of ` + bt + `(.+?)` + bt),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+		},
+
+		WarningPatterns: []ErrorPattern{
+			{
+				Pattern:      regexp.MustCompile(`warning: (.+)$`),
+				Type:         "warning",
+				MessageGroup: 1,
 				LineGroup:    0,
 				FileGroup:    0,
 				ColumnGroup:  0,
@@ -163,6 +212,9 @@ var compileConfigs = map[string]CompileConfig{
 			"-lm",
 			"-DONLINE_JUDGE",
 			"-pipe",
+			"-Wall",
+			"-Wextra",
+			"-Wno-unused-result",
 			"-o", "main",
 			"main.c",
 		},
@@ -173,6 +225,7 @@ var compileConfigs = map[string]CompileConfig{
 		RunArgs:    []string{},
 
 		ErrorPatterns: []ErrorPattern{
+			// Standard GCC error format with column
 			{
 				Pattern:      regexp.MustCompile(`main\.c:(\d+):(\d+): error: (.+)$`),
 				Type:         "error",
@@ -181,6 +234,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  2,
 			},
+			// Standard GCC error format without column
 			{
 				Pattern:      regexp.MustCompile(`main\.c:(\d+): error: (.+)$`),
 				Type:         "error",
@@ -189,9 +243,48 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// Warning format with column
+			{
+				Pattern:      regexp.MustCompile(`main\.c:(\d+):(\d+): warning: (.+)$`),
+				Type:         "warning",
+				MessageGroup: 3,
+				LineGroup:    1,
+				FileGroup:    0,
+				ColumnGroup:  2,
+			},
+			// Generic error without location
 			{
 				Pattern:      regexp.MustCompile(`^error: (.+)$`),
 				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Implicit declaration warning
+			{
+				Pattern:      regexp.MustCompile(`implicit declaration of function ` + bt + `(.+?)` + bt),
+				Type:         "warning",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Linker error - undefined reference
+			{
+				Pattern:      regexp.MustCompile(`undefined reference to ` + bt + `(.+?)` + bt),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+		},
+
+		WarningPatterns: []ErrorPattern{
+			{
+				Pattern:      regexp.MustCompile(`warning: (.+)$`),
+				Type:         "warning",
 				MessageGroup: 1,
 				LineGroup:    0,
 				FileGroup:    0,
@@ -211,9 +304,10 @@ var compileConfigs = map[string]CompileConfig{
 		MemoryFactor: 1.5,
 
 		RunnerPath: "python3",
-		RunArgs:    []string{"-S", "main.py"},
+		RunArgs:    []string{"-S", "-B", "main.py"},
 
 		ErrorPatterns: []ErrorPattern{
+			// File location in error traceback
 			{
 				Pattern:      regexp.MustCompile(`File "main\.py", line (\d+)`),
 				Type:         "error",
@@ -222,18 +316,92 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
-			{
-				Pattern:      regexp.MustCompile(`(\w+Error): (.+)$`),
-				Type:         "error",
-				MessageGroup: 2,
-				LineGroup:    0,
-				FileGroup:    0,
-				ColumnGroup:  0,
-			},
+			// SyntaxError with message
 			{
 				Pattern:      regexp.MustCompile(`SyntaxError: (.+)$`),
 				Type:         "error",
 				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// IndentationError
+			{
+				Pattern:      regexp.MustCompile(`IndentationError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// NameError with variable name
+			{
+				Pattern:      regexp.MustCompile(`NameError: name ` + bt + `(.+?)` + bt + ` is not defined`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// TypeError
+			{
+				Pattern:      regexp.MustCompile(`TypeError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// IndexError
+			{
+				Pattern:      regexp.MustCompile(`IndexError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// ValueError
+			{
+				Pattern:      regexp.MustCompile(`ValueError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// KeyError
+			{
+				Pattern:      regexp.MustCompile(`KeyError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// AttributeError
+			{
+				Pattern:      regexp.MustCompile(`AttributeError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// ZeroDivisionError
+			{
+				Pattern:      regexp.MustCompile(`ZeroDivisionError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Generic error types
+			{
+				Pattern:      regexp.MustCompile(`(\w+Error): (.+)$`),
+				Type:         "error",
+				MessageGroup: 2,
 				LineGroup:    0,
 				FileGroup:    0,
 				ColumnGroup:  0,
@@ -274,6 +442,7 @@ var compileConfigs = map[string]CompileConfig{
 		},
 
 		ErrorPatterns: []ErrorPattern{
+			// Standard javac error format
 			{
 				Pattern:      regexp.MustCompile(`Main\.java:(\d+): error: (.+)$`),
 				Type:         "error",
@@ -282,6 +451,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// Warning format
 			{
 				Pattern:      regexp.MustCompile(`Main\.java:(\d+): warning: (.+)$`),
 				Type:         "warning",
@@ -290,9 +460,75 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// Cannot find symbol error
+			{
+				Pattern:      regexp.MustCompile(`error: cannot find symbol`),
+				Type:         "error",
+				MessageGroup: 0,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Symbol details
+			{
+				Pattern:      regexp.MustCompile(`symbol:\s+(?:class|method|variable)\s+(\w+)`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Class name mismatch
+			{
+				Pattern:      regexp.MustCompile(`class Main is public, should be declared in a file named Main\.java`),
+				Type:         "error",
+				MessageGroup: 0,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Package error
+			{
+				Pattern:      regexp.MustCompile(`error: class, interface, or enum expected`),
+				Type:         "error",
+				MessageGroup: 0,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Generic error
 			{
 				Pattern:      regexp.MustCompile(`^error: (.+)$`),
 				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Incompatible types
+			{
+				Pattern:      regexp.MustCompile(`error: incompatible types: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Method not found
+			{
+				Pattern:      regexp.MustCompile(`error: method (.+?) in class (.+?) cannot be applied`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+		},
+
+		WarningPatterns: []ErrorPattern{
+			{
+				Pattern:      regexp.MustCompile(`warning: (.+)$`),
+				Type:         "warning",
 				MessageGroup: 1,
 				LineGroup:    0,
 				FileGroup:    0,
@@ -325,6 +561,7 @@ var compileConfigs = map[string]CompileConfig{
 		RunArgs:    []string{},
 
 		ErrorPatterns: []ErrorPattern{
+			// Go error format with column
 			{
 				Pattern:      regexp.MustCompile(`main\.go:(\d+):(\d+): (.+)$`),
 				Type:         "error",
@@ -333,6 +570,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  2,
 			},
+			// Go error format without column
 			{
 				Pattern:      regexp.MustCompile(`main\.go:(\d+): (.+)$`),
 				Type:         "error",
@@ -341,17 +579,66 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// undefined symbol
 			{
-				Pattern:      regexp.MustCompile(`^undefined: (.+)$`),
+				Pattern:      regexp.MustCompile(`undefined: (\w+)$`),
 				Type:         "error",
 				MessageGroup: 1,
 				LineGroup:    0,
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// syntax error
 			{
 				Pattern:      regexp.MustCompile(`syntax error: (.+)$`),
 				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// imported but not used
+			{
+				Pattern:      regexp.MustCompile(`imported and not used: "(.+)"$`),
+				Type:         "warning",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// declared but not used
+			{
+				Pattern:      regexp.MustCompile(`declared but not used: (\w+)$`),
+				Type:         "warning",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// cannot find package
+			{
+				Pattern:      regexp.MustCompile(`cannot find package "(.+)"$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// no new variables
+			{
+				Pattern:      regexp.MustCompile(`no new variables on left side of :=$`),
+				Type:         "error",
+				MessageGroup: 0,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+		},
+
+		WarningPatterns: []ErrorPattern{
+			{
+				Pattern:      regexp.MustCompile(`warning: (.+)$`),
+				Type:         "warning",
 				MessageGroup: 1,
 				LineGroup:    0,
 				FileGroup:    0,
@@ -383,14 +670,25 @@ var compileConfigs = map[string]CompileConfig{
 		RunArgs:    []string{},
 
 		ErrorPatterns: []ErrorPattern{
+			// Rust error format with error code
 			{
-				Pattern:      regexp.MustCompile(`error(?:\[\w+\])?: (.+)$`),
+				Pattern:      regexp.MustCompile(`error\[E(\d+)\]: (.+)$`),
+				Type:         "error",
+				MessageGroup: 2,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Rust error without code
+			{
+				Pattern:      regexp.MustCompile(`error: (.+)$`),
 				Type:         "error",
 				MessageGroup: 1,
 				LineGroup:    0,
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// Location pointer
 			{
 				Pattern:      regexp.MustCompile(`--> main\.rs:(\d+):(\d+)$`),
 				Type:         "error",
@@ -398,6 +696,51 @@ var compileConfigs = map[string]CompileConfig{
 				LineGroup:    1,
 				FileGroup:    0,
 				ColumnGroup:  2,
+			},
+			// Cannot find value
+			{
+				Pattern:      regexp.MustCompile(`cannot find value ` + bt + `(.+?)` + bt + ` in this scope`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Cannot find function
+			{
+				Pattern:      regexp.MustCompile(`cannot find function ` + bt + `(.+?)` + bt + ` in this scope`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Mismatched types
+			{
+				Pattern:      regexp.MustCompile(`mismatched types`),
+				Type:         "error",
+				MessageGroup: 0,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Expected type
+			{
+				Pattern:      regexp.MustCompile(`expected type ` + bt + `(.+?)` + bt),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Found type
+			{
+				Pattern:      regexp.MustCompile(`found type ` + bt + `(.+?)` + bt),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
 			},
 		},
 
@@ -424,9 +767,10 @@ var compileConfigs = map[string]CompileConfig{
 		MemoryFactor: 1.5,
 
 		RunnerPath: "node",
-		RunArgs:    []string{"--optimize_for_size", "main.js"},
+		RunArgs:    []string{"--optimize_for_size", "--max-old-space-size=512", "main.js"},
 
 		ErrorPatterns: []ErrorPattern{
+			// SyntaxError with message
 			{
 				Pattern:      regexp.MustCompile(`SyntaxError: (.+)$`),
 				Type:         "error",
@@ -435,6 +779,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// ReferenceError
 			{
 				Pattern:      regexp.MustCompile(`ReferenceError: (.+)$`),
 				Type:         "error",
@@ -443,6 +788,7 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// TypeError
 			{
 				Pattern:      regexp.MustCompile(`TypeError: (.+)$`),
 				Type:         "error",
@@ -451,6 +797,16 @@ var compileConfigs = map[string]CompileConfig{
 				FileGroup:    0,
 				ColumnGroup:  0,
 			},
+			// RangeError
+			{
+				Pattern:      regexp.MustCompile(`RangeError: (.+)$`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Error location in stack trace
 			{
 				Pattern:      regexp.MustCompile(`at .+ \(main\.js:(\d+):(\d+)\)$`),
 				Type:         "error",
@@ -458,6 +814,33 @@ var compileConfigs = map[string]CompileConfig{
 				LineGroup:    1,
 				FileGroup:    0,
 				ColumnGroup:  2,
+			},
+			// Error location simplified
+			{
+				Pattern:      regexp.MustCompile(`at main\.js:(\d+):(\d+)$`),
+				Type:         "error",
+				MessageGroup: 0,
+				LineGroup:    1,
+				FileGroup:    0,
+				ColumnGroup:  2,
+			},
+			// Cannot read property
+			{
+				Pattern:      regexp.MustCompile(`Cannot read properties of undefined \(reading ` + bt + `(.+?)` + bt + `\)`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
+			},
+			// Is not defined
+			{
+				Pattern:      regexp.MustCompile(`(\w+) is not defined`),
+				Type:         "error",
+				MessageGroup: 1,
+				LineGroup:    0,
+				FileGroup:    0,
+				ColumnGroup:  0,
 			},
 		},
 	},

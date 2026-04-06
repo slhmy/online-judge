@@ -79,7 +79,7 @@ var languageConfigs = map[string]LanguageConfig{
 	"python3": {
 		ID:           "python3",
 		CompileCmd:   nil, // No compilation needed
-		RunCmd:       []string{"python3", "-S", "main.py"},
+		RunCmd:       []string{"python3", "-S", "-B", "main.py"},
 		SourceFile:   "main.py",
 		BinaryFile:   "main.py",
 		NeedsCompile: false,
@@ -124,7 +124,7 @@ var languageConfigs = map[string]LanguageConfig{
 	"nodejs": {
 		ID:           "nodejs",
 		CompileCmd:   nil, // No compilation needed
-		RunCmd:       []string{"node", "--optimize_for_size", "main.js"},
+		RunCmd:       []string{"node", "--optimize_for_size", "--max-old-space-size=512", "main.js"},
 		SourceFile:   "main.js",
 		BinaryFile:   "main.js",
 		NeedsCompile: false,
