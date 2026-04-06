@@ -1,0 +1,24 @@
+grpc_port = 50051
+
+[auth]
+jwt_secret = "your-secret-key-change-in-production"
+oauth_state_expiration = "10m"
+token_expiration = "24h"
+
+[redis]
+urls = "redis:6379"
+
+[persistence]
+type = "gorm"
+
+[persistence.gorm]
+driver = "postgres"
+host = "postgres"
+port = 5432
+dbname = "identra"
+username = "oj"
+password = "oj"
+sslmode = "disable"
+
+[smtp_mailer]
+host = ""

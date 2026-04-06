@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package contest.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/contest/v1;contestv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/common.proto";
+
+// Contest Service - DOMjudge-style contest management
+service ContestService {
+  // List contests
+  rpc ListContests(ListContestsRequest) returns (ListContestsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/contests"
+    };
+  }
+
+  // Get contest by ID
+  rpc GetContest(GetContestRequest) returns (GetContestResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/contests/{id}"
+    };
+  }
+
+  // Create contest (admin)
+  rpc CreateContest(CreateContestRequest) returns (CreateContestResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contests"
+      body: "*"
+    };
+  }
+
+  // Register for contest
+  rpc RegisterContest(RegisterContestRequest) returns (RegisterContestResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contests/{contest_id}/register"
+      body: "*"
+    };
+  }
+
+  // Get contest problems
+  rpc GetContestProblems(GetContestProblemsRequest) returns (GetContestProblemsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/contests/{contest_id}/problems"
+    };
+  }
+
+  // Get scoreboard
+  rpc GetScoreboard(GetScoreboardRequest) returns (GetScoreboardResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/contests/{contest_id}/scoreboard"
+    };
+  }
+}
+
+// Contest
+message Contest {
+  string id = 1;
+  string external_id = 2;
+  string name = 3;
+  string short_name = 4;
+
+  string start_time = 5;
+  string end_time = 6;
+  string freeze_time = 7;         // Scoreboard freeze
+  string unfreeze_time = 8;
+
+  bool public = 9;
+  string created_at = 10;
+}
+
+// Contest problem
+message ContestProblem {
+  string problem_id = 1;
+  string short_name = 2;          // "A", "B", "C"
+  int32 rank = 3;
+  string color = 4;
+  int32 points = 5;
+  bool allow_submit = 6;
+}
+
+// Team
+message Team {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string display_name = 4;
+  string affiliation = 5;
+  string country = 6;
+  int32 points = 7;
+  int32 total_time = 8;           // Penalty time in minutes
+}
+
+// Scoreboard entry (ICPC style)
+message ScoreboardEntry {
+  int32 rank = 1;
+  string team_id = 2;
+  string team_name = 3;
+  string affiliation = 4;
+  int32 num_solved = 5;
+  int32 total_time = 6;
+  repeated ProblemScore problems = 7;
+}
+
+// Problem score in scoreboard
+message ProblemScore {
+  string problem_short_name = 1;  // "A", "B", "C"
+  int32 num_pending = 2;          // Wrong submissions before correct
+  int32 num_correct = 3;          // 0 or 1
+  int32 time = 4;                 // Time of correct submission
+  bool is_pending = 5;            // Has pending submissions
+}
+
+// Request/Response messages
+message ListContestsRequest {
+  common.v1.Pagination pagination = 1;
+  bool public_only = 2;
+}
+
+message ListContestsResponse {
+  repeated Contest contests = 1;
+  common.v1.PaginatedResponse pagination = 2;
+}
+
+message GetContestRequest {
+  string id = 1;
+}
+
+message GetContestResponse {
+  Contest contest = 1;
+  repeated ContestProblem problems = 2;
+}
+
+message CreateContestRequest {
+  string external_id = 1;
+  string name = 2;
+  string short_name = 3;
+  string start_time = 4;
+  string end_time = 5;
+  string freeze_time = 6;
+  bool public = 7;
+}
+
+message CreateContestResponse {
+  string id = 1;
+}
+
+message RegisterContestRequest {
+  string contest_id = 1;
+  string team_name = 2;
+  string affiliation = 3;
+}
+
+message RegisterContestResponse {
+  string team_id = 1;
+}
+
+message GetContestProblemsRequest {
+  string contest_id = 1;
+}
+
+message GetContestProblemsResponse {
+  repeated ContestProblem problems = 1;
+}
+
+message GetScoreboardRequest {
+  string contest_id = 1;
+  bool show_frozen = 2;           // Show frozen scoreboard (admin)
+}
+
+message GetScoreboardResponse {
+  repeated ScoreboardEntry entries = 1;
+  string contest_time = 2;        // Current contest time
+  bool is_frozen = 3;             // Is scoreboard currently frozen
+}

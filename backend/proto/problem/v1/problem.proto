@@ -1,0 +1,230 @@
+syntax = "proto3";
+
+package problem.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/problem/v1;problemv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "common/v1/common.proto";
+
+// Problem Service - DOMjudge-style problem management
+service ProblemService {
+  // List problems
+  rpc ListProblems(ListProblemsRequest) returns (ListProblemsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/problems"
+    };
+  }
+
+  // Get problem by ID
+  rpc GetProblem(GetProblemRequest) returns (GetProblemResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/problems/{id}"
+    };
+  }
+
+  // Create problem (admin)
+  rpc CreateProblem(CreateProblemRequest) returns (CreateProblemResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/problems"
+      body: "*"
+    };
+  }
+
+  // Update problem (admin)
+  rpc UpdateProblem(UpdateProblemRequest) returns (UpdateProblemResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/problems/{id}"
+      body: "*"
+    };
+  }
+
+  // Delete problem (admin)
+  rpc DeleteProblem(DeleteProblemRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/v1/problems/{id}"
+    };
+  }
+
+  // Get testcases for a problem
+  rpc ListTestCases(ListTestCasesRequest) returns (ListTestCasesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/problems/{problem_id}/testcases"
+    };
+  }
+
+  // Create testcase (admin)
+  rpc CreateTestCase(CreateTestCaseRequest) returns (CreateTestCaseResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/problems/{problem_id}/testcases"
+      body: "*"
+    };
+  }
+
+  // List languages
+  rpc ListLanguages(google.protobuf.Empty) returns (ListLanguagesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/languages"
+    };
+  }
+}
+
+// Problem summary for list view
+message ProblemSummary {
+  string id = 1;
+  string external_id = 2;        // e.g., "A", "B"
+  string name = 3;
+  string difficulty = 4;
+  double time_limit = 5;          // seconds
+  int32 memory_limit = 6;         // kilobytes
+  int32 points = 7;
+  bool allow_submit = 8;
+}
+
+// Full problem details
+message Problem {
+  string id = 1;
+  string external_id = 2;
+  string name = 3;
+
+  // Time limits (DOMjudge uses seconds)
+  double time_limit = 4;          // seconds
+  int32 memory_limit = 5;         // kilobytes
+  int32 output_limit = 6;         // kilobytes
+  int32 process_limit = 7;
+
+  // Special judging
+  string special_run_id = 8;      // For interactive problems
+  string special_compare_id = 9;  // Custom validator
+  string special_compare_args = 10;
+
+  // Problem statement
+  string problem_statement_path = 11;
+
+  // Metadata
+  string difficulty = 12;
+  string color = 13;
+  int32 points = 14;
+
+  // Visibility
+  bool allow_submit = 15;
+  bool allow_judge = 16;
+  bool is_published = 17;
+
+  string author_id = 18;
+  string created_at = 19;
+  string updated_at = 20;
+}
+
+// Testcase (DOMjudge-style)
+message TestCase {
+  string id = 1;
+  string problem_id = 2;
+  int32 rank = 3;                 // Execution order
+  bool is_sample = 4;             // Visible to teams
+
+  // File paths in object storage
+  string input_path = 5;
+  string output_path = 6;
+
+  // Actual content for sample test cases (visible to teams)
+  string input_content = 9;
+  string output_content = 10;
+
+  // Metadata
+  string description = 7;
+  bool is_interactive = 8;
+}
+
+// Language configuration
+message Language {
+  string id = 1;
+  string external_id = 2;
+  string name = 3;
+  double time_factor = 4;         // Multiplier for time limit
+  repeated string extensions = 5;
+  bool allow_submit = 6;
+  bool allow_judge = 7;
+}
+
+// Request/Response messages
+message ListProblemsRequest {
+  common.v1.Pagination pagination = 1;
+  string difficulty = 2;
+  string search = 3;
+  bool published_only = 4;
+}
+
+message ListProblemsResponse {
+  repeated ProblemSummary problems = 1;
+  common.v1.PaginatedResponse pagination = 2;
+}
+
+message GetProblemRequest {
+  string id = 1;
+}
+
+message GetProblemResponse {
+  Problem problem = 1;
+  repeated TestCase sample_test_cases = 2;
+}
+
+message CreateProblemRequest {
+  string external_id = 1;
+  string name = 2;
+  double time_limit = 3;
+  int32 memory_limit = 4;
+  int32 output_limit = 5;
+  string difficulty = 6;
+  int32 points = 7;
+}
+
+message CreateProblemResponse {
+  string id = 1;
+}
+
+message UpdateProblemRequest {
+  string id = 1;
+  string name = 2;
+  double time_limit = 3;
+  int32 memory_limit = 4;
+  bool is_published = 5;
+  bool allow_submit = 6;
+}
+
+message UpdateProblemResponse {
+  Problem problem = 1;
+}
+
+message DeleteProblemRequest {
+  string id = 1;
+}
+
+message ListTestCasesRequest {
+  string problem_id = 1;
+  bool samples_only = 2;
+}
+
+message ListTestCasesResponse {
+  repeated TestCase test_cases = 1;
+}
+
+message CreateTestCaseRequest {
+  string problem_id = 1;
+  int32 rank = 2;
+  bool is_sample = 3;
+  string input = 4;               // Base64 encoded for small inputs
+  string output = 5;              // Base64 encoded for small outputs
+  string description = 6;
+}
+
+message CreateTestCaseResponse {
+  string id = 1;
+  string input_path = 2;
+  string output_path = 3;
+}
+
+message ListLanguagesResponse {
+  repeated Language languages = 1;
+}

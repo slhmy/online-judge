@@ -1,0 +1,226 @@
+services:
+  # ============================================
+  # Infrastructure
+  # ============================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: oj-postgres
+    environment:
+      POSTGRES_USER: oj
+      POSTGRES_PASSWORD: oj
+      POSTGRES_DB: oj
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oj"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: oj-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  minio:
+    image: minio/minio:latest
+    container_name: oj-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  # ============================================
+  # Auth Service (Identra)
+  # Two services required: gRPC + HTTP Gateway
+  # ============================================
+
+  # Create identra database
+  identra-db-init:
+    image: postgres:16-alpine
+    container_name: oj-identra-db-init
+    environment:
+      PGUSER: oj
+      PGPASSWORD: oj
+      PGHOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "psql -c 'CREATE DATABASE identra;' || echo 'Database already exists'"
+
+  identra-grpc:
+    image: ghcr.io/poly-workshop/identra-grpc:latest
+    container_name: oj-identra-grpc
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./configs:/app/configs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      identra-db-init:
+        condition: service_completed_successfully
+
+  # ============================================
+  # Backend Services
+  # ============================================
+
+  problem-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: problem-service
+    container_name: oj-problem-service
+    ports:
+      - "8002:8002"
+    environment:
+      - GRPC_PORT=8002
+      - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
+      - REDIS_URL=redis:6379
+      - IDENTRA_JWKS_URL=http://identra-grpc:50051/.well-known/jwks.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      identra-grpc:
+        condition: service_started
+
+  submission-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: submission-service
+    container_name: oj-submission-service
+    ports:
+      - "8003:8003"
+    environment:
+      - GRPC_PORT=8003
+      - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
+      - REDIS_URL=redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  contest-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: contest-service
+    container_name: oj-contest-service
+    ports:
+      - "8004:8004"
+    environment:
+      - GRPC_PORT=8004
+      - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
+      - REDIS_URL=redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  notification-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: notification-service
+    container_name: oj-notification-service
+    ports:
+      - "8005:8005"
+    environment:
+      - GRPC_PORT=8005
+      - REDIS_URL=redis:6379
+    depends_on:
+      - redis
+
+  # ============================================
+  # BFF Layer
+  # ============================================
+
+  bff:
+    build:
+      context: .
+      dockerfile: bff/Dockerfile
+    container_name: oj-bff
+    ports:
+      - "8080:8080"
+    environment:
+      - HTTP_PORT=8080
+      - REDIS_URL=redis:6379
+      - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
+      - PROBLEM_SERVICE_ADDR=problem-service:8002
+      - SUBMISSION_SERVICE_ADDR=submission-service:8003
+      - CONTEST_SERVICE_ADDR=contest-service:8004
+      - NOTIFICATION_SERVICE_ADDR=notification-service:8005
+      - IDENTRA_GRPC_HOST=identra-grpc:50051
+      - ADMIN_EMAIL=admin@example.com
+    depends_on:
+      - problem-service
+      - submission-service
+      - contest-service
+      - identra-grpc
+
+  # ============================================
+  # Frontend
+  # ============================================
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: oj-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BFF_URL=http://localhost:8080
+    depends_on:
+      - bff
+
+  # ============================================
+  # Judge Daemon
+  # ============================================
+
+  judgedaemon:
+    build:
+      context: ./judge
+      dockerfile: Dockerfile
+    container_name: oj-judgedaemon
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/oj-sandbox:/tmp/oj-sandbox
+    environment:
+      - JUDGEHOST_ID=judgehost-01
+      - REDIS_URL=redis:6379
+      - ORCHESTRATOR_URL=http://bff:8080
+      - SANDBOX_WORKDIR=/tmp/oj-sandbox
+    depends_on:
+      - bff
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  judge_sandbox:
+
+networks:
+  default:
+    name: oj-network

@@ -1,0 +1,256 @@
+syntax = "proto3";
+
+package submission.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/submission/v1;submissionv1";
+
+import "google/api/annotations.proto";
+import "common/v1/common.proto";
+
+// Submission Service - DOMjudge-style submission handling
+service SubmissionService {
+  // Create submission
+  rpc CreateSubmission(CreateSubmissionRequest) returns (CreateSubmissionResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/submissions"
+      body: "*"
+    };
+  }
+
+  // Get submission by ID
+  rpc GetSubmission(GetSubmissionRequest) returns (GetSubmissionResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/submissions/{id}"
+    };
+  }
+
+  // List submissions
+  rpc ListSubmissions(ListSubmissionsRequest) returns (ListSubmissionsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/submissions"
+    };
+  }
+
+  // Get judging result
+  rpc GetJudging(GetJudgingRequest) returns (GetJudgingResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/submissions/{submission_id}/judging"
+    };
+  }
+
+  // Get judging runs (testcase results)
+  rpc GetJudgingRuns(GetJudgingRunsRequest) returns (GetJudgingRunsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/submissions/{submission_id}/runs"
+    };
+  }
+
+  // Internal: Create judging record (for judge daemon)
+  rpc InternalCreateJudging(InternalCreateJudgingRequest) returns (InternalCreateJudgingResponse) {
+    option (google.api.http) = {
+      post: "/internal/judgings"
+      body: "*"
+    };
+  }
+
+  // Internal: Update judging record (for judge daemon)
+  rpc InternalUpdateJudging(InternalUpdateJudgingRequest) returns (InternalUpdateJudgingResponse) {
+    option (google.api.http) = {
+      put: "/internal/judgings/{judging_id}"
+      body: "*"
+    };
+  }
+
+  // Internal: Create judging run (for judge daemon)
+  rpc InternalCreateJudgingRun(InternalCreateJudgingRunRequest) returns (InternalCreateJudgingRunResponse) {
+    option (google.api.http) = {
+      post: "/internal/judgings/{judging_id}/runs"
+      body: "*"
+    };
+  }
+}
+
+// DOMjudge-style verdicts
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  VERDICT_CORRECT = 1;           // Accepted
+  VERDICT_WRONG_ANSWER = 2;      // Wrong Answer
+  VERDICT_TIMELIMIT = 3;         // Time Limit Exceeded
+  VERDICT_MEMORY_LIMIT = 4;      // Memory Limit Exceeded
+  VERDICT_RUN_ERROR = 5;         // Runtime Error
+  VERDICT_COMPILER_ERROR = 6;    // Compilation Error
+  VERDICT_OUTPUT_LIMIT = 7;      // Output Limit Exceeded
+  VERDICT_PRESENTATION = 8;      // Presentation Error
+}
+
+// Submission status
+enum SubmissionStatus {
+  SUBMISSION_STATUS_UNSPECIFIED = 0;
+  SUBMISSION_STATUS_PENDING = 1;
+  SUBMISSION_STATUS_QUEUED = 2;
+  SUBMISSION_STATUS_JUDGING = 3;
+  SUBMISSION_STATUS_COMPLETED = 4;
+  SUBMISSION_STATUS_ERROR = 5;
+}
+
+// Submission
+message Submission {
+  string id = 1;
+  string user_id = 2;
+  string problem_id = 3;
+  string contest_id = 4;
+  string language_id = 5;
+  string source_path = 6;
+  string submit_time = 7;
+  int32 team_pending_count = 8;
+}
+
+// Submission summary for list
+message SubmissionSummary {
+  string id = 1;
+  common.v1.UserRef user = 2;
+  string problem_id = 3;
+  string problem_name = 4;
+  string language_id = 5;
+  Verdict verdict = 6;
+  double runtime = 7;             // seconds
+  int32 memory = 8;               // kilobytes
+  string submit_time = 9;
+}
+
+// Judging result (DOMjudge-style)
+message Judging {
+  string id = 1;
+  string submission_id = 2;
+  string judgehost_id = 3;
+
+  string start_time = 4;
+  string end_time = 5;
+  double max_runtime = 6;
+  int32 max_memory = 7;
+
+  Verdict verdict = 8;
+
+  bool compile_success = 9;
+  string compile_output_path = 10;
+
+  bool valid = 11;                // False if rejudged
+  bool verified = 12;
+  string verified_by = 13;
+
+  double score = 14;              // For partial scoring
+}
+
+// Judging run (per testcase result)
+message JudgingRun {
+  string id = 1;
+  string judging_id = 2;
+  string test_case_id = 3;
+  int32 rank = 4;
+
+  double runtime = 5;             // CPU time
+  double wall_time = 6;
+  int32 memory = 7;
+
+  Verdict verdict = 8;
+
+  string output_run_path = 9;
+  string output_diff_path = 10;
+  string output_error_path = 11;
+}
+
+// Request/Response messages
+message CreateSubmissionRequest {
+  string problem_id = 1;
+  string contest_id = 2;
+  string language_id = 3;
+  string source_code = 4;
+}
+
+message CreateSubmissionResponse {
+  string id = 1;
+  SubmissionStatus status = 2;
+}
+
+message GetSubmissionRequest {
+  string id = 1;
+}
+
+message GetSubmissionResponse {
+  Submission submission = 1;
+  Judging latest_judging = 2;
+}
+
+message ListSubmissionsRequest {
+  common.v1.Pagination pagination = 1;
+  string user_id = 2;
+  string problem_id = 3;
+  string contest_id = 4;
+  Verdict verdict = 5;
+  string language_id = 6;
+}
+
+message ListSubmissionsResponse {
+  repeated SubmissionSummary submissions = 1;
+  common.v1.PaginatedResponse pagination = 2;
+}
+
+message GetJudgingRequest {
+  string submission_id = 1;
+  string judging_id = 2;          // Optional, get specific judging
+}
+
+message GetJudgingResponse {
+  Judging judging = 1;
+}
+
+message GetJudgingRunsRequest {
+  string submission_id = 1;
+  string judging_id = 2;
+}
+
+message GetJudgingRunsResponse {
+  repeated JudgingRun runs = 1;
+}
+
+// Internal API messages
+message InternalCreateJudgingRequest {
+  string submission_id = 1;
+  string judgehost_id = 2;
+}
+
+message InternalCreateJudgingResponse {
+  string judging_id = 1;
+}
+
+message InternalUpdateJudgingRequest {
+  string judging_id = 1;
+  string verdict = 2;
+  double max_runtime = 3;
+  int32 max_memory = 4;
+  bool compile_success = 5;
+  string compile_error = 6;
+}
+
+message InternalUpdateJudgingResponse {
+  string judging_id = 1;
+  string status = 2;
+}
+
+message InternalCreateJudgingRunRequest {
+  string judging_id = 1;
+  string test_case_id = 2;
+  int32 rank = 3;
+  string verdict = 4;
+  double runtime = 5;
+  double wall_time = 6;
+  int32 memory = 7;
+  string output_run = 8;
+  string output_diff = 9;
+  string output_error = 10;
+}
+
+message InternalCreateJudgingRunResponse {
+  string run_id = 1;
+  string status = 2;
+}

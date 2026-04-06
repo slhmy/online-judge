@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/common/v1;commonv1";
+
+// Pagination parameters
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+// Paginated response metadata
+message PaginatedResponse {
+  int32 total = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+// User reference (from Identra)
+message UserRef {
+  string id = 1;
+  string username = 2;
+}
+
+// Empty message
+message Empty {}

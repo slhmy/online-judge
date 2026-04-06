@@ -1,0 +1,2 @@
+I'm designing a modernized online judge platform for competitive programming (like LeetCode, Codeforces, Domjudge, etc.). The platform should use a microservices architecture and be built with scalability in mind. The platform should support multiple programming languages, provide real-time feedback to users, and have a user-friendly interface.
+Create an agent team to achieve this goal. The team should consist of 3 agents, each with a specific role: one for frontend development, one for backend development, one for judging system development.

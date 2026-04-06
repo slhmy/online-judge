@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/notification/v1;notificationv1";
+
+import "google/api/annotations.proto";
+
+// Notification Service - WebSocket and notifications
+service NotificationService {
+  // Get notifications
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/notifications"
+    };
+  }
+
+  // Mark notification as read
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/notifications/{id}/read"
+      body: "*"
+    };
+  }
+}
+
+// Notification types
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_SUBMISSION_JUDGED = 1;
+  NOTIFICATION_TYPE_CONTEST_STARTING = 2;
+  NOTIFICATION_TYPE_CONTEST_ANNOUNCEMENT = 3;
+  NOTIFICATION_TYPE_CLARIFICATION = 4;
+}
+
+// Notification
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  NotificationType type = 3;
+  string title = 4;
+  string body = 5;
+  map<string, string> data = 6;
+  bool read = 7;
+  string created_at = 8;
+}
+
+// Judge progress (for WebSocket)
+message JudgeProgress {
+  string submission_id = 1;
+  string status = 2;              // "compiling", "running", "completed"
+  int32 progress = 3;             // 0-100
+  int32 current_case = 4;
+  int32 total_cases = 5;
+  string verdict = 6;
+  double runtime = 7;
+  int32 memory = 8;
+}
+
+// Request/Response messages
+message GetNotificationsRequest {
+  int32 limit = 1;
+  bool unread_only = 2;
+}
+
+message GetNotificationsResponse {
+  repeated Notification notifications = 1;
+}
+
+message MarkAsReadRequest {
+  string id = 1;
+}
+
+message MarkAsReadResponse {
+  bool success = 1;
+}
