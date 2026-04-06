@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import TestRunPanel from '@/components/TestRunPanel'
+import { TestRunResult } from '@/types'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -55,6 +57,8 @@ export default function ProblemDetailPage() {
   const [language, setLanguage] = useState('cpp')
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [testRunResult, setTestRunResult] = useState<TestRunResult | null>(null)
 
   useEffect(() => {
     async function fetchProblem() {
@@ -113,6 +117,43 @@ export default function ProblemDetailPage() {
       alert('Submission failed: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleRun = async () => {
+    if (!code.trim()) {
+      alert('Please write some code before running')
+      return
+    }
+
+    setRunning(true)
+    setTestRunResult(null)
+
+    try {
+      const res = await fetch(`${BFF_URL}/api/v1/test-runs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          problem_id: problemId,
+          language: language,
+          source: code,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`HTTP error! status: ${res.status} - ${errorText}`)
+      }
+
+      const data: TestRunResult = await res.json()
+      setTestRunResult(data)
+    } catch (error) {
+      console.error('Test run error:', error)
+      alert('Test run failed: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setRunning(false)
     }
   }
 
@@ -212,13 +253,22 @@ export default function ProblemDetailPage() {
             ))}
           </select>
 
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 disabled:bg-gray-600"
-          >
-            {submitting ? 'Submitting...' : 'Submit'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRun}
+              disabled={running}
+              className="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-600"
+            >
+              {running ? 'Running...' : 'Run'}
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 disabled:bg-gray-600"
+            >
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1">
@@ -235,6 +285,13 @@ export default function ProblemDetailPage() {
             }}
           />
         </div>
+
+        {/* Test Run Results Panel */}
+        <TestRunPanel
+          result={testRunResult}
+          loading={running}
+          onClose={() => setTestRunResult(null)}
+        />
       </div>
     </div>
   )

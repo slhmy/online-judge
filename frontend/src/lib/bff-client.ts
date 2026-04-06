@@ -152,7 +152,7 @@ export class BFFClient {
     })
   }
 
-  // User profile
+// User profile
   async getUserProfile(userId: string) {
     return this.fetch(`/api/v1/users/${userId}/profile`)
   }
@@ -181,6 +181,18 @@ export class BFFClient {
     if (verdict) params.append('verdict', verdict)
     if (problemId) params.append('problem_id', problemId)
     return this.fetch(`/api/v1/users/${userId}/submissions?${params.toString()}`)
+  }
+
+  // Test Run
+  async createTestRun(data: { problemId: string; language: string; source: string }) {
+    return this.fetch('/api/v1/test-runs', {
+      method: 'POST',
+      body: JSON.stringify({
+        problem_id: data.problemId,
+        language: data.language,
+        source: data.source,
+      }),
+    })
   }
 }
 

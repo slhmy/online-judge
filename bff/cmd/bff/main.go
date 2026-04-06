@@ -105,6 +105,7 @@ func main() {
 	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL)
 	sseHandler := handler.NewSSEHandler(sseHub)
 	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb)
+	testRunHandler := handler.NewTestRunHandler(problemClient)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -178,6 +179,9 @@ func main() {
 			// Rejudge submission (admin only)
 			r.Post("/submissions/{id}/rejudge", submissionHandler.Rejudge)
 		})
+
+		// Test runs (public - sample test case execution)
+		testRunHandler.RegisterRoutes(r)
 	})
 
 	// SSE endpoint for real-time submission updates

@@ -120,3 +120,32 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { id: 'rust', name: 'Rust 1.70', timeFactor: 1.0, extensions: ['.rs'] },
   { id: 'nodejs', name: 'Node.js 18', timeFactor: 2.0, extensions: ['.js', '.ts'] },
 ]
+
+// Test Run types
+export interface TestRunRequest {
+  problemId: string
+  language: string
+  source: string
+}
+
+export interface TestRunTestCaseResult {
+  test_case_id: string
+  rank: number
+  verdict: string
+  input: string
+  expected: string
+  output: string
+  runtime: number
+  memory: number
+  pass: boolean
+}
+
+export interface TestRunResult {
+  id: string
+  status: string
+  verdict: string
+  runtime: number
+  memory: number
+  compile_error?: string
+  test_cases: TestRunTestCaseResult[]
+}
