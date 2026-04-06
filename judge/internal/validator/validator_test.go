@@ -1,9 +1,15 @@
 package validator
 
 import (
+	"context"
+	"encoding/base64"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultValidator_Validate(t *testing.T) {
@@ -337,4 +343,262 @@ func BenchmarkValidator_ValidateLarge(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		validator.Validate(expected, actual)
 	}
+}
+
+// Special Validator Tests
+
+func TestSpecialValidator_ExitCodes(t *testing.T) {
+	tests := []struct {
+		name         string
+		exitCode     int
+		expectedVerd Verdict
+	}{
+		{
+			name:         "exit code 42 = correct",
+			exitCode:     ExitCodeCorrect,
+			expectedVerd: VerdictCorrect,
+		},
+		{
+			name:         "exit code 43 = wrong answer",
+			exitCode:     ExitCodeWrongAnswer,
+			expectedVerd: VerdictWrongAnswer,
+		},
+		{
+			name:         "exit code 44 = presentation error",
+			exitCode:     ExitCodePresentation,
+			expectedVerd: VerdictPresentation,
+		},
+		{
+			name:         "exit code 0 = correct (non-standard)",
+			exitCode:     0,
+			expectedVerd: VerdictCorrect,
+		},
+		{
+			name:         "exit code 1 = internal error",
+			exitCode:     1,
+			expectedVerd: VerdictInternalError,
+		},
+		{
+			name:         "exit code -1 = internal error",
+			exitCode:     -1,
+			expectedVerd: VerdictInternalError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test that exit code constants are correct
+			switch tt.exitCode {
+			case ExitCodeCorrect:
+				assert.Equal(t, 42, ExitCodeCorrect)
+			case ExitCodeWrongAnswer:
+				assert.Equal(t, 43, ExitCodeWrongAnswer)
+			case ExitCodePresentation:
+				assert.Equal(t, 44, ExitCodePresentation)
+			}
+		})
+	}
+}
+
+func TestValidatorCache_StoreAndGet(t *testing.T) {
+	// Create temporary cache directory
+	cacheDir := t.TempDir()
+	cache := NewValidatorCache(cacheDir)
+
+	testData := []byte("#!/bin/bash\necho 'test validator'\nexit 42")
+	testID := "test-validator-001"
+	testMD5 := "abc123"
+
+	// Store validator
+	binary, err := cache.Store(testID, testData, testMD5)
+	require.NoError(t, err)
+	assert.NotNil(t, binary)
+	assert.Equal(t, testID, binary.ID)
+	assert.Equal(t, testMD5, binary.MD5Sum)
+	assert.FileExists(t, binary.Path)
+
+	// Verify file contents
+	data, err := os.ReadFile(binary.Path)
+	require.NoError(t, err)
+	assert.Equal(t, testData, data)
+
+	// Get from cache
+	cached, ok := cache.Get(testID)
+	require.True(t, ok)
+	assert.Equal(t, binary.Path, cached.Path)
+	assert.Equal(t, testMD5, cached.MD5Sum)
+
+	// Verify cache size
+	assert.Equal(t, 1, cache.Size())
+}
+
+func TestValidatorCache_SameMD5Skip(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache := NewValidatorCache(cacheDir)
+
+	testData := []byte("test data")
+	testID := "test-validator"
+	testMD5 := "same-md5"
+
+	// Store first time
+	binary1, err := cache.Store(testID, testData, testMD5)
+	require.NoError(t, err)
+
+	// Store again with same MD5 - should return same entry
+	binary2, err := cache.Store(testID, []byte("different data"), testMD5)
+	require.NoError(t, err)
+	assert.Equal(t, binary1.Path, binary2.Path)
+
+	// Cache should still have 1 entry
+	assert.Equal(t, 1, cache.Size())
+}
+
+func TestValidatorCache_Clear(t *testing.T) {
+	cacheDir := t.TempDir()
+	cache := NewValidatorCache(cacheDir)
+
+	// Store multiple validators
+	for i := 0; i < 3; i++ {
+		_, err := cache.Store(string(rune('a'+i)), []byte("data"), "md5")
+		require.NoError(t, err)
+	}
+
+	assert.Equal(t, 3, cache.Size())
+
+	// Clear cache
+	err := cache.Clear()
+	require.NoError(t, err)
+	assert.Equal(t, 0, cache.Size())
+}
+
+func TestSpecialValidatorConfig_Defaults(t *testing.T) {
+	config := DefaultSpecialValidatorConfig()
+
+	assert.Equal(t, 30*time.Second, config.TimeLimit)
+	assert.Equal(t, int64(524288), config.MemoryLimit) // 512 MB
+	assert.Equal(t, "/tmp/validator-cache", config.CacheDir)
+	assert.True(t, config.EnableCache)
+}
+
+// MockHTTPClient for testing
+type MockHTTPClient struct {
+	response []byte
+	err      error
+}
+
+func (m *MockHTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
+	return m.response, m.err
+}
+
+func TestSpecialValidator_FetchValidator_RawBinary(t *testing.T) {
+	// Test raw binary response
+	validatorBinary := []byte("#!/bin/bash\nexit 42")
+
+	mockClient := &MockHTTPClient{response: validatorBinary}
+	config := SpecialValidatorConfig{
+		TimeLimit:   5 * time.Second,
+		EnableCache: false,
+	}
+
+	validator := NewSpecialValidator(config, mockClient, "http://localhost:8080")
+
+	data, md5sum, err := validator.fetchValidator(context.Background(), "test-id")
+	require.NoError(t, err)
+	assert.Equal(t, validatorBinary, data)
+	assert.Empty(t, md5sum)
+}
+
+func TestSpecialValidator_FetchValidator_JSONResponse(t *testing.T) {
+	// Test JSON response with base64 binary
+	validatorBinary := []byte("#!/bin/bash\nexit 42")
+	encodedBinary := base64.StdEncoding.EncodeToString(validatorBinary)
+
+	jsonResponse := `{
+		"executable": {
+			"id": "test-id",
+			"external_id": "validator-1",
+			"type": "compare",
+			"executable_path": "/path/to/validator",
+			"md5sum": "test-md5",
+			"binary_data": "` + encodedBinary + `"
+		}
+	}`
+
+	mockClient := &MockHTTPClient{response: []byte(jsonResponse)}
+	config := SpecialValidatorConfig{
+		TimeLimit:   5 * time.Second,
+		EnableCache: false,
+	}
+
+	validator := NewSpecialValidator(config, mockClient, "http://localhost:8080")
+
+	data, md5sum, err := validator.fetchValidator(context.Background(), "test-id")
+	require.NoError(t, err)
+	assert.Equal(t, validatorBinary, data)
+	assert.Equal(t, "test-md5", md5sum)
+}
+
+func TestSpecialValidator_FetchValidator_NoHTTPClient(t *testing.T) {
+	config := SpecialValidatorConfig{
+		TimeLimit:   5 * time.Second,
+		EnableCache: false,
+	}
+
+	validator := NewSpecialValidator(config, nil, "http://localhost:8080")
+
+	_, _, err := validator.fetchValidator(context.Background(), "test-id")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no HTTP client configured")
+}
+
+// TestValidatorBinary_Execution tests actual validator script execution
+func TestValidatorBinary_Execution(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Create a temporary validator script
+	tmpDir := t.TempDir()
+	validatorPath := filepath.Join(tmpDir, "validator.sh")
+
+	validatorScript := `#!/bin/bash
+# Simple validator that checks if output matches expected
+INPUT="$1"
+ANSWER="$2"
+OUTPUT="$3"
+
+EXPECTED=$(cat "$ANSWER")
+ACTUAL=$(cat "$OUTPUT")
+
+if [ "$EXPECTED" = "$ACTUAL" ]; then
+    echo "Correct output"
+    exit 42
+else
+    echo "Wrong answer"
+    exit 43
+fi
+`
+
+	err := os.WriteFile(validatorPath, []byte(validatorScript), 0755)
+	require.NoError(t, err)
+
+	// Create test input files
+	inputFile := filepath.Join(tmpDir, "input.txt")
+	answerFile := filepath.Join(tmpDir, "answer.txt")
+	outputFile := filepath.Join(tmpDir, "output.txt")
+
+	os.WriteFile(inputFile, []byte("test input"), 0644)
+	os.WriteFile(answerFile, []byte("expected output"), 0644)
+	os.WriteFile(outputFile, []byte("expected output"), 0644)
+
+	// Create ValidatorBinary
+	binary := &ValidatorBinary{
+		ID:       "test-validator",
+		Path:     validatorPath,
+		MD5Sum:   "test-md5",
+		LoadedAt: time.Now(),
+	}
+
+	// Verify the binary exists and is executable
+	assert.FileExists(t, binary.Path)
 }

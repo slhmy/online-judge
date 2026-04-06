@@ -2,12 +2,14 @@ package handler
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
@@ -21,15 +23,22 @@ type InternalHandler struct {
 	problemClient    pbProblem.ProblemServiceClient
 	redis            *redis.Client
 	cache            *cache.Service
+	db               *pgxpool.Pool
 }
 
 // NewInternalHandler creates a new internal handler
-func NewInternalHandler(submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, redis *redis.Client, cacheService *cache.Service) *InternalHandler {
+func NewInternalHandler(submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, redis *redis.Client, cacheService *cache.Service, databaseURL string) *InternalHandler {
+	db, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		log.Printf("Warning: Failed to connect to database in internal handler: %v", err)
+	}
+
 	return &InternalHandler{
 		submissionClient: submissionClient,
 		problemClient:    problemClient,
 		redis:            redis,
 		cache:            cacheService,
+		db:               db,
 	}
 }
 
@@ -405,16 +414,75 @@ func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) 
 	ctx := context.Background()
 	executableID := chi.URLParam(r, "id")
 
-	// Try Redis cache first
-	executableKey := "executable:" + executableID + ":binary"
-	binaryData, err := h.redis.Get(ctx, executableKey).Result()
+	// Try Redis cache first for binary data
+	binaryCacheKey := "executable:" + executableID + ":binary"
+	binaryData, err := h.redis.Get(ctx, binaryCacheKey).Result()
 	if err == nil {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Write([]byte(binaryData))
 		return
 	}
 
-	// Try to get metadata from cache
+	// Query database for executable metadata
+	if h.db != nil {
+		var exec struct {
+			ID             string
+			ExternalID     string
+			Type           string
+			Description    string
+			ExecutablePath string
+			MD5Sum         string
+			BinaryData     []byte
+		}
+
+		query := `
+			SELECT id, external_id, type, description, executable_path, md5sum
+			FROM executables
+			WHERE id = $1 OR external_id = $1
+		`
+
+		err := h.db.QueryRow(ctx, query, executableID).Scan(
+			&exec.ID, &exec.ExternalID, &exec.Type, &exec.Description,
+			&exec.ExecutablePath, &exec.MD5Sum,
+		)
+
+		if err == nil {
+			// Found executable in database
+			// Try to fetch binary from object storage or executable_path
+			// For now, check if executable_path contains binary data (inlined)
+			if exec.ExecutablePath != "" && len(exec.ExecutablePath) > 0 {
+				// If executable_path looks like base64 encoded data, decode it
+				// In production, this would fetch from MinIO/S3
+				decoded, err := base64.StdEncoding.DecodeString(exec.ExecutablePath)
+				if err == nil {
+					// Cache the binary for future requests
+					h.redis.Set(ctx, binaryCacheKey, string(decoded), 3600) // 1 hour TTL
+					w.Header().Set("Content-Type", "application/octet-stream")
+					w.Write(decoded)
+					return
+				}
+			}
+
+			// Return JSON response with metadata for the judge to handle
+			response := map[string]interface{}{
+				"executable": map[string]interface{}{
+					"id":              exec.ID,
+					"external_id":     exec.ExternalID,
+					"type":            exec.Type,
+					"description":     exec.Description,
+					"executable_path": exec.ExecutablePath,
+					"md5sum":          exec.MD5Sum,
+					"binary_data":     "", // Will be fetched separately if needed
+				},
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	// Check metadata cache
 	metaKey := "executable:" + executableID + ":meta"
 	md5sum, err := h.redis.HGet(ctx, metaKey, "md5sum").Result()
 	if err == nil {
@@ -425,20 +493,19 @@ func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"executable": map[string]interface{}{
-				"id":             executableID,
-				"type":           execType,
+				"id":              executableID,
+				"type":            execType,
 				"executable_path": execPath,
-				"md5sum":         md5sum,
+				"md5sum":          md5sum,
 			},
 		})
 		return
 	}
 
-	// For now, return a placeholder validator script for testing
-	// In production, this would fetch from database and object storage
-	log.Printf("Executable %s not found in cache, returning placeholder", executableID)
+	// Return placeholder validator for testing if not found in database
+	log.Printf("Executable %s not found, returning placeholder validator", executableID)
 
-	// Return a simple shell validator script that compares output
+	// DOMjudge-style validator script
 	placeholderValidator := `#!/bin/bash
 # DOMjudge-style validator exit codes:
 # 42 = correct
@@ -455,19 +522,19 @@ ACTUAL=$(cat "$OUTPUT" | sed 's/[[:space:]]*$//')
 
 # Compare
 if [ "$EXPECTED" = "$ACTUAL" ]; then
-	echo "Correct"
-	exit 42
+    echo "Correct"
+    exit 42
 else
-	# Check if whitespace-only difference (presentation error)
-	EXPECTED_NOSPACE=$(echo "$EXPECTED" | tr -d '[:space:]')
-	ACTUAL_NOSPACE=$(echo "$ACTUAL" | tr -d '[:space:]')
-	if [ "$EXPECTED_NOSPACE" = "$ACTUAL_NOSPACE" ]; then
-		echo "Presentation Error: whitespace differences"
-		exit 44
-	else
-		echo "Wrong Answer"
-		exit 43
-	fi
+    # Check if whitespace-only difference (presentation error)
+    EXPECTED_NOSPACE=$(echo "$EXPECTED" | tr -d '[:space:]')
+    ACTUAL_NOSPACE=$(echo "$ACTUAL" | tr -d '[:space:]')
+    if [ "$EXPECTED_NOSPACE" = "$ACTUAL_NOSPACE" ]; then
+        echo "Presentation Error: whitespace differences"
+        exit 44
+    else
+        echo "Wrong Answer"
+        exit 43
+    fi
 fi
 `
 

@@ -115,7 +115,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(cfg.IdentraGRPCHost, cfg.IdentraHTTPHost, cfg.DatabaseURL, cfg.AdminEmail)
 	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL, nil) // TODO: wire up rejudge service client
 	sseHandler := handler.NewSSEHandler(sseHub)
-	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb, cacheService)
+	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb, cacheService, cfg.DatabaseURL)
 	testRunHandler := handler.NewTestRunHandler(problemClient)
 
 	// Setup router

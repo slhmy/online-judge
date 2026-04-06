@@ -3,6 +3,8 @@ package validator
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -14,8 +16,8 @@ import (
 
 // DOMjudge-style validator exit codes
 const (
-	ExitCodeCorrect     = 42 // Accept / Correct
-	ExitCodeWrongAnswer = 43 // Wrong Answer
+	ExitCodeCorrect      = 42 // Accept / Correct
+	ExitCodeWrongAnswer  = 43 // Wrong Answer
 	ExitCodePresentation = 44 // Presentation Error (some validators use this)
 )
 
@@ -97,8 +99,8 @@ func (v *SpecialValidator) Validate(ctx context.Context, validatorID string, arg
 
 	// Write test case files
 	inputFile := filepath.Join(workDir, "testcase.in")
-	answerFile := filepath.Join(workDir, "testcase.out")  // Expected output
-	outputFile := filepath.Join(workDir, "team.out")      // Actual output (submission output)
+	answerFile := filepath.Join(workDir, "testcase.out") // Expected output
+	outputFile := filepath.Join(workDir, "team.out")     // Actual output (submission output)
 
 	if err := os.WriteFile(inputFile, input, 0644); err != nil {
 		return VerdictInternalError, fmt.Sprintf("Failed to write input file: %v", err)
@@ -177,10 +179,10 @@ func (v *SpecialValidator) Validate(ctx context.Context, validatorID string, arg
 func (v *SpecialValidator) getValidator(ctx context.Context, validatorID string) (*ValidatorBinary, error) {
 	// Check cache first
 	if v.cache != nil {
-	 cached, ok := v.cache.Get(validatorID)
-	 if ok {
-		 return cached, nil
-	 }
+		cached, ok := v.cache.Get(validatorID)
+		if ok {
+			return cached, nil
+		}
 	}
 
 	// Fetch validator binary from backend
@@ -191,12 +193,12 @@ func (v *SpecialValidator) getValidator(ctx context.Context, validatorID string)
 
 	// Store in cache if enabled
 	if v.cache != nil {
-	 cached, err := v.cache.Store(validatorID, binaryData, md5sum)
-	 if err != nil {
-		 log.Printf("Warning: failed to cache validator %s: %v", validatorID, err)
-		 // Continue anyway - we can still use it
-	 }
-	 return cached, nil
+		cached, err := v.cache.Store(validatorID, binaryData, md5sum)
+		if err != nil {
+			log.Printf("Warning: failed to cache validator %s: %v", validatorID, err)
+			// Continue anyway - we can still use it
+		}
+		return cached, nil
 	}
 
 	// If no cache, create temporary file
@@ -215,34 +217,62 @@ func (v *SpecialValidator) getValidator(ctx context.Context, validatorID string)
 // fetchValidator downloads validator binary from the backend API
 func (v *SpecialValidator) fetchValidator(ctx context.Context, validatorID string) ([]byte, string, error) {
 	if v.httpClient == nil {
-	 return nil, "", fmt.Errorf("no HTTP client configured")
+		return nil, "", fmt.Errorf("no HTTP client configured")
 	}
 
 	url := fmt.Sprintf("%s/internal/executables/%s", v.baseURL, validatorID)
 	data, err := v.httpClient.Get(ctx, url)
 	if err != nil {
-	 return nil, "", fmt.Errorf("HTTP request failed: %w", err)
+		return nil, "", fmt.Errorf("HTTP request failed: %w", err)
 	}
 
-	// Parse response to get binary and md5sum
-	// The response should include the binary data and metadata
-	var resp struct {
-		BinaryData []byte `json:"binary_data"`
-		MD5Sum     string `json:"md5sum"`
-		Path       string `json:"executable_path"`
+	// Try to parse as JSON response first
+	var jsonResp struct {
+		Executable struct {
+			ID             string `json:"id"`
+			ExternalID     string `json:"external_id"`
+			Type           string `json:"type"`
+			ExecutablePath string `json:"executable_path"`
+			MD5Sum         string `json:"md5sum"`
+			BinaryData     string `json:"binary_data"`
+		} `json:"executable"`
 	}
 
-	// For simplicity, if data is raw binary, use it directly
-	// Otherwise parse as JSON
-	if len(data) > 0 && data[0] != '{' {
-	 // Raw binary data
-	 return data, "", nil
+	if err := json.Unmarshal(data, &jsonResp); err == nil && jsonResp.Executable.ID != "" {
+		// Successfully parsed JSON response
+		md5sum := jsonResp.Executable.MD5Sum
+
+		// If binary_data is provided as base64, decode it
+		if jsonResp.Executable.BinaryData != "" {
+			decoded, err := base64.StdEncoding.DecodeString(jsonResp.Executable.BinaryData)
+			if err != nil {
+				// Try without padding (some implementations don't use padding)
+				decoded, err = base64.RawStdEncoding.DecodeString(jsonResp.Executable.BinaryData)
+				if err != nil {
+					return nil, md5sum, fmt.Errorf("failed to decode base64 binary data: %w", err)
+				}
+			}
+			return decoded, md5sum, nil
+		}
+
+		// If executable_path contains base64 encoded data, try to decode
+		if jsonResp.Executable.ExecutablePath != "" {
+			decoded, err := base64.StdEncoding.DecodeString(jsonResp.Executable.ExecutablePath)
+			if err == nil {
+				return decoded, md5sum, nil
+			}
+			// Not base64, might be a storage path - return placeholder
+			log.Printf("Executable %s has storage path %s, binary needs to be fetched separately",
+				validatorID, jsonResp.Executable.ExecutablePath)
+		}
+
+		// No binary data available in JSON, need to fetch separately
+		return nil, md5sum, fmt.Errorf("executable binary not available in response")
 	}
 
-	// Try JSON parsing
-	// Use a simple approach - assume binary_data is base64 encoded
-	resp.BinaryData = data
-	return resp.BinaryData, resp.MD5Sum, nil
+	// If not JSON, treat as raw binary data
+	// This handles cases where the endpoint returns raw binary directly
+	return data, "", nil
 }
 
 // ValidatorCache manages cached validator binaries
@@ -270,14 +300,14 @@ func (c *ValidatorCache) Get(id string) (*ValidatorBinary, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
- cached, ok := c.binary[id]
+	cached, ok := c.binary[id]
 	if !ok {
-	 return nil, false
+		return nil, false
 	}
 
 	// Check if file still exists
 	if _, err := os.Stat(cached.Path); err != nil {
-	 return nil, false
+		return nil, false
 	}
 
 	return cached, true
@@ -290,16 +320,16 @@ func (c *ValidatorCache) Store(id string, data []byte, md5sum string) (*Validato
 
 	// Check if we already have this version (by md5sum)
 	if existing, ok := c.binary[id]; ok && existing.MD5Sum == md5sum {
-	 return existing, nil
+		return existing, nil
 	}
 
 	// Write binary to cache file
 	path := filepath.Join(c.dir, fmt.Sprintf("validator-%s", id))
 	if err := os.WriteFile(path, data, 0755); err != nil {
-	 return nil, fmt.Errorf("failed to write cached binary: %w", err)
+		return nil, fmt.Errorf("failed to write cached binary: %w", err)
 	}
 
- cached := &ValidatorBinary{
+	cached := &ValidatorBinary{
 		ID:       id,
 		Path:     path,
 		MD5Sum:   md5sum,
@@ -317,9 +347,9 @@ func (c *ValidatorCache) Clear() error {
 
 	// Remove all cached files
 	for id, binary := range c.binary {
-	 if err := os.Remove(binary.Path); err != nil {
-		 log.Printf("Warning: failed to remove cached validator %s: %v", id, err)
-	 }
+		if err := os.Remove(binary.Path); err != nil {
+			log.Printf("Warning: failed to remove cached validator %s: %v", id, err)
+		}
 	}
 
 	c.binary = make(map[string]*ValidatorBinary)
