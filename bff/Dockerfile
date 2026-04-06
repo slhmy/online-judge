@@ -20,7 +20,6 @@ COPY backend/proto ./backend/proto/
 COPY bff/go.mod bff/go.sum ./
 COPY bff/cmd ./cmd/
 COPY bff/internal ./internal/
-COPY bff/pkg ./pkg/
 
 # Update replace directive for Docker build - only replace the path, not module name
 RUN sed -i 's|=> ../backend|=> /app/backend|g' go.mod
