@@ -60,7 +60,7 @@ export default function AdminProblemsPage() {
   const problems: Problem[] = data?.problems || []
 
   const createMutation = useCreateProblem()
-  const updateMutation = editingProblem ? useUpdateProblem(editingProblem.id) : null
+  const updateMutation = useUpdateProblem(editingProblem?.id || '')
   const deleteMutation = useDeleteProblem()
 
   const {
