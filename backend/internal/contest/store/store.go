@@ -485,3 +485,122 @@ func formatDuration(d time.Duration) string {
 	s := d / time.Second
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
+
+// RefreshScoreboard recalculates all team scores for a contest
+func (s *ContestStore) RefreshScoreboard(ctx context.Context, contestID string) error {
+	parsedContestID, err := uuid.Parse(contestID)
+	if err != nil {
+		return err
+	}
+
+	// Get all teams for this contest
+	rows, err := s.db.Query(ctx, `
+		SELECT id FROM teams WHERE contest_id = $1
+	`, parsedContestID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var teamIDs []uuid.UUID
+	for rows.Next() {
+		var teamID pgtype.UUID
+		if err := rows.Scan(&teamID); err != nil {
+			continue
+		}
+		if teamID.Valid {
+			teamIDs = append(teamIDs, uuid.UUID(teamID.Bytes))
+		}
+	}
+
+	// Update each team's score
+	for _, teamID := range teamIDs {
+		if err := s.UpdateTeamScore(ctx, contestID, teamID.String()); err != nil {
+			// Log but continue
+			fmt.Printf("Failed to update team score for team %s: %v\n", teamID.String(), err)
+		}
+	}
+
+	return nil
+}
+
+// UpdateTeamScore recalculates a team's points and total time
+func (s *ContestStore) UpdateTeamScore(ctx context.Context, contestID, teamID string) error {
+	parsedContestID, err := uuid.Parse(contestID)
+	if err != nil {
+		return err
+	}
+	parsedTeamID, err := uuid.Parse(teamID)
+	if err != nil {
+		return err
+	}
+
+	// Get contest start time
+	var contestStart pgtype.Timestamp
+	err = s.db.QueryRow(ctx, `SELECT start_time FROM contests WHERE id = $1`, parsedContestID).Scan(&contestStart)
+	if err != nil {
+		return err
+	}
+
+	// Get contest problems
+	problems, err := s.GetContestProblems(ctx, contestID)
+	if err != nil {
+		return err
+	}
+
+	var totalPoints int32
+	var totalTime int32
+
+	// Calculate score for each problem (ICPC style)
+	for _, p := range problems {
+		parsedProblemID, err := uuid.Parse(p.ProblemId)
+		if err != nil {
+			continue
+		}
+
+		// Find first correct submission for this problem
+		var correctTime pgtype.Timestamp
+		var correctExists bool
+		err = s.db.QueryRow(ctx, `
+			SELECT s.submit_time, EXISTS(SELECT 1)
+			FROM submissions s
+			JOIN judgings j ON j.submission_id = s.id
+			WHERE s.team_id = $1 AND s.problem_id = $2 AND s.contest_id = $3
+			  AND j.verdict = 'correct' AND j.valid = true
+			ORDER BY s.submit_time ASC
+			LIMIT 1
+		`, parsedTeamID, parsedProblemID, parsedContestID).Scan(&correctTime, &correctExists)
+		if err != nil || !correctExists {
+			continue
+		}
+
+		totalPoints++
+
+		// Count wrong submissions before the correct one
+		var wrongCount int32
+		if correctTime.Valid {
+			err = s.db.QueryRow(ctx, `
+				SELECT COUNT(*)
+				FROM submissions s
+				JOIN judgings j ON j.submission_id = s.id
+				WHERE s.team_id = $1 AND s.problem_id = $2 AND s.contest_id = $3
+				  AND j.verdict != 'correct' AND j.valid = true
+				  AND s.submit_time < $4
+			`, parsedTeamID, parsedProblemID, parsedContestID, correctTime.Time).Scan(&wrongCount)
+			if err != nil {
+				wrongCount = 0
+			}
+
+			// Calculate penalty time (correct time + 20 * wrong count)
+			timeFromStart := int32(correctTime.Time.Sub(contestStart.Time).Minutes())
+			totalTime += timeFromStart + (wrongCount * 20)
+		}
+	}
+
+	// Update team record
+	_, err = s.db.Exec(ctx, `
+		UPDATE teams SET points = $1, total_time = $2 WHERE id = $3
+	`, totalPoints, totalTime, parsedTeamID)
+
+	return err
+}

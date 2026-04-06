@@ -20,6 +20,7 @@ type JudgeJob struct {
 	Language     string    `json:"language"`
 	Priority     int       `json:"priority"`
 	SubmitTime   time.Time `json:"submit_time"`
+	RejudgeID    string    `json:"rejudge_id,omitempty"`
 }
 
 // JudgeResult represents the final judging result
@@ -597,6 +598,35 @@ func (q *JudgeQueue) PushJudgingResult(ctx context.Context, result *JudgeResult,
 	// Publish result via Redis for real-time updates
 	if err := q.PushResult(ctx, result); err != nil {
 		fmt.Printf("Warning: failed to publish result via Redis: %v\n", err)
+	}
+
+	return nil
+}
+
+// UpdateRejudgeSubmission notifies the backend about a completed rejudge submission
+func (q *JudgeQueue) UpdateRejudgeSubmission(ctx context.Context, rejudgeID, submissionID, judgingID, verdict string) error {
+	url := fmt.Sprintf("%s/internal/rejudges/%s/submissions", q.orchestratorURL, rejudgeID)
+
+	body := map[string]string{
+		"submission_id":  submissionID,
+		"new_judging_id": judgingID,
+		"new_verdict":    verdict,
+	}
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	resp, err := q.httpClient.Post(url, "application/json", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to update rejudge submission: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update rejudge submission: status %d, body: %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil

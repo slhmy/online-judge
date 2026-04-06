@@ -300,6 +300,13 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 		if err := w.queue.PushJudgingResult(ctx, result, judgingID, runResults); err != nil {
 			log.Printf("Failed to push judging result: %v", err)
 		}
+
+		// If this is a rejudge job, update the rejudging submission
+		if job.RejudgeID != "" {
+			if err := w.queue.UpdateRejudgeSubmission(ctx, job.RejudgeID, job.SubmissionID, judgingID, finalVerdict); err != nil {
+				log.Printf("Failed to update rejudge submission: %v", err)
+			}
+		}
 	} else {
 		// Publish result via Redis only
 		if err := w.queue.PushResult(ctx, result); err != nil {

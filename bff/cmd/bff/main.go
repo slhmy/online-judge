@@ -102,7 +102,7 @@ func main() {
 	contestHandler := handler.NewContestHandler(contestClient)
 	userHandler := handler.NewUserHandler(userClient)
 	authHandler := handler.NewAuthHandler(cfg.IdentraGRPCHost, cfg.IdentraHTTPHost, cfg.DatabaseURL, cfg.AdminEmail)
-	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL)
+	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL, nil) // TODO: wire up rejudge service client
 	sseHandler := handler.NewSSEHandler(sseHub)
 	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb)
 	testRunHandler := handler.NewTestRunHandler(problemClient)

@@ -16,6 +16,8 @@ type ContestStoreInterface interface {
 	GetContestProblems(ctx context.Context, contestID string) ([]*pb.ContestProblem, error)
 	Register(ctx context.Context, contestID, userID, teamName, affiliation string) (string, error)
 	GetScoreboard(ctx context.Context, contestID string, showFrozen bool) ([]*pb.ScoreboardEntry, string, bool, error)
+	RefreshScoreboard(ctx context.Context, contestID string) error
+	UpdateTeamScore(ctx context.Context, contestID, teamID string) error
 }
 
 // MockContestStore is a mock implementation of ContestStoreInterface for testing
@@ -151,4 +153,14 @@ func (m *MockContestStore) getProblemScores(ctx context.Context, contestID, team
 		})
 	}
 	return scores, nil
+}
+
+// RefreshScoreboard refreshes the scoreboard for a contest
+func (m *MockContestStore) RefreshScoreboard(ctx context.Context, contestID string) error {
+	return nil
+}
+
+// UpdateTeamScore updates a team's score
+func (m *MockContestStore) UpdateTeamScore(ctx context.Context, contestID, teamID string) error {
+	return nil
 }

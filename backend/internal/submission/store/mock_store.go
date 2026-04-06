@@ -20,6 +20,7 @@ type SubmissionStoreInterface interface {
 	GetJudgingByID(ctx context.Context, judgingID string) (*Judging, error)
 	GetJudgingRuns(ctx context.Context, judgingID string) ([]*JudgingRun, error)
 	UpdateSubmissionStatus(ctx context.Context, submissionID string, status string) error
+	InvalidateJudging(ctx context.Context, judgingID string) error
 }
 
 // MockSubmissionStore is a mock implementation of SubmissionStoreInterface for testing
@@ -192,6 +193,15 @@ func (m *MockSubmissionStore) UpdateSubmissionStatus(ctx context.Context, submis
 		return errors.New("submission not found")
 	}
 	// Mock implementation - no status field in mock
+	return nil
+}
+
+func (m *MockSubmissionStore) InvalidateJudging(ctx context.Context, judgingID string) error {
+	j, ok := m.Judgings[judgingID]
+	if !ok {
+		return errors.New("judging not found")
+	}
+	j.Valid = false
 	return nil
 }
 
