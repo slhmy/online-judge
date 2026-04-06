@@ -37,7 +37,7 @@ func main() {
 	judgeQueue := queue.NewJudgeQueue(rdb, cfg.OrchestratorURL)
 
 	// Create and start worker
-	w := worker.NewJudgeWorker(cfg.JudgehostID, cfg, judgeQueue)
+	w := worker.NewJudgeWorker(cfg.JudgehostID, cfg, judgeQueue, rdb)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

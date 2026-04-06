@@ -24,6 +24,10 @@ type Config struct {
 	DefaultMemoryLimit int64 `mapstructure:"default_memory_limit"`
 	DefaultTimeLimit    int64 `mapstructure:"default_time_limit"`
 	MaxProcesses        int   `mapstructure:"max_processes"`
+
+	// Compilation Cache
+	CompileCacheTTL     int  `mapstructure:"compile_cache_ttl"`     // hours
+	CompileCacheEnabled bool `mapstructure:"compile_cache_enabled"`
 }
 
 func Load() (*Config, error) {
@@ -38,6 +42,8 @@ func Load() (*Config, error) {
 	v.SetDefault("default_memory_limit", 524288) // 512 MB in KB
 	v.SetDefault("default_time_limit", 10)       // 10 seconds
 	v.SetDefault("max_processes", 50)
+	v.SetDefault("compile_cache_ttl", 24)        // 24 hours
+	v.SetDefault("compile_cache_enabled", true)  // Cache enabled by default
 
 	v.AutomaticEnv()
 

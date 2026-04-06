@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/online-judge/judge/internal/config"
 	"github.com/online-judge/judge/internal/queue"
 	"github.com/online-judge/judge/internal/sandbox"
@@ -33,12 +35,13 @@ type JudgeWorker struct {
 	config          *config.Config
 	validator       *validator.DefaultValidator
 	specialValidator *validator.SpecialValidator
+	compileCache    *sandbox.CompileCache
 	mu              sync.Mutex
 	currentJob      *queue.JudgeJob
 }
 
 // NewJudgeWorker creates a new judge worker
-func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue) *JudgeWorker {
+func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue, redisClient *redis.Client) *JudgeWorker {
 	// Set sandbox work directory if configured
 	if cfg.SandboxWorkDir != "" {
 		sandbox.SetSandboxWorkDir(cfg.SandboxWorkDir)
@@ -50,6 +53,10 @@ func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue)
 		specialValidatorConfig.CacheDir = cfg.SandboxWorkDir + "/validator-cache"
 	}
 
+	// Create compilation cache
+	cacheTTL := time.Duration(cfg.CompileCacheTTL) * time.Hour
+	compileCache := sandbox.NewCompileCache(redisClient, cacheTTL, cfg.CompileCacheEnabled)
+
 	return &JudgeWorker{
 		id:        id,
 		queue:     judgeQueue,
@@ -60,6 +67,7 @@ func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue)
 			judgeQueue,
 			cfg.OrchestratorURL,
 		),
+		compileCache: compileCache,
 	}
 }
 
@@ -145,7 +153,7 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 	}
 
 	// 4. Create sandbox environment
-	sb, err := sandbox.NewDockerSandbox()
+	sb, err := sandbox.NewDockerSandboxWithCache(w.compileCache)
 	if err != nil {
 		log.Printf("Failed to create sandbox: %v", err)
 		return &queue.JudgeResult{

@@ -138,6 +138,7 @@ var languageConfigs = map[string]LanguageConfig{
 type DockerSandbox struct {
 	workDir     string
 	containerID string
+	cache       *CompileCache
 }
 
 // sandboxWorkDirBase is the base directory for sandbox work directories
@@ -173,6 +174,16 @@ func NewDockerSandbox() (*DockerSandbox, error) {
 	}, nil
 }
 
+// NewDockerSandboxWithCache creates a new Docker sandbox with compilation cache
+func NewDockerSandboxWithCache(cache *CompileCache) (*DockerSandbox, error) {
+	sb, err := NewDockerSandbox()
+	if err != nil {
+		return nil, err
+	}
+	sb.cache = cache
+	return sb, nil
+}
+
 // Compile compiles source code for the given language
 func (s *DockerSandbox) Compile(ctx context.Context, source string, language string) (string, error) {
 	cfg, ok := languageConfigs[language]
@@ -191,7 +202,20 @@ func (s *DockerSandbox) Compile(ctx context.Context, source string, language str
 		return sourcePath, nil
 	}
 
-	// Run compilation in Docker container
+	// Check compilation cache
+	binaryPath := filepath.Join(s.workDir, cfg.BinaryFile)
+	if s.cache != nil {
+		cachedBinary, found := s.cache.Get(ctx, language, source)
+		if found {
+			// Cache hit - write cached binary to work directory
+			if err := os.WriteFile(binaryPath, cachedBinary, 0755); err != nil {
+				return "", fmt.Errorf("failed to write cached binary: %w", err)
+			}
+			return binaryPath, nil
+		}
+	}
+
+	// Cache miss or no cache - run compilation in Docker container
 	result, err := s.runDockerWithCopy(ctx, cfg.Image, cfg.CompileCmd, nil, Limits{
 		TimeLimit:    30 * time.Second, // Compilation time limit
 		MemoryLimit:  524288,            // 512MB for compilation
@@ -206,8 +230,20 @@ func (s *DockerSandbox) Compile(ctx context.Context, source string, language str
 		return "", fmt.Errorf("compilation error: %s", string(result.Error))
 	}
 
+	// Store compiled binary in cache
+	if s.cache != nil {
+		binaryData, err := os.ReadFile(binaryPath)
+		if err != nil {
+			// Log warning but don't fail - compilation succeeded
+			fmt.Printf("Warning: failed to read binary for cache: %v\n", err)
+		} else {
+			if err := s.cache.Set(ctx, language, source, binaryData); err != nil {
+				fmt.Printf("Warning: failed to cache compiled binary: %v\n", err)
+			}
+		}
+	}
+
 	// Return path to compiled binary
-	binaryPath := filepath.Join(s.workDir, cfg.BinaryFile)
 	return binaryPath, nil
 }
 
