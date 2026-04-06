@@ -1,14 +1,13 @@
 -- Seed data for testing
 
 -- Insert languages
-INSERT INTO languages (id, external_id, name, time_factor, extensions, allow_submit, allow_judge) VALUES
-('cpp', 'cpp', 'C++ 17', 1.0, ARRAY['.cpp', '.cc', '.cxx'], true, true),
-('c', 'c', 'C11', 1.0, ARRAY['.c'], true, true),
-('python3', 'python3', 'Python 3', 2.0, ARRAY['.py', '.py3'], true, true),
-('java', 'java', 'Java 17', 1.5, ARRAY['.java'], true, true),
-('go', 'go', 'Go 1.21', 1.2, ARRAY['.go'], true, true),
-('rust', 'rust', 'Rust', 1.0, ARRAY['.rs'], true, true),
-('nodejs', 'nodejs', 'Node.js 18', 2.0, ARRAY['.js', '.mjs'], true, true);
+INSERT INTO languages (id, external_id, name, time_factor, extensions, allow_submit, allow_judge, compile_command, run_command, version) VALUES
+('cpp', 'cpp', 'C++17', 1.0, ARRAY['.cpp', '.cc', '.cxx'], true, true, 'g++ -std=c++17 -O2 -o {executable} {source}', './{executable}', 'g++ (GCC) 13'),
+('python3', 'python3', 'Python 3', 2.0, ARRAY['.py', '.py3'], true, true, NULL, 'python3 {source}', 'Python 3.12'),
+('java', 'java', 'Java 17', 1.5, ARRAY['.java'], true, true, 'javac -J-Xmx1024m -source 17 -target 17 {source}', 'java -Xmx512m {mainclass}', 'OpenJDK 17'),
+('go', 'go', 'Go 1.21', 1.2, ARRAY['.go'], true, true, 'go build -o {executable} {source}', './{executable}', 'Go 1.21'),
+('rust', 'rust', 'Rust', 1.0, ARRAY['.rs'], true, true, 'rustc -O -o {executable} {source}', './{executable}', 'Rust 1.75'),
+('nodejs', 'nodejs', 'Node.js 18', 2.0, ARRAY['.js', '.mjs'], true, true, NULL, 'node {source}', 'Node.js 18.19');
 
 -- Insert problems
 INSERT INTO problems (id, external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES

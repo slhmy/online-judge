@@ -146,6 +146,9 @@ message Language {
   repeated string extensions = 5;
   bool allow_submit = 6;
   bool allow_judge = 7;
+  string compile_command = 8;     // Command to compile source
+  string run_command = 9;         // Command to run executable
+  string version = 10;            // Language version string
 }
 
 // Request/Response messages

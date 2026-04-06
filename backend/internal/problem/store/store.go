@@ -287,3 +287,53 @@ func (s *ProblemStore) CreateTestCase(ctx context.Context, req *pb.CreateTestCas
 
 	return idStr, inputPathStr, outputPathStr, nil
 }
+
+func (s *ProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, error) {
+	query := `
+		SELECT id, external_id, name, time_factor, extensions, allow_submit, allow_judge,
+		       compile_command, run_command, version
+		FROM languages
+		WHERE allow_submit = true
+		ORDER BY name
+	`
+
+	rows, err := s.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var languages []*pb.Language
+	for rows.Next() {
+		var lang pb.Language
+		var extensions [][]byte
+		var compileCommand, runCommand, version pgtype.Text
+		err := rows.Scan(
+			&lang.Id, &lang.ExternalId, &lang.Name, &lang.TimeFactor,
+			&extensions, &lang.AllowSubmit, &lang.AllowJudge,
+			&compileCommand, &runCommand, &version,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert extensions array to string slice
+		for _, ext := range extensions {
+			lang.Extensions = append(lang.Extensions, string(ext))
+		}
+
+		if compileCommand.Valid {
+			lang.CompileCommand = compileCommand.String
+		}
+		if runCommand.Valid {
+			lang.RunCommand = runCommand.String
+		}
+		if version.Valid {
+			lang.Version = version.String
+		}
+
+		languages = append(languages, &lang)
+	}
+
+	return languages, nil
+}

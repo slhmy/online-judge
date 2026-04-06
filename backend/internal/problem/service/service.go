@@ -110,6 +110,10 @@ func (s *ProblemService) CreateTestCase(ctx context.Context, req *pb.CreateTestC
 }
 
 func (s *ProblemService) ListLanguages(ctx context.Context, req *emptypb.Empty) (*pb.ListLanguagesResponse, error) {
-	// TODO: Implement
-	return &pb.ListLanguagesResponse{}, nil
+	languages, err := s.store.ListLanguages(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ListLanguagesResponse{Languages: languages}, nil
 }
