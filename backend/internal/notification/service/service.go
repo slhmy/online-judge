@@ -18,8 +18,8 @@ import (
 // NotificationService implements the notification gRPC service
 type NotificationService struct {
 	pb.UnimplementedNotificationServiceServer
-	redis *redis.Client
-	store *store.NotificationStore
+	redis  *redis.Client
+	store  NotificationStoreInterface
 
 	// Local subscriber management for judging progress updates
 	// channel -> userID -> progressChan
@@ -32,20 +32,41 @@ type NotificationService struct {
 	streamMu          sync.RWMutex
 }
 
+// NotificationStoreInterface defines the interface for notification store
+type NotificationStoreInterface interface {
+	Create(ctx context.Context, notification *pb.Notification) error
+	List(ctx context.Context, userID string, limit int32, unreadOnly bool) ([]*pb.Notification, error)
+	MarkAsRead(ctx context.Context, userID string, notificationID string) error
+	MarkAllAsRead(ctx context.Context, userID string, filterType pb.NotificationType) (int32, error)
+	GetUnreadCount(ctx context.Context, userID string) (int32, map[string]int32, error)
+	PublishNotification(ctx context.Context, userID string, notification *pb.Notification) error
+	AddSubscriber(ctx context.Context, channel string, userID string) error
+	RemoveSubscriber(ctx context.Context, channel string, userID string) error
+	GetSubscribers(ctx context.Context, channel string) ([]string, error)
+	Publish(ctx context.Context, channel string, message interface{}) error
+}
+
 // NewNotificationService creates a new notification service
 func NewNotificationService(redis *redis.Client) *NotificationService {
-	s := &NotificationService{
+	return NewNotificationServiceWithStore(redis, store.NewNotificationStore(redis))
+}
+
+// NewNotificationServiceWithStore creates a new notification service with a custom store (for testing)
+func NewNotificationServiceWithStore(redis *redis.Client, s NotificationStoreInterface) *NotificationService {
+	svc := &NotificationService{
 		redis:               redis,
-		store:               store.NewNotificationStore(redis),
+		store:               s,
 		progressSubscribers: make(map[string]map[string]chan *pb.JudgeProgress),
 		streamSubscribers:   make(map[string]chan *pb.Notification),
 	}
 
 	// Start Redis pub/sub listener for cross-instance communication
-	go s.listenToRedisPubSub()
-	go s.listenToNotificationChannels()
+	if redis != nil {
+		go svc.listenToRedisPubSub()
+		go svc.listenToNotificationChannels()
+	}
 
-	return s
+	return svc
 }
 
 // GetNotifications retrieves notifications for a user

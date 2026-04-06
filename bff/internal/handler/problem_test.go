@@ -113,6 +113,18 @@ func (m *MockProblemServiceClient) CreateTestCase(ctx context.Context, req *pb.C
 	return &pb.CreateTestCaseResponse{}, nil
 }
 
+func (m *MockProblemServiceClient) UpdateTestCase(ctx context.Context, req *pb.UpdateTestCaseRequest, opts ...grpc.CallOption) (*pb.UpdateTestCaseResponse, error) {
+	return &pb.UpdateTestCaseResponse{}, nil
+}
+
+func (m *MockProblemServiceClient) DeleteTestCase(ctx context.Context, req *pb.DeleteTestCaseRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+func (m *MockProblemServiceClient) BatchUploadTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest, opts ...grpc.CallOption) (*pb.BatchUploadTestCasesResponse, error) {
+	return &pb.BatchUploadTestCasesResponse{}, nil
+}
+
 func (m *MockProblemServiceClient) ListLanguages(ctx context.Context, req *emptypb.Empty, opts ...grpc.CallOption) (*pb.ListLanguagesResponse, error) {
 	if m.ListLanguagesFunc != nil {
 		return m.ListLanguagesFunc(ctx, req)

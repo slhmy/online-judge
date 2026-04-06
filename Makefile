@@ -219,6 +219,12 @@ test-submission-service:
 test-contest-service:
 	cd backend && go test ./internal/contest/... -v -race
 
+test-notification-service:
+	cd backend && go test ./internal/notification/... -v -race
+
+test-user-service:
+	cd backend && go test ./internal/user/... -v -race
+
 test-bff-handlers:
 	cd bff && go test ./internal/handler/... -v -race
 
@@ -228,12 +234,35 @@ test-judge-queue:
 test-judge-validator:
 	cd judge && go test ./internal/validator/... -v -race
 
-# Run integration tests (requires running services)
-test-integration:
-	@echo "Running integration tests..."
-	$(MAKE) test-backend
-	$(MAKE) test-bff
-	$(MAKE) test-judge
+test-judge-worker:
+	cd judge && go test ./internal/worker/... -v -race
+
+# ============================================
+# Integration Tests (using mocks, no external services needed)
+# ============================================
+
+# Run integration tests for backend services
+test-integration-backend:
+	@echo "Running backend integration tests..."
+	cd backend && go test ./... -v -race -run "Integration"
+
+# Run integration tests for BFF handlers
+test-integration-bff:
+	@echo "Running BFF integration tests..."
+	cd bff && go test ./... -v -race -run "Integration"
+
+# Run integration tests for judge system
+test-integration-judge:
+	@echo "Running judge integration tests..."
+	cd judge && go test ./... -v -race -run "Integration"
+
+# Run all integration tests
+test-integration: test-integration-backend test-integration-bff test-integration-judge
+	@echo "All integration tests completed!"
+
+# ============================================
+# Extended Test Commands
+# ============================================
 
 # Run tests in short mode (skip slow tests)
 test-short:
@@ -259,6 +288,41 @@ test-clean:
 	rm -f backend/coverage.out backend/coverage.html
 	rm -f bff/coverage.out bff/coverage.html
 	rm -f judge/coverage.out judge/coverage.html
+
+# Run specific service tests with a prompt
+test-service:
+	@echo "Available services: problem, submission, contest, notification, user"
+	@read -p "Enter service name: " svc; \
+	case $$svc in \
+		problem) cd backend && go test ./internal/problem/... -v -race ;; \
+		submission) cd backend && go test ./internal/submission/... -v -race ;; \
+		contest) cd backend && go test ./internal/contest/... -v -race ;; \
+		notification) cd backend && go test ./internal/notification/... -v -race ;; \
+		user) cd backend && go test ./internal/user/... -v -race ;; \
+		*) echo "Unknown service: $$svc" ;; \
+	esac
+
+# Benchmark tests
+test-bench:
+	@echo "Running benchmark tests..."
+	cd backend && go test ./... -bench=. -benchmem
+	cd bff && go test ./... -bench=. -benchmem
+	cd judge && go test ./... -bench=. -benchmem
+
+# Run tests and generate HTML coverage report
+test-coverage-html: test-coverage
+	@echo "Opening coverage reports..."
+	@echo "Backend: backend/coverage.html"
+	@echo "BFF: bff/coverage.html"
+	@echo "Judge: judge/coverage.html"
+
+# Run tests with race detection and output to file
+test-report:
+	@echo "Generating test report..."
+	cd backend && go test ./... -v -race -json > backend-test-report.json 2>&1 || true
+	cd bff && go test ./... -v -race -json > bff-test-report.json 2>&1 || true
+	cd judge && go test ./... -v -race -json > judge-test-report.json 2>&1 || true
+	@echo "Test reports generated: backend-test-report.json, bff-test-report.json, judge-test-report.json"
 
 # ============================================
 # Docker

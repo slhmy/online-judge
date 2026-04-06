@@ -10,12 +10,12 @@ import (
 
 type UserService struct {
 	pb.UnimplementedUserServiceServer
-	store *store.UserStore
+	store store.UserStoreInterface
 }
 
-func NewUserService(store *store.UserStore) *UserService {
+func NewUserService(s store.UserStoreInterface) *UserService {
 	return &UserService{
-		store: store,
+		store: s,
 	}
 }
 
