@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,14 +22,16 @@ import (
 
 // MockProblemServiceClient is a mock implementation of ProblemServiceClient
 type MockProblemServiceClient struct {
-	ListProblemsFunc   func(ctx context.Context, req *pb.ListProblemsRequest) (*pb.ListProblemsResponse, error)
-	GetProblemFunc     func(ctx context.Context, req *pb.GetProblemRequest) (*pb.GetProblemResponse, error)
-	CreateProblemFunc  func(ctx context.Context, req *pb.CreateProblemRequest) (*pb.CreateProblemResponse, error)
-	UpdateProblemFunc  func(ctx context.Context, req *pb.UpdateProblemRequest) (*pb.UpdateProblemResponse, error)
-	DeleteProblemFunc  func(ctx context.Context, req *pb.DeleteProblemRequest) (*emptypb.Empty, error)
-	ListTestCasesFunc  func(ctx context.Context, req *pb.ListTestCasesRequest) (*pb.ListTestCasesResponse, error)
-	CreateTestCaseFunc func(ctx context.Context, req *pb.CreateTestCaseRequest) (*pb.CreateTestCaseResponse, error)
-	ListLanguagesFunc  func(ctx context.Context, req *emptypb.Empty) (*pb.ListLanguagesResponse, error)
+	ListProblemsFunc        func(ctx context.Context, req *pb.ListProblemsRequest) (*pb.ListProblemsResponse, error)
+	GetProblemFunc          func(ctx context.Context, req *pb.GetProblemRequest) (*pb.GetProblemResponse, error)
+	CreateProblemFunc       func(ctx context.Context, req *pb.CreateProblemRequest) (*pb.CreateProblemResponse, error)
+	UpdateProblemFunc       func(ctx context.Context, req *pb.UpdateProblemRequest) (*pb.UpdateProblemResponse, error)
+	DeleteProblemFunc       func(ctx context.Context, req *pb.DeleteProblemRequest) (*emptypb.Empty, error)
+	ListTestCasesFunc       func(ctx context.Context, req *pb.ListTestCasesRequest) (*pb.ListTestCasesResponse, error)
+	CreateTestCaseFunc      func(ctx context.Context, req *pb.CreateTestCaseRequest) (*pb.CreateTestCaseResponse, error)
+	ListLanguagesFunc       func(ctx context.Context, req *emptypb.Empty) (*pb.ListLanguagesResponse, error)
+	GetProblemStatementFunc func(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error)
+	SetProblemStatementFunc func(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error)
 }
 
 func setupTestProblemHandler(t *testing.T, mockClient *MockProblemServiceClient) (*ProblemHandler, *miniredis.Miniredis) {
@@ -137,6 +140,37 @@ func (m *MockProblemServiceClient) ListLanguages(ctx context.Context, req *empty
 	}, nil
 }
 
+func (m *MockProblemServiceClient) GetProblemStatement(ctx context.Context, req *pb.GetProblemStatementRequest, opts ...grpc.CallOption) (*pb.GetProblemStatementResponse, error) {
+	if m.GetProblemStatementFunc != nil {
+		return m.GetProblemStatementFunc(ctx, req)
+	}
+	return &pb.GetProblemStatementResponse{
+		Statement: &pb.ProblemStatement{
+			Id:        "stmt-1",
+			ProblemId: req.ProblemId,
+			Language:  req.Language,
+			Format:    "markdown",
+			Content:   "# Test Problem\n\nThis is a test problem statement.",
+		},
+	}, nil
+}
+
+func (m *MockProblemServiceClient) SetProblemStatement(ctx context.Context, req *pb.SetProblemStatementRequest, opts ...grpc.CallOption) (*pb.SetProblemStatementResponse, error) {
+	if m.SetProblemStatementFunc != nil {
+		return m.SetProblemStatementFunc(ctx, req)
+	}
+	return &pb.SetProblemStatementResponse{
+		Statement: &pb.ProblemStatement{
+			Id:        "stmt-1",
+			ProblemId: req.ProblemId,
+			Language:  req.Language,
+			Format:    req.Format,
+			Title:     req.Title,
+			Content:   req.Content,
+		},
+	}, nil
+}
+
 func TestProblemHandler_ListProblems(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -165,8 +199,8 @@ func TestProblemHandler_ListProblems(t *testing.T) {
 			name: "empty list",
 			mockFunc: func(ctx context.Context, req *pb.ListProblemsRequest) (*pb.ListProblemsResponse, error) {
 				return &pb.ListProblemsResponse{
-					Problems:    []*pb.ProblemSummary{},
-					Pagination:  &commonv1.PaginatedResponse{Total: 0, Page: 1, PageSize: 20},
+					Problems:   []*pb.ProblemSummary{},
+					Pagination: &commonv1.PaginatedResponse{Total: 0, Page: 1, PageSize: 20},
 				}, nil
 			},
 			wantStatus: http.StatusOK,
@@ -359,6 +393,205 @@ func TestProblemHandler_ListLanguages(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			handler.ListLanguages(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+			tt.wantBody(t, w.Body.String())
+		})
+	}
+}
+
+func TestProblemHandler_GetProblemStatement(t *testing.T) {
+	tests := []struct {
+		name       string
+		problemID  string
+		language   string
+		mockFunc   func(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error)
+		wantStatus int
+		wantBody   func(t *testing.T, body string)
+	}{
+		{
+			name:      "get statement successfully",
+			problemID: "prob-1",
+			language:  "en",
+			mockFunc: func(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error) {
+				return &pb.GetProblemStatementResponse{
+					Statement: &pb.ProblemStatement{
+						Id:        "stmt-1",
+						ProblemId: req.ProblemId,
+						Language:  req.Language,
+						Format:    "markdown",
+						Title:     "Two Sum",
+						Content:   "# Two Sum\n\nGiven an array of integers...",
+					},
+				}, nil
+			},
+			wantStatus: http.StatusOK,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "Two Sum")
+				assert.Contains(t, body, "markdown")
+			},
+		},
+		{
+			name:      "get statement with default language",
+			problemID: "prob-1",
+			language:  "",
+			mockFunc: func(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error) {
+				assert.Equal(t, "en", req.Language) // Should default to "en"
+				return &pb.GetProblemStatementResponse{
+					Statement: &pb.ProblemStatement{
+						Id:        "stmt-1",
+						ProblemId: req.ProblemId,
+						Language:  "en",
+						Format:    "markdown",
+						Content:   "# Test Problem",
+					},
+				}, nil
+			},
+			wantStatus: http.StatusOK,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "Test Problem")
+			},
+		},
+		{
+			name:      "statement not found",
+			problemID: "non-existent",
+			language:  "en",
+			mockFunc: func(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error) {
+				return nil, assert.AnError
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "error")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockProblemServiceClient{
+				GetProblemStatementFunc: tt.mockFunc,
+			}
+
+			handler, mr := setupTestProblemHandler(t, mockClient)
+			defer mr.Close()
+
+			r := chi.NewRouter()
+			r.Get("/api/v1/problems/{id}/statement", handler.GetProblemStatement)
+
+			url := "/api/v1/problems/" + tt.problemID + "/statement"
+			if tt.language != "" {
+				url += "?language=" + tt.language
+			}
+
+			req := httptest.NewRequest("GET", url, nil)
+			w := httptest.NewRecorder()
+
+			r.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+			tt.wantBody(t, w.Body.String())
+		})
+	}
+}
+
+func TestProblemHandler_SetProblemStatement(t *testing.T) {
+	tests := []struct {
+		name       string
+		problemID  string
+		body       string
+		mockFunc   func(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error)
+		wantStatus int
+		wantBody   func(t *testing.T, body string)
+	}{
+		{
+			name:      "set statement successfully",
+			problemID: "prob-1",
+			body:      `{"language":"en","format":"markdown","title":"Two Sum","content":"# Two Sum\n\nGiven an array..."}`,
+			mockFunc: func(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error) {
+				assert.Equal(t, "prob-1", req.ProblemId)
+				assert.Equal(t, "en", req.Language)
+				assert.Equal(t, "markdown", req.Format)
+				assert.Equal(t, "Two Sum", req.Title)
+				return &pb.SetProblemStatementResponse{
+					Statement: &pb.ProblemStatement{
+						Id:        "stmt-1",
+						ProblemId: req.ProblemId,
+						Language:  req.Language,
+						Format:    req.Format,
+						Title:     req.Title,
+						Content:   req.Content,
+					},
+				}, nil
+			},
+			wantStatus: http.StatusOK,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "Two Sum")
+				assert.Contains(t, body, "markdown")
+			},
+		},
+		{
+			name:      "set statement with defaults",
+			problemID: "prob-1",
+			body:      `{"content":"# Test Problem"}`,
+			mockFunc: func(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error) {
+				assert.Equal(t, "en", req.Language)     // Should default to "en"
+				assert.Equal(t, "markdown", req.Format) // Should default to "markdown"
+				return &pb.SetProblemStatementResponse{
+					Statement: &pb.ProblemStatement{
+						Id:        "stmt-1",
+						ProblemId: req.ProblemId,
+						Language:  "en",
+						Format:    "markdown",
+						Content:   req.Content,
+					},
+				}, nil
+			},
+			wantStatus: http.StatusOK,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "Test Problem")
+			},
+		},
+		{
+			name:       "invalid JSON body",
+			problemID:  "prob-1",
+			body:       `{invalid json}`,
+			mockFunc:   nil,
+			wantStatus: http.StatusBadRequest,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "error")
+			},
+		},
+		{
+			name:      "backend error",
+			problemID: "prob-1",
+			body:      `{"content":"# Test"}`,
+			mockFunc: func(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error) {
+				return nil, assert.AnError
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantBody: func(t *testing.T, body string) {
+				assert.Contains(t, body, "error")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockProblemServiceClient{
+				SetProblemStatementFunc: tt.mockFunc,
+			}
+
+			handler, mr := setupTestProblemHandler(t, mockClient)
+			defer mr.Close()
+
+			r := chi.NewRouter()
+			r.Put("/api/v1/problems/{id}/statement", handler.SetProblemStatement)
+
+			req := httptest.NewRequest("PUT", "/api/v1/problems/"+tt.problemID+"/statement", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			r.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
 			tt.wantBody(t, w.Body.String())

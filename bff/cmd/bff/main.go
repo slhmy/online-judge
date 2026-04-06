@@ -9,16 +9,16 @@ import (
 	"syscall"
 	"time"
 
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	pbContest "github.com/online-judge/backend/gen/go/contest/v1"
 	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
 	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
-	pbContest "github.com/online-judge/backend/gen/go/contest/v1"
 	pbUser "github.com/online-judge/backend/gen/go/user/v1"
 	"github.com/online-judge/bff/internal/cache"
 	"github.com/online-judge/bff/internal/config"
@@ -157,15 +157,17 @@ func main() {
 		// Problems (public)
 		r.Get("/problems", problemHandler.ListProblems)
 		r.Get("/problems/{id}", problemHandler.GetProblem)
+		r.Get("/problems/{id}/statement", problemHandler.GetProblemStatement)
 		r.Get("/languages", problemHandler.ListLanguages)
 
-			// Problem admin routes (protected)
-			r.Group(func(r chi.Router) {
-				r.Use(authMiddleware.RequireAuth)
-				r.Post("/problems", problemHandler.CreateProblem)
-				r.Put("/problems/{id}", problemHandler.UpdateProblem)
-				r.Delete("/problems/{id}", problemHandler.DeleteProblem)
-			})
+		// Problem admin routes (protected)
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.RequireAuth)
+			r.Post("/problems", problemHandler.CreateProblem)
+			r.Put("/problems/{id}", problemHandler.UpdateProblem)
+			r.Delete("/problems/{id}", problemHandler.DeleteProblem)
+			r.Put("/problems/{id}/statement", problemHandler.SetProblemStatement)
+		})
 
 		// Submissions (mixed - some public, some protected)
 		r.With(rateLimiter.SubmissionRateLimitMiddleware).Post("/submissions", submissionHandler.Create)
