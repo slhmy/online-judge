@@ -35,6 +35,12 @@ type Config struct {
 	RateLimitSubmissionBurstSize       int  `mapstructure:"rate_limit_submission_burst_size"`
 	RateLimitIPRequestsPerMinute       int  `mapstructure:"rate_limit_ip_requests_per_minute"`
 	RateLimitIPBurstSize               int  `mapstructure:"rate_limit_ip_burst_size"`
+
+	// Caching
+	CacheEnabled         bool `mapstructure:"cache_enabled"`
+	CacheProblemTTL      int  `mapstructure:"cache_problem_ttl"`      // seconds
+	CacheContestTTL      int  `mapstructure:"cache_contest_ttl"`      // seconds
+	CacheScoreboardTTL   int  `mapstructure:"cache_scoreboard_ttl"`   // seconds
 }
 
 func Load() (*Config, error) {
@@ -62,6 +68,12 @@ func Load() (*Config, error) {
 	v.SetDefault("rate_limit_submission_burst_size", 2)
 	v.SetDefault("rate_limit_ip_requests_per_minute", 30)
 	v.SetDefault("rate_limit_ip_burst_size", 5)
+
+	// Caching defaults
+	v.SetDefault("cache_enabled", true)
+	v.SetDefault("cache_problem_ttl", 300)      // 5 minutes
+	v.SetDefault("cache_contest_ttl", 120)      // 2 minutes
+	v.SetDefault("cache_scoreboard_ttl", 10)    // 10 seconds
 
 	v.AutomaticEnv()
 

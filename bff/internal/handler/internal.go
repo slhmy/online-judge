@@ -12,6 +12,7 @@ import (
 
 	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
 	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
+	"github.com/online-judge/bff/internal/cache"
 )
 
 // InternalHandler handles internal API endpoints for judge daemon
@@ -19,14 +20,16 @@ type InternalHandler struct {
 	submissionClient pbSubmission.SubmissionServiceClient
 	problemClient    pbProblem.ProblemServiceClient
 	redis            *redis.Client
+	cache            *cache.Service
 }
 
 // NewInternalHandler creates a new internal handler
-func NewInternalHandler(submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, redis *redis.Client) *InternalHandler {
+func NewInternalHandler(submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, redis *redis.Client, cacheService *cache.Service) *InternalHandler {
 	return &InternalHandler{
 		submissionClient: submissionClient,
 		problemClient:    problemClient,
 		redis:            redis,
+		cache:            cacheService,
 	}
 }
 
@@ -207,6 +210,7 @@ func (h *InternalHandler) UpdateJudging(w http.ResponseWriter, r *http.Request) 
 		MaxMemory    int64   `json:"max_memory"`
 		Error        string  `json:"error"`
 		CompileError string  `json:"compile_error"`
+		ContestID    string  `json:"contest_id"` // Contest ID for cache invalidation
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -245,6 +249,20 @@ func (h *InternalHandler) UpdateJudging(w http.ResponseWriter, r *http.Request) 
 		h.redis.Publish(ctx, resultKey, string(resultData))
 
 		log.Printf("Published judging result for submission %s: %s", submissionID, req.Verdict)
+
+		// Invalidate scoreboard cache if contest ID is provided
+		if req.ContestID != "" {
+			h.cache.InvalidateScoreboardCache(ctx, req.ContestID)
+			log.Printf("Invalidated scoreboard cache for contest %s", req.ContestID)
+		} else {
+			// Try to get contest ID from submission metadata
+			contestingKey := "submission:" + submissionID + ":contest_id"
+			contestID, err := h.redis.Get(ctx, contestingKey).Result()
+			if err == nil && contestID != "" {
+				h.cache.InvalidateScoreboardCache(ctx, contestID)
+				log.Printf("Invalidated scoreboard cache for contest %s (from submission metadata)", contestID)
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

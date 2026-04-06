@@ -5,14 +5,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/problem/v1"
+	"github.com/online-judge/bff/internal/cache"
 )
 
 // MockProblemServiceClient is a mock implementation of ProblemServiceClient
@@ -25,6 +29,28 @@ type MockProblemServiceClient struct {
 	ListTestCasesFunc  func(ctx context.Context, req *pb.ListTestCasesRequest) (*pb.ListTestCasesResponse, error)
 	CreateTestCaseFunc func(ctx context.Context, req *pb.CreateTestCaseRequest) (*pb.CreateTestCaseResponse, error)
 	ListLanguagesFunc  func(ctx context.Context, req *emptypb.Empty) (*pb.ListLanguagesResponse, error)
+}
+
+func setupTestProblemHandler(t *testing.T, mockClient *MockProblemServiceClient) (*ProblemHandler, *miniredis.Miniredis) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Failed to create miniredis: %v", err)
+	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	cacheConfig := cache.Config{
+		Enabled:       true,
+		ProblemTTL:    5 * time.Minute,
+		ContestTTL:    2 * time.Minute,
+		ScoreboardTTL: 10 * time.Second,
+	}
+	cacheService := cache.NewService(rdb, cacheConfig)
+
+	handler := NewProblemHandler(mockClient, cacheService)
+	return handler, mr
 }
 
 func (m *MockProblemServiceClient) ListProblems(ctx context.Context, req *pb.ListProblemsRequest, opts ...grpc.CallOption) (*pb.ListProblemsResponse, error) {
@@ -144,7 +170,8 @@ func TestProblemHandler_ListProblems(t *testing.T) {
 				ListProblemsFunc: tt.mockFunc,
 			}
 
-			handler := NewProblemHandler(mockClient)
+			handler, mr := setupTestProblemHandler(t, mockClient)
+			defer mr.Close()
 
 			req := httptest.NewRequest("GET", "/api/v1/problems", nil)
 			w := httptest.NewRecorder()
@@ -164,6 +191,7 @@ func TestProblemHandler_GetProblem(t *testing.T) {
 		mockFunc   func(ctx context.Context, req *pb.GetProblemRequest) (*pb.GetProblemResponse, error)
 		wantStatus int
 		wantBody   func(t *testing.T, body string)
+		wantCache  string // expected X-Cache header value
 	}{
 		{
 			name:      "get problem successfully",
@@ -182,6 +210,7 @@ func TestProblemHandler_GetProblem(t *testing.T) {
 				}, nil
 			},
 			wantStatus: http.StatusOK,
+			wantCache:  "miss", // First request should be cache miss
 			wantBody: func(t *testing.T, body string) {
 				assert.Contains(t, body, "Test Problem")
 				assert.Contains(t, body, "prob-1")
@@ -206,7 +235,8 @@ func TestProblemHandler_GetProblem(t *testing.T) {
 				GetProblemFunc: tt.mockFunc,
 			}
 
-			handler := NewProblemHandler(mockClient)
+			handler, mr := setupTestProblemHandler(t, mockClient)
+			defer mr.Close()
 
 			// Create chi router to test URL param extraction
 			r := chi.NewRouter()
@@ -218,9 +248,51 @@ func TestProblemHandler_GetProblem(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
+			if tt.wantCache != "" {
+				assert.Equal(t, tt.wantCache, w.Header().Get("X-Cache"))
+			}
 			tt.wantBody(t, w.Body.String())
 		})
 	}
+}
+
+func TestProblemHandler_GetProblem_CacheHit(t *testing.T) {
+	mockClient := &MockProblemServiceClient{
+		GetProblemFunc: func(ctx context.Context, req *pb.GetProblemRequest) (*pb.GetProblemResponse, error) {
+			return &pb.GetProblemResponse{
+				Problem: &pb.Problem{
+					Id:          "prob-1",
+					Name:        "Cached Problem",
+					TimeLimit:   1.0,
+					MemoryLimit: 256,
+				},
+			}, nil
+		},
+	}
+
+	handler, mr := setupTestProblemHandler(t, mockClient)
+	defer mr.Close()
+
+	r := chi.NewRouter()
+	r.Get("/api/v1/problems/{id}", handler.GetProblem)
+
+	// First request - should be cache miss
+	req1 := httptest.NewRequest("GET", "/api/v1/problems/prob-1", nil)
+	w1 := httptest.NewRecorder()
+	r.ServeHTTP(w1, req1)
+
+	assert.Equal(t, http.StatusOK, w1.Code)
+	assert.Equal(t, "miss", w1.Header().Get("X-Cache"))
+	assert.Contains(t, w1.Body.String(), "Cached Problem")
+
+	// Second request - should be cache hit
+	req2 := httptest.NewRequest("GET", "/api/v1/problems/prob-1", nil)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+	assert.Equal(t, "hit", w2.Header().Get("X-Cache"))
+	assert.Contains(t, w2.Body.String(), "Cached Problem")
 }
 
 func TestProblemHandler_ListLanguages(t *testing.T) {
@@ -268,7 +340,8 @@ func TestProblemHandler_ListLanguages(t *testing.T) {
 				ListLanguagesFunc: tt.mockFunc,
 			}
 
-			handler := NewProblemHandler(mockClient)
+			handler, mr := setupTestProblemHandler(t, mockClient)
+			defer mr.Close()
 
 			req := httptest.NewRequest("GET", "/api/v1/languages", nil)
 			w := httptest.NewRecorder()

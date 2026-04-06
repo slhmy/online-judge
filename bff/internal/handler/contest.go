@@ -8,14 +8,19 @@ import (
 
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/contest/v1"
+	"github.com/online-judge/bff/internal/cache"
 )
 
 type ContestHandler struct {
 	client pb.ContestServiceClient
+	cache  *cache.Service
 }
 
-func NewContestHandler(client pb.ContestServiceClient) *ContestHandler {
-	return &ContestHandler{client: client}
+func NewContestHandler(client pb.ContestServiceClient, cacheService *cache.Service) *ContestHandler {
+	return &ContestHandler{
+		client: client,
+		cache:  cacheService,
+	}
 }
 
 func (h *ContestHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -39,12 +44,29 @@ func (h *ContestHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 
+	// Try cache first
+	cacheKey := "contest:" + id
+	cached, err := h.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "hit")
+		w.Write(cached)
+		return
+	}
+
+	// Fetch from gRPC
 	resp, err := h.client.GetContest(ctx, &pb.GetContestRequest{Id: id})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Cache the response
+	data, _ := json.Marshal(resp)
+	h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ContestTTL, "contest:"+id)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "miss")
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -67,6 +89,17 @@ func (h *ContestHandler) GetScoreboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	contestID := chi.URLParam(r, "id")
 
+	// Try cache first (short TTL for scoreboard during contest)
+	cacheKey := "scoreboard:" + contestID
+	cached, err := h.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "hit")
+		w.Write(cached)
+		return
+	}
+
+	// Fetch from gRPC
 	resp, err := h.client.GetScoreboard(ctx, &pb.GetScoreboardRequest{
 		ContestId: contestID,
 	})
@@ -75,6 +108,12 @@ func (h *ContestHandler) GetScoreboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cache the response with short TTL (scoreboard changes frequently during contest)
+	data, _ := json.Marshal(resp)
+	h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ScoreboardTTL, "contest:"+contestID, "scoreboard:"+contestID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "miss")
 	json.NewEncoder(w).Encode(resp)
 }
 

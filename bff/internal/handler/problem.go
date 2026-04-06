@@ -9,15 +9,20 @@ import (
 
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/problem/v1"
+	"github.com/online-judge/bff/internal/cache"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type ProblemHandler struct {
 	client pb.ProblemServiceClient
+	cache  *cache.Service
 }
 
-func NewProblemHandler(client pb.ProblemServiceClient) *ProblemHandler {
-	return &ProblemHandler{client: client}
+func NewProblemHandler(client pb.ProblemServiceClient, cacheService *cache.Service) *ProblemHandler {
+	return &ProblemHandler{
+		client: client,
+		cache:  cacheService,
+	}
 }
 
 func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
@@ -38,15 +43,32 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 
+	// Try cache first
+	cacheKey := "problem:" + id
+	cached, err := h.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "hit")
+		w.Write(cached)
+		return
+	}
+
+	// Fetch from gRPC
 	resp, err := h.client.GetProblem(ctx, &pb.GetProblemRequest{Id: id})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Cache the response
+	data, _ := json.Marshal(resp)
+	h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ProblemTTL, "problem:"+id)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "miss")
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -114,7 +136,7 @@ func (h *ProblemHandler) CreateProblem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 
 	var req struct {
@@ -149,11 +171,14 @@ func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Invalidate problem cache
+	h.cache.InvalidateProblemCache(ctx, id)
+
 	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 
 	_, err := h.client.DeleteProblem(ctx, &pb.DeleteProblemRequest{Id: id})
@@ -161,6 +186,9 @@ func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Invalidate problem cache
+	h.cache.InvalidateProblemCache(ctx, id)
 
 	w.WriteHeader(http.StatusNoContent)
 }

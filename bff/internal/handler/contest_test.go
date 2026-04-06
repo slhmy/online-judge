@@ -7,14 +7,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/contest/v1"
+	"github.com/online-judge/bff/internal/cache"
 )
 
 // MockContestServiceClient is a mock implementation of ContestServiceClient
@@ -25,6 +29,28 @@ type MockContestServiceClient struct {
 	RegisterContestFunc  func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error)
 	GetContestProblemsFunc func(ctx context.Context, req *pb.GetContestProblemsRequest) (*pb.GetContestProblemsResponse, error)
 	GetScoreboardFunc    func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error)
+}
+
+func setupTestContestHandler(t *testing.T, mockClient *MockContestServiceClient) (*ContestHandler, *miniredis.Miniredis) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Failed to create miniredis: %v", err)
+	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	cacheConfig := cache.Config{
+		Enabled:       true,
+		ProblemTTL:    5 * time.Minute,
+		ContestTTL:    2 * time.Minute,
+		ScoreboardTTL: 10 * time.Second,
+	}
+	cacheService := cache.NewService(rdb, cacheConfig)
+
+	handler := NewContestHandler(mockClient, cacheService)
+	return handler, mr
 }
 
 func (m *MockContestServiceClient) ListContests(ctx context.Context, req *pb.ListContestsRequest, opts ...grpc.CallOption) (*pb.ListContestsResponse, error) {
@@ -135,7 +161,8 @@ func TestContestHandler_List(t *testing.T) {
 				ListContestsFunc: tt.mockFunc,
 			}
 
-			handler := NewContestHandler(mockClient)
+			handler, mr := setupTestContestHandler(t, mockClient)
+			defer mr.Close()
 
 			req := httptest.NewRequest("GET", "/api/v1/contests", nil)
 			w := httptest.NewRecorder()
@@ -155,6 +182,7 @@ func TestContestHandler_Get(t *testing.T) {
 		mockFunc   func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error)
 		wantStatus int
 		wantBody   func(t *testing.T, body string)
+		wantCache  string
 	}{
 		{
 			name:      "get contest successfully",
@@ -176,6 +204,7 @@ func TestContestHandler_Get(t *testing.T) {
 				}, nil
 			},
 			wantStatus: http.StatusOK,
+			wantCache:  "miss",
 			wantBody: func(t *testing.T, body string) {
 				var resp pb.GetContestResponse
 				err := json.Unmarshal([]byte(body), &resp)
@@ -203,7 +232,8 @@ func TestContestHandler_Get(t *testing.T) {
 				GetContestFunc: tt.mockFunc,
 			}
 
-			handler := NewContestHandler(mockClient)
+			handler, mr := setupTestContestHandler(t, mockClient)
+			defer mr.Close()
 
 			r := chi.NewRouter()
 			r.Get("/api/v1/contests/{id}", handler.Get)
@@ -214,9 +244,53 @@ func TestContestHandler_Get(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
+			if tt.wantCache != "" {
+				assert.Equal(t, tt.wantCache, w.Header().Get("X-Cache"))
+			}
 			tt.wantBody(t, w.Body.String())
 		})
 	}
+}
+
+func TestContestHandler_Get_CacheHit(t *testing.T) {
+	mockClient := &MockContestServiceClient{
+		GetContestFunc: func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error) {
+			return &pb.GetContestResponse{
+				Contest: &pb.Contest{
+					Id:         "contest-1",
+					Name:       "Cached Contest",
+					ShortName:  "CC",
+					StartTime:  "2024-03-01T10:00:00Z",
+					EndTime:    "2024-03-01T15:00:00Z",
+					Public:     true,
+				},
+			}, nil
+		},
+	}
+
+	handler, mr := setupTestContestHandler(t, mockClient)
+	defer mr.Close()
+
+	r := chi.NewRouter()
+	r.Get("/api/v1/contests/{id}", handler.Get)
+
+	// First request - cache miss
+	req1 := httptest.NewRequest("GET", "/api/v1/contests/contest-1", nil)
+	w1 := httptest.NewRecorder()
+	r.ServeHTTP(w1, req1)
+
+	assert.Equal(t, http.StatusOK, w1.Code)
+	assert.Equal(t, "miss", w1.Header().Get("X-Cache"))
+	assert.Contains(t, w1.Body.String(), "Cached Contest")
+
+	// Second request - cache hit
+	req2 := httptest.NewRequest("GET", "/api/v1/contests/contest-1", nil)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+	assert.Equal(t, "hit", w2.Header().Get("X-Cache"))
+	assert.Contains(t, w2.Body.String(), "Cached Contest")
 }
 
 func TestContestHandler_GetProblems(t *testing.T) {
@@ -269,7 +343,8 @@ func TestContestHandler_GetProblems(t *testing.T) {
 				GetContestProblemsFunc: tt.mockFunc,
 			}
 
-			handler := NewContestHandler(mockClient)
+			handler, mr := setupTestContestHandler(t, mockClient)
+			defer mr.Close()
 
 			r := chi.NewRouter()
 			r.Get("/api/v1/contests/{id}/problems", handler.GetProblems)
@@ -292,6 +367,7 @@ func TestContestHandler_GetScoreboard(t *testing.T) {
 		mockFunc   func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error)
 		wantStatus int
 		wantBody   func(t *testing.T, body string)
+		wantCache  string
 	}{
 		{
 			name:      "get scoreboard successfully",
@@ -321,6 +397,7 @@ func TestContestHandler_GetScoreboard(t *testing.T) {
 				}, nil
 			},
 			wantStatus: http.StatusOK,
+			wantCache:  "miss",
 			wantBody: func(t *testing.T, body string) {
 				var resp pb.GetScoreboardResponse
 				err := json.Unmarshal([]byte(body), &resp)
@@ -356,7 +433,8 @@ func TestContestHandler_GetScoreboard(t *testing.T) {
 				GetScoreboardFunc: tt.mockFunc,
 			}
 
-			handler := NewContestHandler(mockClient)
+			handler, mr := setupTestContestHandler(t, mockClient)
+			defer mr.Close()
 
 			r := chi.NewRouter()
 			r.Get("/api/v1/contests/{id}/scoreboard", handler.GetScoreboard)
@@ -367,9 +445,55 @@ func TestContestHandler_GetScoreboard(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
+			if tt.wantCache != "" {
+				assert.Equal(t, tt.wantCache, w.Header().Get("X-Cache"))
+			}
 			tt.wantBody(t, w.Body.String())
 		})
 	}
+}
+
+func TestContestHandler_GetScoreboard_CacheHit(t *testing.T) {
+	mockClient := &MockContestServiceClient{
+		GetScoreboardFunc: func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error) {
+			return &pb.GetScoreboardResponse{
+				Entries: []*pb.ScoreboardEntry{
+					{
+						Rank:        1,
+						TeamId:      "team-1",
+						TeamName:    "Team Alpha",
+						Affiliation: "University A",
+						NumSolved:   5,
+						TotalTime:   600,
+					},
+				},
+				ContestTime: "02:30:00",
+				IsFrozen:    false,
+			}, nil
+		},
+	}
+
+	handler, mr := setupTestContestHandler(t, mockClient)
+	defer mr.Close()
+
+	r := chi.NewRouter()
+	r.Get("/api/v1/contests/{id}/scoreboard", handler.GetScoreboard)
+
+	// First request - cache miss
+	req1 := httptest.NewRequest("GET", "/api/v1/contests/contest-1/scoreboard", nil)
+	w1 := httptest.NewRecorder()
+	r.ServeHTTP(w1, req1)
+
+	assert.Equal(t, http.StatusOK, w1.Code)
+	assert.Equal(t, "miss", w1.Header().Get("X-Cache"))
+
+	// Second request - cache hit
+	req2 := httptest.NewRequest("GET", "/api/v1/contests/contest-1/scoreboard", nil)
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+	assert.Equal(t, "hit", w2.Header().Get("X-Cache"))
 }
 
 func TestContestHandler_Register(t *testing.T) {
@@ -437,7 +561,8 @@ func TestContestHandler_Register(t *testing.T) {
 				RegisterContestFunc: tt.mockFunc,
 			}
 
-			handler := NewContestHandler(mockClient)
+			handler, mr := setupTestContestHandler(t, mockClient)
+			defer mr.Close()
 
 			r := chi.NewRouter()
 			r.Post("/api/v1/contests/{id}/register", handler.Register)
