@@ -2,19 +2,29 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"strings"
 )
 
 type Verdict string
 
 const (
-	VerdictCorrect      Verdict = "correct"
-	VerdictWrongAnswer  Verdict = "wrong-answer"
-	VerdictPresentation Verdict = "presentation"
+	VerdictCorrect       Verdict = "correct"
+	VerdictWrongAnswer   Verdict = "wrong-answer"
+	VerdictPresentation  Verdict = "presentation"
+	VerdictInternalError Verdict = "internal-error"
 )
 
+// Validator interface for output validation
 type Validator interface {
+	// Validate compares expected and actual output
 	Validate(expected, actual []byte) Verdict
+}
+
+// SpecialValidatorInterface for validators that need full context
+type SpecialValidatorInterface interface {
+	// ValidateWithInput validates with full context (input, expected, actual)
+	ValidateWithInput(ctx context.Context, validatorID string, args string, input, expected, actual []byte) (Verdict, string)
 }
 
 // DefaultValidator implements standard output comparison

@@ -32,6 +32,7 @@ type JudgeWorker struct {
 	queue           *queue.JudgeQueue
 	config          *config.Config
 	validator       *validator.DefaultValidator
+	specialValidator *validator.SpecialValidator
 	mu              sync.Mutex
 	currentJob      *queue.JudgeJob
 }
@@ -43,11 +44,22 @@ func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue)
 		sandbox.SetSandboxWorkDir(cfg.SandboxWorkDir)
 	}
 
+	// Create special validator config
+	specialValidatorConfig := validator.DefaultSpecialValidatorConfig()
+	if cfg.SandboxWorkDir != "" {
+		specialValidatorConfig.CacheDir = cfg.SandboxWorkDir + "/validator-cache"
+	}
+
 	return &JudgeWorker{
 		id:        id,
 		queue:     judgeQueue,
 		config:    cfg,
 		validator: validator.NewDefaultValidator(),
+		specialValidator: validator.NewSpecialValidator(
+			specialValidatorConfig,
+			judgeQueue,
+			cfg.OrchestratorURL,
+		),
 	}
 }
 
@@ -228,8 +240,23 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 		// Determine verdict for this test case
 		tcVerdict := runResult.Verdict
 		if tcVerdict == VerdictCorrect {
-			// Validate output
-			tcVerdict = string(w.validator.Validate(tcData.Output, runResult.Output))
+			// Validate output - use special validator if problem has special_compare_id
+			if problem.SpecialCompare != "" && w.specialValidator != nil {
+				// Run custom validator
+				vVerdict, feedback := w.specialValidator.Validate(
+					ctx,
+					problem.SpecialCompare,
+					problem.SpecialCompareArgs,
+					tcData.Input,
+					tcData.Output,
+					runResult.Output,
+				)
+				tcVerdict = string(vVerdict)
+				log.Printf("Special validator %s returned: %s (feedback: %s)", problem.SpecialCompare, tcVerdict, feedback)
+			} else {
+				// Use default validator
+				tcVerdict = string(w.validator.Validate(tcData.Output, runResult.Output))
+			}
 		}
 
 		// Track statistics

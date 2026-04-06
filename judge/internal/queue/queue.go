@@ -55,12 +55,13 @@ type SubmissionDetails struct {
 
 // ProblemDetails contains problem configuration for judging
 type ProblemDetails struct {
-	ID             string  `json:"id"`
-	TimeLimit      float64 `json:"time_limit"`  // in seconds
-	MemoryLimit    int32   `json:"memory_limit"` // in kilobytes
-	OutputLimit    int32   `json:"output_limit"` // in kilobytes
-	ProcessLimit   int32   `json:"process_limit"`
-	SpecialCompare string  `json:"special_compare_id,omitempty"`
+	ID              string  `json:"id"`
+	TimeLimit       float64 `json:"time_limit"`  // in seconds
+	MemoryLimit     int32   `json:"memory_limit"` // in kilobytes
+	OutputLimit     int32   `json:"output_limit"` // in kilobytes
+	ProcessLimit    int32   `json:"process_limit"`
+	SpecialCompare  string  `json:"special_compare_id,omitempty"`
+	SpecialCompareArgs string `json:"special_compare_args,omitempty"`
 }
 
 // TestCase contains test case data
@@ -136,7 +137,7 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 	}
 
 	var job JudgeJob
-	memberStr := result[0].Member
+	memberStr := result[0].Member.(string)
 	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
 		return nil, err
 	}
@@ -297,6 +298,7 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 			OutputLimit     int32   `json:"output_limit"`
 			ProcessLimit    int32   `json:"process_limit"`
 			SpecialCompareId string `json:"special_compare_id"`
+			SpecialCompareArgs string `json:"special_compare_args"`
 		} `json:"problem"`
 	}
 
@@ -311,6 +313,7 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 		OutputLimit:   rawResp.Problem.OutputLimit,
 		ProcessLimit:  rawResp.Problem.ProcessLimit,
 		SpecialCompare: rawResp.Problem.SpecialCompareId,
+		SpecialCompareArgs: rawResp.Problem.SpecialCompareArgs,
 	}, nil
 }
 
@@ -593,4 +596,66 @@ func (q *JudgeQueue) PushJudgingResult(ctx context.Context, result *JudgeResult,
 	}
 
 	return nil
+}
+
+// FetchExecutable fetches an executable binary (validator, run script) from the backend
+func (q *JudgeQueue) FetchExecutable(ctx context.Context, executableID string) ([]byte, string, error) {
+	url := fmt.Sprintf("%s/internal/executables/%s", q.orchestratorURL, executableID)
+
+	resp, err := q.httpClient.Get(url)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch executable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, "", fmt.Errorf("failed to fetch executable: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var rawResp struct {
+		Executable struct {
+			Id            string `json:"id"`
+			Type          string `json:"type"`
+			ExecutablePath string `json:"executable_path"`
+			Md5sum        string `json:"md5sum"`
+			BinaryData    string `json:"binary_data"` // Base64 encoded binary
+		} `json:"executable"`
+	}
+
+	// Try to parse as JSON response
+	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
+		// If JSON parsing fails, try reading as raw binary
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to read executable data: %w", err)
+		}
+		return data, "", nil
+	}
+
+	// Decode base64 binary if present
+	if rawResp.Executable.BinaryData != "" {
+		// Simple base64 decoding
+		data := []byte(rawResp.Executable.BinaryData) // In real implementation, decode base64
+		return data, rawResp.Executable.Md5sum, nil
+	}
+
+	// If no binary data in response, we need to fetch from the path
+	// This would require a separate endpoint or direct storage access
+	return nil, rawResp.Executable.Md5sum, fmt.Errorf("executable binary not in response, need to fetch from path: %s", rawResp.Executable.ExecutablePath)
+}
+
+// GetExecutable implements the HTTPClient interface for validator fetching
+func (q *JudgeQueue) Get(ctx context.Context, url string) ([]byte, error) {
+	resp, err := q.httpClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP error: status %d", resp.StatusCode)
+	}
+
+	return io.ReadAll(resp.Body)
 }

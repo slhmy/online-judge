@@ -43,6 +43,9 @@ func (h *InternalHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/testcases/{id}/input", h.GetTestCaseInput)
 		r.Get("/testcases/{id}/output", h.GetTestCaseOutput)
 
+		// Executables (validators, run scripts)
+		r.Get("/executables/{id}", h.GetExecutable)
+
 		// Judging management
 		r.Post("/judgings", h.CreateJudging)
 		r.Put("/judgings/{id}", h.UpdateJudging)
@@ -377,4 +380,79 @@ func (h *InternalHandler) UpdateProgress(w http.ResponseWriter, r *http.Request)
 		"submission_id": submissionID,
 		"status":        "updated",
 	})
+}
+
+// GetExecutable returns an executable binary (validator, run script)
+func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	executableID := chi.URLParam(r, "id")
+
+	// Try Redis cache first
+	executableKey := "executable:" + executableID + ":binary"
+	binaryData, err := h.redis.Get(ctx, executableKey).Result()
+	if err == nil {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Write([]byte(binaryData))
+		return
+	}
+
+	// Try to get metadata from cache
+	metaKey := "executable:" + executableID + ":meta"
+	md5sum, err := h.redis.HGet(ctx, metaKey, "md5sum").Result()
+	if err == nil {
+		// Return metadata if binary not available
+		execType, _ := h.redis.HGet(ctx, metaKey, "type").Result()
+		execPath, _ := h.redis.HGet(ctx, metaKey, "executable_path").Result()
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"executable": map[string]interface{}{
+				"id":             executableID,
+				"type":           execType,
+				"executable_path": execPath,
+				"md5sum":         md5sum,
+			},
+		})
+		return
+	}
+
+	// For now, return a placeholder validator script for testing
+	// In production, this would fetch from database and object storage
+	log.Printf("Executable %s not found in cache, returning placeholder", executableID)
+
+	// Return a simple shell validator script that compares output
+	placeholderValidator := `#!/bin/bash
+# DOMjudge-style validator exit codes:
+# 42 = correct
+# 43 = wrong-answer
+# 44 = presentation error
+
+INPUT="$1"
+ANSWER="$2"
+OUTPUT="$3"
+
+# Read expected output (trim trailing whitespace)
+EXPECTED=$(cat "$ANSWER" | sed 's/[[:space:]]*$//')
+ACTUAL=$(cat "$OUTPUT" | sed 's/[[:space:]]*$//')
+
+# Compare
+if [ "$EXPECTED" = "$ACTUAL" ]; then
+	echo "Correct"
+	exit 42
+else
+	# Check if whitespace-only difference (presentation error)
+	EXPECTED_NOSPACE=$(echo "$EXPECTED" | tr -d '[:space:]')
+	ACTUAL_NOSPACE=$(echo "$ACTUAL" | tr -d '[:space:]')
+	if [ "$EXPECTED_NOSPACE" = "$ACTUAL_NOSPACE" ]; then
+		echo "Presentation Error: whitespace differences"
+		exit 44
+	else
+		echo "Wrong Answer"
+		exit 43
+	fi
+fi
+`
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Write([]byte(placeholderValidator))
 }
