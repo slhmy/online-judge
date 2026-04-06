@@ -57,10 +57,11 @@ type SubmissionDetails struct {
 // ProblemDetails contains problem configuration for judging
 type ProblemDetails struct {
 	ID              string  `json:"id"`
-	TimeLimit       float64 `json:"time_limit"`  // in seconds
+	TimeLimit       float64 `json:"time_limit"`   // in seconds
 	MemoryLimit     int32   `json:"memory_limit"` // in kilobytes
 	OutputLimit     int32   `json:"output_limit"` // in kilobytes
 	ProcessLimit    int32   `json:"process_limit"`
+	SpecialRunID    string  `json:"special_run_id,omitempty"`    // For interactive problems
 	SpecialCompare  string  `json:"special_compare_id,omitempty"`
 	SpecialCompareArgs string `json:"special_compare_args,omitempty"`
 }
@@ -139,7 +140,11 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 
 	var job JudgeJob
 	memberStr := result[0].Member
-	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
+	memberBytes, ok := memberStr.(string)
+	if !ok {
+		return nil, fmt.Errorf("unexpected member type in queue result")
+	}
+	if err := json.Unmarshal([]byte(memberBytes), &job); err != nil {
 		return nil, err
 	}
 
@@ -298,6 +303,7 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 			MemoryLimit     int32   `json:"memory_limit"`
 			OutputLimit     int32   `json:"output_limit"`
 			ProcessLimit    int32   `json:"process_limit"`
+			SpecialRunId    string  `json:"special_run_id"`
 			SpecialCompareId string `json:"special_compare_id"`
 			SpecialCompareArgs string `json:"special_compare_args"`
 		} `json:"problem"`
@@ -313,6 +319,7 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 		MemoryLimit:   rawResp.Problem.MemoryLimit,
 		OutputLimit:   rawResp.Problem.OutputLimit,
 		ProcessLimit:  rawResp.Problem.ProcessLimit,
+		SpecialRunID:  rawResp.Problem.SpecialRunId,
 		SpecialCompare: rawResp.Problem.SpecialCompareId,
 		SpecialCompareArgs: rawResp.Problem.SpecialCompareArgs,
 	}, nil

@@ -12,6 +12,7 @@ import (
 
 	"github.com/online-judge/judge/internal/config"
 	"github.com/online-judge/judge/internal/queue"
+	"github.com/online-judge/judge/internal/runner"
 	"github.com/online-judge/judge/internal/sandbox"
 	"github.com/online-judge/judge/internal/validator"
 )
@@ -30,14 +31,15 @@ const (
 
 // JudgeWorker handles judging jobs from the queue
 type JudgeWorker struct {
-	id              string
-	queue           *queue.JudgeQueue
-	config          *config.Config
-	validator       *validator.DefaultValidator
+	id               string
+	queue            *queue.JudgeQueue
+	config           *config.Config
+	validator        *validator.DefaultValidator
 	specialValidator *validator.SpecialValidator
-	compileCache    *sandbox.CompileCache
-	mu              sync.Mutex
-	currentJob      *queue.JudgeJob
+	interactiveRunner *runner.InteractiveRunner
+	compileCache     *sandbox.CompileCache
+	mu               sync.Mutex
+	currentJob       *queue.JudgeJob
 }
 
 // NewJudgeWorker creates a new judge worker
@@ -51,6 +53,12 @@ func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue,
 	specialValidatorConfig := validator.DefaultSpecialValidatorConfig()
 	if cfg.SandboxWorkDir != "" {
 		specialValidatorConfig.CacheDir = cfg.SandboxWorkDir + "/validator-cache"
+	}
+
+	// Create interactive runner config
+	interactiveRunnerConfig := runner.DefaultInteractiveRunnerConfig()
+	if cfg.SandboxWorkDir != "" {
+		interactiveRunnerConfig.CacheDir = cfg.SandboxWorkDir + "/interactor-cache"
 	}
 
 	// Create compilation cache
@@ -67,7 +75,8 @@ func NewJudgeWorker(id string, cfg *config.Config, judgeQueue *queue.JudgeQueue,
 			judgeQueue,
 			cfg.OrchestratorURL,
 		),
-		compileCache: compileCache,
+		interactiveRunner: runner.NewInteractiveRunner(interactiveRunnerConfig),
+		compileCache:      compileCache,
 	}
 }
 
@@ -214,6 +223,9 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 		limits.OutputLimit = 10240 // 10MB default
 	}
 
+	// Check if problem is interactive
+	isInteractiveProblem := problem.SpecialRunID != ""
+
 	for i, tc := range testCases {
 		log.Printf("Running test case %d/%d for submission %s", i+1, len(testCases), job.SubmissionID)
 
@@ -231,45 +243,72 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 			break // Can't continue without test case data
 		}
 
-		// Run the binary with test case input
-		runResult, err := w.runTest(ctx, sb, binaryPath, submission.LanguageID, tcData.Input, limits)
-		if err != nil {
-			log.Printf("Failed to run test case %s: %v", tc.ID, err)
-			runResults = append(runResults, &queue.TestCaseResult{
-				TestCaseID: tc.ID,
-				Rank:       int(tc.Rank),
-				Verdict:    VerdictRunError,
-				Error:      fmt.Sprintf("Execution failed: %v", err),
-			})
-			finalVerdict = VerdictRunError
-			break
-		}
+		// Determine if this test case should run interactively
+		isInteractive := isInteractiveProblem || tc.IsInteractive
+		var tcVerdict string
+		var runtimeSeconds float64
+		var memoryKB int64
+		var tcOutput string
 
-		// Determine verdict for this test case
-		tcVerdict := runResult.Verdict
-		if tcVerdict == VerdictCorrect {
-			// Validate output - use special validator if problem has special_compare_id
-			if problem.SpecialCompare != "" && w.specialValidator != nil {
-				// Run custom validator
-				vVerdict, feedback := w.specialValidator.Validate(
-					ctx,
-					problem.SpecialCompare,
-					problem.SpecialCompareArgs,
-					tcData.Input,
-					tcData.Output,
-					runResult.Output,
-				)
-				tcVerdict = string(vVerdict)
-				log.Printf("Special validator %s returned: %s (feedback: %s)", problem.SpecialCompare, tcVerdict, feedback)
-			} else {
-				// Use default validator
-				tcVerdict = string(w.validator.Validate(tcData.Output, runResult.Output))
+		if isInteractive {
+			// Run interactive test
+			tcVerdict, runtimeSeconds, memoryKB, err = w.runInteractiveTest(
+				ctx, sb, binaryPath, problem.SpecialRunID, tcData.Input, limits,
+			)
+			if err != nil {
+				log.Printf("Failed to run interactive test case %s: %v", tc.ID, err)
+				runResults = append(runResults, &queue.TestCaseResult{
+					TestCaseID: tc.ID,
+					Rank:       int(tc.Rank),
+					Verdict:    VerdictRunError,
+					Error:      fmt.Sprintf("Interactive execution failed: %v", err),
+				})
+				finalVerdict = VerdictRunError
+				break
 			}
-		}
+			log.Printf("Interactive test case %s verdict: %s", tc.ID, tcVerdict)
+		} else {
+			// Run standard test
+			runResult, err := w.runTest(ctx, sb, binaryPath, submission.LanguageID, tcData.Input, limits)
+			if err != nil {
+				log.Printf("Failed to run test case %s: %v", tc.ID, err)
+				runResults = append(runResults, &queue.TestCaseResult{
+					TestCaseID: tc.ID,
+					Rank:       int(tc.Rank),
+					Verdict:    VerdictRunError,
+					Error:      fmt.Sprintf("Execution failed: %v", err),
+				})
+				finalVerdict = VerdictRunError
+				break
+			}
 
-		// Track statistics
-		runtimeSeconds := runResult.TimeUsed.Seconds()
-		memoryKB := runResult.MemoryUsed
+			// Determine verdict for this test case
+			tcVerdict = runResult.Verdict
+			if tcVerdict == VerdictCorrect {
+				// Validate output - use special validator if problem has special_compare_id
+				if problem.SpecialCompare != "" && w.specialValidator != nil {
+					// Run custom validator
+					vVerdict, feedback := w.specialValidator.Validate(
+						ctx,
+						problem.SpecialCompare,
+						problem.SpecialCompareArgs,
+						tcData.Input,
+						tcData.Output,
+						runResult.Output,
+					)
+					tcVerdict = string(vVerdict)
+					log.Printf("Special validator %s returned: %s (feedback: %s)", problem.SpecialCompare, tcVerdict, feedback)
+				} else {
+					// Use default validator
+					tcVerdict = string(w.validator.Validate(tcData.Output, runResult.Output))
+				}
+			}
+
+			// Track statistics
+			runtimeSeconds = runResult.TimeUsed.Seconds()
+			memoryKB = runResult.MemoryUsed
+			tcOutput = string(runResult.Output)
+		}
 
 		if runtimeSeconds > maxRuntime {
 			maxRuntime = runtimeSeconds
@@ -284,8 +323,7 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 			Verdict:    tcVerdict,
 			Runtime:    runtimeSeconds,
 			Memory:     memoryKB,
-			Output:     string(runResult.Output),
-			Error:      string(runResult.Error),
+			Output:     tcOutput,
 		})
 
 		// Lazy judging: stop on first non-correct verdict
@@ -341,6 +379,46 @@ func (w *JudgeWorker) runTest(ctx context.Context, sb *sandbox.DockerSandbox, bi
 		return nil, err
 	}
 	return result, nil
+}
+
+// runInteractiveTest runs an interactive test case with an interactor
+// Returns: verdict, runtime, memory, error
+func (w *JudgeWorker) runInteractiveTest(
+	ctx context.Context,
+	sb *sandbox.DockerSandbox,
+	binaryPath string,
+	interactorID string,
+	testcaseInput []byte,
+	limits sandbox.Limits,
+) (string, float64, int64, error) {
+	// Fetch interactor binary
+	interactorBinary, err := w.getInteractorBinary(ctx, interactorID)
+	if err != nil {
+		return VerdictRunError, 0, 0, fmt.Errorf("failed to get interactor: %w", err)
+	}
+
+	// Run interactive execution
+	result, err := sb.RunInteractive(ctx, binaryPath, interactorBinary, testcaseInput, limits)
+	if err != nil {
+		return VerdictRunError, 0, 0, fmt.Errorf("interactive execution failed: %w", err)
+	}
+
+	return result.SolutionVerdict, result.TimeUsed.Seconds(), result.MemoryUsed, nil
+}
+
+// getInteractorBinary fetches the interactor binary for an interactive problem
+func (w *JudgeWorker) getInteractorBinary(ctx context.Context, interactorID string) ([]byte, error) {
+	if interactorID == "" {
+		return nil, fmt.Errorf("interactor ID is empty")
+	}
+
+	// Use the queue's FetchExecutable method to get the binary
+	binaryData, _, err := w.queue.FetchExecutable(ctx, interactorID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch interactor binary: %w", err)
+	}
+
+	return binaryData, nil
 }
 
 // GetCurrentJob returns the current job being processed

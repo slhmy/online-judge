@@ -31,9 +31,21 @@ type Result struct {
 	Error      []byte        // stderr
 }
 
+// InteractiveResult contains the result of interactive execution
+type InteractiveResult struct {
+	SolutionVerdict  string        // correct, wrong-answer, time-limit, memory-limit, run-error
+	InteractorExit   int           // DOMjudge exit code (42=correct, 43=wrong-answer)
+	InteractorOutput []byte        // Interactor stderr for feedback
+	TimeUsed         time.Duration // Solution wall time
+	MemoryUsed       int64         // Solution memory in KB (approximate)
+	Output           []byte        // Any solution output captured
+	Error            string        // Error message if any
+}
+
 // Sandbox interface for code execution
 type Sandbox interface {
 	Run(ctx context.Context, binary string, args []string, input io.Reader, limits Limits) (*Result, error)
+	RunInteractive(ctx context.Context, solutionBinary string, interactorBinary []byte, testcaseInput []byte, limits Limits) (*InteractiveResult, error)
 	Compile(ctx context.Context, source string, language string) (string, error)
 	Cleanup() error
 }
@@ -506,4 +518,250 @@ func GetLanguageConfig(language string) (*LanguageConfig, error) {
 		return nil, fmt.Errorf("unsupported language: %s", language)
 	}
 	return &cfg, nil
+}
+
+// RunInteractive executes a solution with an interactor for interactive problems
+// This method runs two processes connected by pipes:
+//   - Interactor stdout -> Solution stdin
+//   - Solution stdout -> Interactor stdin
+// For Docker-in-Docker, we use a helper script approach
+func (s *DockerSandbox) RunInteractive(
+	ctx context.Context,
+	solutionBinary string,
+	interactorBinary []byte,
+	testcaseInput []byte,
+	limits Limits,
+) (*InteractiveResult, error) {
+	// DOMjudge-style exit codes
+	const (
+		ExitCodeCorrect     = 42
+		ExitCodeWrongAnswer = 43
+		ExitCodePresentation = 44
+	)
+
+	// Create work directory for this interactive run
+	interactiveDir := filepath.Join(s.workDir, "interactive")
+	if err := os.MkdirAll(interactiveDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create interactive directory: %w", err)
+	}
+
+	// Write interactor binary to work directory
+	interactorPath := filepath.Join(interactiveDir, "interactor")
+	if err := os.WriteFile(interactorPath, interactorBinary, 0755); err != nil {
+		return nil, fmt.Errorf("failed to write interactor binary: %w", err)
+	}
+
+	// Write test case input to work directory
+	inputPath := filepath.Join(interactiveDir, "testcase.in")
+	if err := os.WriteFile(inputPath, testcaseInput, 0644); err != nil {
+		return nil, fmt.Errorf("failed to write testcase input: %w", err)
+	}
+
+	// Determine language from solution binary
+	language := detectLanguageFromBinary(solutionBinary)
+	cfg, ok := languageConfigs[language]
+	if !ok {
+		cfg = languageConfigs["cpp"]
+	}
+
+	// Apply time factor
+	effectiveTimeLimit := time.Duration(float64(limits.TimeLimit) * cfg.TimeFactor)
+	effectiveMemoryLimit := int64(float64(limits.MemoryLimit) * cfg.MemoryFactor)
+
+	// Create interactive runner script that will orchestrate the pipe communication
+	runnerScript := filepath.Join(interactiveDir, "run_interactive.sh")
+	scriptContent := fmt.Sprintf(`#!/bin/bash
+set -e
+
+INTERACTOR="%s"
+SOLUTION="%s"
+INPUT="%s"
+WORKDIR="%s"
+
+# Create pipes for communication
+mkfifo "$WORKDIR/interactor_to_solution"
+mkfifo "$WORKDIR/solution_to_interactor"
+
+# Run interactor with testcase input as argument
+# Interactor stdin receives from solution stdout
+# Interactor stdout sends to solution stdin
+"$INTERACTOR" "$INPUT" < "$WORKDIR/solution_to_interactor" > "$WORKDIR/interactor_to_solution" 2> "$WORKDIR/interactor_stderr.txt" &
+INTERACTOR_PID=$!
+
+# Run solution
+# Solution stdin receives from interactor stdout
+# Solution stdout sends to interactor stdin
+"%s" < "$WORKDIR/interactor_to_solution" > "$WORKDIR/solution_to_interactor" 2> "$WORKDIR/solution_stderr.txt" &
+SOLUTION_PID=$!
+
+# Wait for both processes
+wait $SOLUTION_PID
+SOLUTION_EXIT=$?
+wait $INTERACTOR_PID
+INTERACTOR_EXIT=$?
+
+# Clean up pipes
+rm -f "$WORKDIR/interactor_to_solution" "$WORKDIR/solution_to_interactor"
+
+# Exit with interactor's exit code (DOMjudge-style)
+exit $INTERACTOR_EXIT
+`,
+		"/workspace/interactive/interactor", // Interactor path in container
+		strings.Join(cfg.RunCmd, " "),       // Solution command
+		"/workspace/interactive/testcase.in", // Input path in container
+		"/workspace/interactive",             // Work dir in container
+		strings.Join(cfg.RunCmd, " "),       // Solution command (repeated for clarity)
+	)
+
+	// For container execution, we need simpler paths
+	scriptContent = fmt.Sprintf(`#!/bin/bash
+INTERACTOR="/workspace/interactive/interactor"
+INPUT="/workspace/interactive/testcase.in"
+WORKDIR="/workspace/interactive"
+
+# Create named pipes
+mkfifo "$WORKDIR/pipe1"
+mkfifo "$WORKDIR/pipe2"
+
+# Run interactor: reads from pipe2 (solution output), writes to pipe1 (solution input)
+"$INTERACTOR" "$INPUT" < "$WORKDIR/pipe2" > "$WORKDIR/pipe1" 2> "$WORKDIR/interactor_stderr.txt" &
+INTERACTOR_PID=$!
+
+# Run solution: reads from pipe1 (interactor output), writes to pipe2 (interactor input)
+cd /workspace
+%s < "$WORKDIR/pipe1" > "$WORKDIR/pipe2" 2> "$WORKDIR/solution_stderr.txt" &
+SOLUTION_PID=$!
+
+# Wait for solution first
+wait $SOLUTION_PID 2>/dev/null || true
+
+# Then wait for interactor
+wait $INTERACTOR_PID 2>/dev/null
+INTERACTOR_EXIT=$?
+
+# Cleanup
+rm -f "$WORKDIR/pipe1" "$WORKDIR/pipe2"
+
+# Return interactor exit code
+exit $INTERACTOR_EXIT
+`, strings.Join(cfg.RunCmd, " "))
+
+	if err := os.WriteFile(runnerScript, []byte(scriptContent), 0755); err != nil {
+		return nil, fmt.Errorf("failed to write runner script: %w", err)
+	}
+
+	// Run the interactive script in Docker container
+	containerName := fmt.Sprintf("interactive-%d", time.Now().UnixNano())
+
+	// Build Docker run command with volume mount
+	runArgs := []string{
+		"run",
+		"-i",
+		"--rm",
+		"--name", containerName,
+		"-v", s.workDir + ":/workspace",
+		"-w", "/workspace",
+	}
+
+	// Apply memory limit (convert KB to bytes)
+	memoryBytes := effectiveMemoryLimit * 1024
+	runArgs = append(runArgs,
+		"--memory", fmt.Sprintf("%d", memoryBytes),
+		"--memory-swap", fmt.Sprintf("%d", memoryBytes),
+	)
+
+	// Apply process limit
+	if limits.ProcessLimit > 0 {
+		runArgs = append(runArgs, "--pids-limit", fmt.Sprintf("%d", limits.ProcessLimit))
+	}
+
+	// Security constraints
+	runArgs = append(runArgs,
+		"--network", "none",
+		"--cap-drop", "ALL",
+		"--security-opt", "no-new-privileges",
+	)
+
+	// Add image and command
+	runArgs = append(runArgs, cfg.Image)
+	runArgs = append(runArgs, "/workspace/interactive/run_interactive.sh")
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, effectiveTimeLimit+10*time.Second)
+	defer cancel()
+
+	// Execute Docker command
+	startTime := time.Now()
+	execCmd := exec.CommandContext(timeoutCtx, "docker", runArgs...)
+
+	var stdout, stderr bytes.Buffer
+	execCmd.Stdout = &stdout
+	execCmd.Stderr = &stderr
+
+	runErr := execCmd.Run()
+	elapsed := time.Since(startTime)
+
+	result := &InteractiveResult{
+		TimeUsed: elapsed,
+		MemoryUsed: 0, // Approximate - would need cgroups for accurate measurement
+	}
+
+	// Read interactor stderr for feedback
+	interactorStderrPath := filepath.Join(interactiveDir, "interactor_stderr.txt")
+	if data, err := os.ReadFile(interactorStderrPath); err == nil {
+		result.InteractorOutput = data
+	}
+
+	// Get exit code
+	exitCode := -1
+	if execCmd.ProcessState != nil {
+		exitCode = execCmd.ProcessState.ExitCode()
+	}
+
+	// Determine verdict
+	if timeoutCtx.Err() == context.DeadlineExceeded {
+		result.SolutionVerdict = "time-limit"
+		result.Error = "Interactive execution timed out"
+		return result, nil
+	}
+
+	if runErr != nil {
+		// Check Docker error messages for memory limit
+		if strings.Contains(stderr.String(), "OOM") || strings.Contains(stderr.String(), "memory") {
+			result.SolutionVerdict = "memory-limit"
+			result.Error = "Memory limit exceeded"
+		} else {
+			// Determine from exit code
+			switch exitCode {
+			case ExitCodeCorrect:
+				result.SolutionVerdict = "correct"
+			case ExitCodeWrongAnswer:
+				result.SolutionVerdict = "wrong-answer"
+			case ExitCodePresentation:
+				result.SolutionVerdict = "presentation"
+			default:
+				result.SolutionVerdict = "run-error"
+				result.Error = fmt.Sprintf("Execution error (exit %d): %s", exitCode, stderr.String())
+			}
+		}
+	} else {
+		// Successful execution - check exit code
+		switch exitCode {
+		case ExitCodeCorrect:
+			result.SolutionVerdict = "correct"
+		case ExitCodeWrongAnswer:
+			result.SolutionVerdict = "wrong-answer"
+		case ExitCodePresentation:
+			result.SolutionVerdict = "presentation"
+		case 0:
+			// Exit code 0 might mean correct in some implementations
+			result.SolutionVerdict = "correct"
+		default:
+			result.SolutionVerdict = "internal-error"
+			result.Error = fmt.Sprintf("Unexpected exit code %d: %s", exitCode, string(result.InteractorOutput))
+		}
+	}
+
+	result.InteractorExit = exitCode
+	return result, nil
 }
