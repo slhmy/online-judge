@@ -1,4 +1,4 @@
-.PHONY: all proto build run test clean infra-up infra-down
+.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed
 
 # Default target
 all: proto build
@@ -120,6 +120,30 @@ migrate-down:
 migrate-create:
 	@read -p "Migration name: " name; \
 	migrate create -ext sql -dir backend/migrations -seq $$name
+
+# ============================================
+# Seeding
+# ============================================
+
+seed:
+	@echo "Running database seed..."
+	cd backend && go run ./cmd/seed
+
+seed-docker:
+	@echo "Running database seed in Docker..."
+	docker-compose exec problem-service sh -c "cd /app && ./seed" || \
+		cd backend && go run ./cmd/seed
+
+seed-reset:
+	@echo "Resetting and re-seeding database..."
+	migrate -path backend/migrations -database "postgres://oj:oj@localhost:5432/oj?sslmode=disable" down
+	migrate -path backend/migrations -database "postgres://oj:oj@localhost:5432/oj?sslmode=disable" up
+	$(MAKE) seed
+
+# Build seed binary (for Docker deployment)
+build-seed:
+	@echo "Building seed binary..."
+	cd backend && go build -o bin/seed ./cmd/seed
 
 # ============================================
 # Testing
