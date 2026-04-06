@@ -24,6 +24,7 @@ type MockSubmissionServiceClient struct {
 	ListSubmissionsFunc        func(ctx context.Context, req *pb.ListSubmissionsRequest) (*pb.ListSubmissionsResponse, error)
 	GetJudgingFunc             func(ctx context.Context, req *pb.GetJudgingRequest) (*pb.GetJudgingResponse, error)
 	GetJudgingRunsFunc         func(ctx context.Context, req *pb.GetJudgingRunsRequest) (*pb.GetJudgingRunsResponse, error)
+	RejudgeSubmissionFunc      func(ctx context.Context, req *pb.RejudgeSubmissionRequest) (*pb.RejudgeSubmissionResponse, error)
 	InternalCreateJudgingFunc  func(ctx context.Context, req *pb.InternalCreateJudgingRequest) (*pb.InternalCreateJudgingResponse, error)
 	InternalUpdateJudgingFunc  func(ctx context.Context, req *pb.InternalUpdateJudgingRequest) (*pb.InternalUpdateJudgingResponse, error)
 	InternalCreateJudgingRunFunc func(ctx context.Context, req *pb.InternalCreateJudgingRunRequest) (*pb.InternalCreateJudgingRunResponse, error)
@@ -69,6 +70,13 @@ func (m *MockSubmissionServiceClient) GetJudgingRuns(ctx context.Context, req *p
 		return m.GetJudgingRunsFunc(ctx, req)
 	}
 	return &pb.GetJudgingRunsResponse{Runs: []*pb.JudgingRun{}}, nil
+}
+
+func (m *MockSubmissionServiceClient) RejudgeSubmission(ctx context.Context, req *pb.RejudgeSubmissionRequest, opts ...grpc.CallOption) (*pb.RejudgeSubmissionResponse, error) {
+	if m.RejudgeSubmissionFunc != nil {
+		return m.RejudgeSubmissionFunc(ctx, req)
+	}
+	return &pb.RejudgeSubmissionResponse{SubmissionId: req.SubmissionId, Status: "queued"}, nil
 }
 
 func (m *MockSubmissionServiceClient) InternalCreateJudging(ctx context.Context, req *pb.InternalCreateJudgingRequest, opts ...grpc.CallOption) (*pb.InternalCreateJudgingResponse, error) {

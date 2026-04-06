@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -214,16 +216,16 @@ func (rl *RateLimiter) checkRateLimit(ctx context.Context, key string, limit, bu
 		remaining = 0
 	}
 
-	// Check if under burst limit
+	// Check if at or above limit (including burst allowance)
 	if count >= int64(limit+burst) {
 		// Calculate time until oldest entry expires
-		oldestCmd := rl.redis.ZRange(ctx, key, 0, 0)
+		oldestCmd := rl.redis.ZRangeWithScores(ctx, key, 0, 0)
 		oldest, err := oldestCmd.Result()
 		if err == nil && len(oldest) > 0 {
-			oldestTime, _ := strconv.ParseInt(oldest[0], 10, 64)
+			oldestTime := int64(oldest[0].Score)
 			resetIn := int(oldestTime + int64(window.Seconds()) - now.Unix())
-			if resetIn < 0 {
-				resetIn = 0
+			if resetIn < 1 {
+				resetIn = 1
 			}
 			return false, 0, resetIn, nil
 		}
@@ -271,7 +273,7 @@ func (rl *RateLimiter) TokenBucketRateLimit(ctx context.Context, key string, rat
 
 	// Calculate new token count
 	elapsed := now - lastUpdate
-	tokens = min(tokens+elapsed*rate, float64(burst))
+	tokens = math.Min(tokens+elapsed*rate, float64(burst))
 
 	allowed := tokens >= 1.0
 	remaining := int(tokens)
@@ -314,9 +316,9 @@ func getClientIP(r *http.Request) string {
 	// Check X-Forwarded-For header (most common for proxies)
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		// X-Forwarded-For may contain multiple IPs, first is the original client
-		ips := splitAndTrim(xff, ",")
+		ips := strings.Split(xff, ",")
 		if len(ips) > 0 {
-			return ips[0]
+			return strings.TrimSpace(ips[0])
 		}
 	}
 
@@ -327,51 +329,4 @@ func getClientIP(r *http.Request) string {
 
 	// Fall back to RemoteAddr
 	return r.RemoteAddr
-}
-
-// splitAndTrim splits a string and trims whitespace from each part
-func splitAndTrim(s, sep string) []string {
-	parts := []string{}
-	for _, part := range split(s, sep) {
-		trimmed := trimSpace(part)
-		if trimmed != "" {
-			parts = append(parts, trimmed)
-		}
-	}
-	return parts
-}
-
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func split(s, sep string) []string {
-	if s == "" {
-		return nil
-	}
-	result := []string{}
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i:i+1] == sep {
-			result = append(result, s[start:i])
-			start = i + 1
-		}
-	}
-	result = append(result, s[start:])
-	return result
-}
-
-func trimSpace(s string) string {
-	start := 0
-	end := len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-	return s[start:end]
 }
