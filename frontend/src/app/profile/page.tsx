@@ -392,21 +392,10 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [submissionPage, setSubmissionPage] = useState(1)
 
-  // Redirect if not authenticated
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Profile</h1>
-        <div className="text-center py-10 text-gray-500">
-          Please <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">login</Link> to view your profile.
-        </div>
-      </div>
-    )
-  }
+  // Get userId - use empty string as fallback when not authenticated
+  const userId = user?.id || ''
 
-  const userId = user.id
-
-  // Fetch profile data
+  // Fetch profile data - hooks must always be called in the same order
   const { data: profileData, isLoading: profileLoading, error: profileError, refetch: refetchProfile } = useUserProfile(userId) as {
     data: UserProfile | undefined
     isLoading: boolean
@@ -436,6 +425,18 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Failed to update profile:', err)
     }
+  }
+
+  // Redirect if not authenticated - AFTER all hooks are called
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="px-4 py-6">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Profile</h1>
+        <div className="text-center py-10 text-gray-500">
+          Please <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">login</Link> to view your profile.
+        </div>
+      </div>
+    )
   }
 
   if (profileError) {
