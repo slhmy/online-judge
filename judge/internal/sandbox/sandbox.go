@@ -48,59 +48,67 @@ type LanguageConfig struct {
 	NeedsCompile    bool
 	Image           string   // Docker image to use
 	TimeFactor      float64  // Time multiplier
+	MemoryFactor    float64  // Memory multiplier
+	ExtraFiles      []string // Additional files needed
 }
 
-// Language configurations
+// Language configurations - comprehensive settings for all supported languages
 var languageConfigs = map[string]LanguageConfig{
 	"cpp": {
 		ID:           "cpp",
-		CompileCmd:   []string{"g++", "-O2", "-std=c++17", "-o", "main", "main.cpp"},
+		CompileCmd:   []string{"g++", "-std=c++17", "-O2", "-lm", "-DONLINE_JUDGE", "-pipe", "-fno-stack-limit", "-o", "main", "main.cpp"},
 		RunCmd:       []string{"./main"},
 		SourceFile:   "main.cpp",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "gcc:latest",
+		Image:        "judge-runtime:latest", // Use our custom image
 		TimeFactor:   1.0,
+		MemoryFactor: 1.0,
 	},
 	"c": {
 		ID:           "c",
-		CompileCmd:   []string{"gcc", "-O2", "-std=c11", "-o", "main", "main.c"},
+		CompileCmd:   []string{"gcc", "-std=c11", "-O2", "-lm", "-DONLINE_JUDGE", "-pipe", "-o", "main", "main.c"},
 		RunCmd:       []string{"./main"},
 		SourceFile:   "main.c",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "gcc:latest",
+		Image:        "judge-runtime:latest",
 		TimeFactor:   1.0,
+		MemoryFactor: 1.0,
 	},
 	"python3": {
 		ID:           "python3",
 		CompileCmd:   nil, // No compilation needed
-		RunCmd:       []string{"python3", "main.py"},
+		RunCmd:       []string{"python3", "-S", "main.py"},
 		SourceFile:   "main.py",
 		BinaryFile:   "main.py",
 		NeedsCompile: false,
-		Image:        "python:3.11-slim",
+		Image:        "judge-runtime:latest",
 		TimeFactor:   2.0, // Python is slower
+		MemoryFactor: 1.5, // Python uses more memory
+		ExtraFiles:   []string{"__pycache__"},
 	},
 	"java": {
 		ID:           "java",
-		CompileCmd:   []string{"javac", "Main.java"},
-		RunCmd:       []string{"java", "Main"},
+		CompileCmd:   []string{"javac", "-encoding", "UTF8", "-source", "17", "-target", "17", "Main.java"},
+		RunCmd:       []string{"java", "-Xmx512M", "-Xss64M", "-DONLINE_JUDGE=true", "-enableassertions", "Main"},
 		SourceFile:   "Main.java",
 		BinaryFile:   "Main.class",
 		NeedsCompile: true,
-		Image:        "openjdk:17-slim",
+		Image:        "judge-runtime:latest",
 		TimeFactor:   2.0, // Java startup overhead
+		MemoryFactor: 1.5,
 	},
 	"go": {
 		ID:           "go",
-		CompileCmd:   []string{"go", "build", "-o", "main", "main.go"},
+		CompileCmd:   []string{"go", "build", "-o", "main", "-ldflags", "-s -w", "main.go"},
 		RunCmd:       []string{"./main"},
 		SourceFile:   "main.go",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "golang:1.21-alpine",
+		Image:        "judge-runtime:latest",
 		TimeFactor:   1.0,
+		MemoryFactor: 1.0,
 	},
 	"rust": {
 		ID:           "rust",
@@ -109,18 +117,20 @@ var languageConfigs = map[string]LanguageConfig{
 		SourceFile:   "main.rs",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "rust:latest",
+		Image:        "judge-runtime:latest",
 		TimeFactor:   1.0,
+		MemoryFactor: 1.0,
 	},
 	"nodejs": {
 		ID:           "nodejs",
 		CompileCmd:   nil, // No compilation needed
-		RunCmd:       []string{"node", "main.js"},
+		RunCmd:       []string{"node", "--optimize_for_size", "main.js"},
 		SourceFile:   "main.js",
 		BinaryFile:   "main.js",
 		NeedsCompile: false,
-		Image:        "node:18-alpine",
+		Image:        "judge-runtime:latest",
 		TimeFactor:   2.0, // Node.js overhead
+		MemoryFactor: 1.5,
 	},
 }
 
@@ -222,13 +232,14 @@ func (s *DockerSandbox) Run(ctx context.Context, binary string, args []string, i
 		runCmd = append(runCmd, args...)
 	}
 
-	// Apply time factor
+	// Apply time factor and memory factor
 	effectiveTimeLimit := time.Duration(float64(limits.TimeLimit) * cfg.TimeFactor)
+	effectiveMemoryLimit := int64(float64(limits.MemoryLimit) * cfg.MemoryFactor)
 
 	// Run in Docker with network disabled and read-only filesystem
 	result, err := s.runDockerWithCopy(ctx, cfg.Image, runCmd, inputData, Limits{
 		TimeLimit:    effectiveTimeLimit,
-		MemoryLimit:  limits.MemoryLimit,
+		MemoryLimit:  effectiveMemoryLimit,
 		OutputLimit:  limits.OutputLimit,
 		ProcessLimit: limits.ProcessLimit,
 	}, true)

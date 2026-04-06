@@ -137,7 +137,10 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 	}
 
 	var job JudgeJob
-	memberStr := result[0].Member.(string)
+	memberStr, ok := result[0].Member.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid queue member type")
+	}
 	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
 		return nil, err
 	}

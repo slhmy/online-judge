@@ -1,7 +1,29 @@
-.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed
+.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image
 
 # Default target
 all: proto build
+
+# ============================================
+# Judge Runtime Image (Multi-language compilers)
+# ============================================
+
+judge-runtime-image:
+	@echo "Building judge runtime Docker image with all compilers..."
+	cd judge/scripts && chmod +x build-runtime-image.sh && ./build-runtime-image.sh
+	@echo "Judge runtime image built successfully!"
+	@echo ""
+	@echo "Supported languages:"
+	@echo "  - C++17 (g++)"
+	@echo "  - C11 (gcc)"
+	@echo "  - Python3"
+	@echo "  - Java17"
+	@echo "  - Go 1.21"
+	@echo "  - Rust (stable)"
+	@echo "  - Node.js 18"
+
+judge-runtime-check:
+	@echo "Verifying judge runtime compilers..."
+	docker run --rm judge-runtime:latest /usr/local/bin/check-compilers
 
 # ============================================
 # Run Services
