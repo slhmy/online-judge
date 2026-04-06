@@ -90,3 +90,55 @@ export function useMe() {
     retry: false,
   })
 }
+
+// Admin - Problem CRUD
+export function useCreateProblem() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: {
+      external_id: string
+      name: string
+      time_limit: number
+      memory_limit: number
+      difficulty: string
+      points: number
+      description?: string
+    }) => bffClient.createProblem(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['problems'] })
+    },
+  })
+}
+
+export function useUpdateProblem(id: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: {
+      name?: string
+      time_limit?: number
+      memory_limit?: number
+      difficulty?: string
+      points?: number
+      is_published?: boolean
+      allow_submit?: boolean
+      description?: string
+    }) => bffClient.updateProblem(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['problems'] })
+      queryClient.invalidateQueries({ queryKey: ['problem', id] })
+    },
+  })
+}
+
+export function useDeleteProblem() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => bffClient.deleteProblem(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['problems'] })
+    },
+  })
+}

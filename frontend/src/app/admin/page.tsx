@@ -82,6 +82,21 @@ export default function AdminPage() {
     <div className="px-4 py-6">
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
 
+      {/* Navigation Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <button
+          onClick={() => router.push('/admin/problems')}
+          className="p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition-colors"
+        >
+          <div className="text-lg font-semibold">Problem Management</div>
+          <div className="text-sm opacity-80">Create, edit, and delete problems</div>
+        </button>
+        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contest Management</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Coming soon</div>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Management</h2>

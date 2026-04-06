@@ -85,6 +85,58 @@ export class BFFClient {
   async getMe() {
     return this.fetch('/api/v1/auth/me')
   }
+
+  // Admin - Problem CRUD
+  async createProblem(data: {
+    external_id: string
+    name: string
+    time_limit: number
+    memory_limit: number
+    output_limit?: number
+    difficulty: string
+    points: number
+    description?: string
+  }) {
+    return this.fetch('/api/v1/problems', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateProblem(id: string, data: {
+    name?: string
+    time_limit?: number
+    memory_limit?: number
+    output_limit?: number
+    difficulty?: string
+    points?: number
+    is_published?: boolean
+    allow_submit?: boolean
+    description?: string
+  }) {
+    return this.fetch(`/api/v1/problems/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteProblem(id: string) {
+    return this.fetch(`/api/v1/problems/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Admin - User management
+  async getUsers() {
+    return this.fetch('/api/v1/admin/users')
+  }
+
+  async updateUserRole(userId: string, role: string) {
+    return this.fetch(`/api/v1/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    })
+  }
 }
 
 export const bffClient = new BFFClient()

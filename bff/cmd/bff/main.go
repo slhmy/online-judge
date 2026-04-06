@@ -116,6 +116,14 @@ func main() {
 		r.Get("/problems/{id}", problemHandler.GetProblem)
 		r.Get("/languages", problemHandler.ListLanguages)
 
+			// Problem admin routes (protected)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Post("/problems", problemHandler.CreateProblem)
+				r.Put("/problems/{id}", problemHandler.UpdateProblem)
+				r.Delete("/problems/{id}", problemHandler.DeleteProblem)
+			})
+
 		// Submissions (mixed - some public, some protected)
 		r.Post("/submissions", submissionHandler.Create) // TODO: Add auth
 		r.Get("/submissions", submissionHandler.List)
