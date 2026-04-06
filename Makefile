@@ -36,6 +36,7 @@ build-backend:
 	cd backend && go build -o bin/submission-service ./cmd/submission-service
 	cd backend && go build -o bin/contest-service ./cmd/contest-service
 	cd backend && go build -o bin/notification-service ./cmd/notification-service
+	cd backend && go build -o bin/user-service ./cmd/user-service
 
 build-bff:
 	@echo "Building BFF..."
@@ -72,6 +73,9 @@ run-contest:
 
 run-notification:
 	cd backend && go run ./cmd/notification-service
+
+run-user:
+	cd backend && go run ./cmd/user-service
 
 run-judge:
 	cd judge && go run ./cmd/judgedaemon

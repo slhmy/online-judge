@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/user/v1;userv1";
+
+import "google/api/annotations.proto";
+import "common/v1/common.proto";
+
+// User Service - handles user profiles and statistics
+service UserService {
+  // Get user profile by ID
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/users/{user_id}/profile"
+    };
+  }
+
+  // Update user profile
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/users/{user_id}/profile"
+      body: "*"
+    };
+  }
+
+  // Get user statistics (solved_count, submission_count, rating)
+  rpc GetUserStats(GetUserStatsRequest) returns (GetUserStatsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/users/{user_id}/stats"
+    };
+  }
+
+  // List user submissions with pagination
+  rpc ListUserSubmissions(ListUserSubmissionsRequest) returns (ListUserSubmissionsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/users/{user_id}/submissions"
+    };
+  }
+}
+
+// User profile
+message UserProfile {
+  string user_id = 1;
+  string username = 2;
+  string display_name = 3;
+  int32 rating = 4;
+  int32 solved_count = 5;
+  int32 submission_count = 6;
+  string avatar_url = 7;
+  string bio = 8;
+  string country = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+// User statistics
+message UserStats {
+  string user_id = 1;
+  int32 solved_count = 2;
+  int32 submission_count = 3;
+  int32 rating = 4;
+  int32 accepted_count = 5;          // Correct submissions
+  int32 wrong_answer_count = 6;      // Wrong answer submissions
+  int32 time_limit_count = 7;        // TLE submissions
+  int32 memory_limit_count = 8;      // MLE submissions
+  int32 runtime_error_count = 9;     // RE submissions
+  int32 compile_error_count = 10;    // CE submissions
+  double acceptance_rate = 11;       // accepted_count / submission_count
+}
+
+// Submission summary for user's submission list
+message UserSubmissionSummary {
+  string id = 1;
+  string problem_id = 2;
+  string problem_name = 3;
+  string language_id = 4;
+  string verdict = 5;
+  double runtime = 6;                // seconds
+  int32 memory = 7;                  // kilobytes
+  string submit_time = 8;
+  string contest_id = 9;
+  string contest_name = 10;
+}
+
+// Request/Response messages
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+message GetUserProfileResponse {
+  UserProfile profile = 1;
+}
+
+message UpdateUserProfileRequest {
+  string user_id = 1;
+  string display_name = 2;
+  string avatar_url = 3;
+  string bio = 4;
+  string country = 5;
+}
+
+message UpdateUserProfileResponse {
+  UserProfile profile = 1;
+}
+
+message GetUserStatsRequest {
+  string user_id = 1;
+}
+
+message GetUserStatsResponse {
+  UserStats stats = 1;
+}
+
+message ListUserSubmissionsRequest {
+  string user_id = 1;
+  common.v1.Pagination pagination = 2;
+  string verdict = 3;                // Filter by verdict (optional)
+  string problem_id = 4;             // Filter by problem (optional)
+}
+
+message ListUserSubmissionsResponse {
+  repeated UserSubmissionSummary submissions = 1;
+  common.v1.PaginatedResponse pagination = 2;
+}
