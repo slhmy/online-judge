@@ -91,6 +91,21 @@ service ProblemService {
       get: "/api/v1/languages"
     };
   }
+
+  // Get problem statement content
+  rpc GetProblemStatement(GetProblemStatementRequest) returns (GetProblemStatementResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/problems/{problem_id}/statement"
+    };
+  }
+
+  // Set problem statement content (admin)
+  rpc SetProblemStatement(SetProblemStatementRequest) returns (SetProblemStatementResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/problems/{problem_id}/statement"
+      body: "*"
+    };
+  }
 }
 
 // Problem summary for list view
@@ -285,4 +300,37 @@ message BatchUploadTestCasesResponse {
 
 message ListLanguagesResponse {
   repeated Language languages = 1;
+}
+
+// Problem statement content
+message ProblemStatement {
+  string id = 1;
+  string problem_id = 2;
+  string language = 3;        // e.g., "en", "zh"
+  string format = 4;          // "html", "markdown", "pdf"
+  string title = 5;           // Problem title for this language
+  string content = 6;         // Markdown/HTML content
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message GetProblemStatementRequest {
+  string problem_id = 1;
+  string language = 2;        // Optional, defaults to "en"
+}
+
+message GetProblemStatementResponse {
+  ProblemStatement statement = 1;
+}
+
+message SetProblemStatementRequest {
+  string problem_id = 1;
+  string language = 2;
+  string format = 3;
+  string title = 4;
+  string content = 5;
+}
+
+message SetProblemStatementResponse {
+  ProblemStatement statement = 1;
 }

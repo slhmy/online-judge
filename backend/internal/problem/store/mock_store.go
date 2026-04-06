@@ -21,24 +21,28 @@ type ProblemStoreInterface interface {
 	DeleteTestCase(ctx context.Context, id string) error
 	BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error)
 	ListLanguages(ctx context.Context) ([]*pb.Language, error)
+	GetProblemStatement(ctx context.Context, problemID string, language string) (*pb.ProblemStatement, error)
+	SetProblemStatement(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.ProblemStatement, error)
 }
 
 // MockProblemStore is a mock implementation of ProblemStoreInterface for testing
 type MockProblemStore struct {
-	Problems    map[string]*pb.Problem
-	TestCases   map[string][]*pb.TestCase
-	Languages   []*pb.Language
-	CreateError error
-	GetError    error
-	ListError   error
-	UpdateError error
-	DeleteError error
+	Problems          map[string]*pb.Problem
+	TestCases         map[string][]*pb.TestCase
+	Languages         []*pb.Language
+	ProblemStatements map[string]*pb.ProblemStatement // key: problemID:language
+	CreateError       error
+	GetError          error
+	ListError         error
+	UpdateError       error
+	DeleteError       error
 }
 
 func NewMockProblemStore() *MockProblemStore {
 	return &MockProblemStore{
-		Problems:  make(map[string]*pb.Problem),
-		TestCases: make(map[string][]*pb.TestCase),
+		Problems:          make(map[string]*pb.Problem),
+		TestCases:         make(map[string][]*pb.TestCase),
+		ProblemStatements: make(map[string]*pb.ProblemStatement),
 	}
 }
 
@@ -316,4 +320,52 @@ func (m *MockProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, e
 		}, nil
 	}
 	return m.Languages, nil
+}
+
+func (m *MockProblemStore) GetProblemStatement(ctx context.Context, problemID string, language string) (*pb.ProblemStatement, error) {
+	if m.GetError != nil {
+		return nil, m.GetError
+	}
+
+	if language == "" {
+		language = "en"
+	}
+
+	key := problemID + ":" + language
+	stmt, ok := m.ProblemStatements[key]
+	if !ok {
+		return nil, errors.New("problem statement not found")
+	}
+	return stmt, nil
+}
+
+func (m *MockProblemStore) SetProblemStatement(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.ProblemStatement, error) {
+	if m.CreateError != nil {
+		return nil, m.CreateError
+	}
+
+	language := req.GetLanguage()
+	if language == "" {
+		language = "en"
+	}
+
+	format := req.GetFormat()
+	if format == "" {
+		format = "markdown"
+	}
+
+	key := req.GetProblemId() + ":" + language
+	stmt := &pb.ProblemStatement{
+		Id:        uuid.New().String(),
+		ProblemId: req.GetProblemId(),
+		Language:  language,
+		Format:    format,
+		Title:     req.GetTitle(),
+		Content:   req.GetContent(),
+		CreatedAt: "2024-01-01T00:00:00Z",
+		UpdatedAt: "2024-01-01T00:00:00Z",
+	}
+
+	m.ProblemStatements[key] = stmt
+	return stmt, nil
 }

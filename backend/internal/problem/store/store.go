@@ -445,3 +445,104 @@ func (s *ProblemStore) BatchCreateTestCases(ctx context.Context, req *pb.BatchUp
 
 	return testCases, nil
 }
+
+func (s *ProblemStore) GetProblemStatement(ctx context.Context, problemID string, language string) (*pb.ProblemStatement, error) {
+	parsedID, err := uuid.Parse(problemID)
+	if err != nil {
+		return nil, err
+	}
+
+	if language == "" {
+		language = "en"
+	}
+
+	query := `
+		SELECT id, problem_id, language, format, title, content, created_at, updated_at
+		FROM problem_statements
+		WHERE problem_id = $1 AND language = $2
+	`
+
+	var stmt pb.ProblemStatement
+	var stmtID, stmtProblemID pgtype.UUID
+	var createdAt, updatedAt pgtype.Timestamp
+
+	err = s.db.QueryRow(ctx, query, parsedID, language).Scan(
+		&stmtID, &stmtProblemID, &stmt.Language, &stmt.Format, &stmt.Title, &stmt.Content,
+		&createdAt, &updatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if stmtID.Valid {
+		stmt.Id = uuid.UUID(stmtID.Bytes).String()
+	}
+	if stmtProblemID.Valid {
+		stmt.ProblemId = uuid.UUID(stmtProblemID.Bytes).String()
+	}
+	if createdAt.Valid {
+		stmt.CreatedAt = createdAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if updatedAt.Valid {
+		stmt.UpdatedAt = updatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+
+	return &stmt, nil
+}
+
+func (s *ProblemStore) SetProblemStatement(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.ProblemStatement, error) {
+	parsedID, err := uuid.Parse(req.GetProblemId())
+	if err != nil {
+		return nil, err
+	}
+
+	language := req.GetLanguage()
+	if language == "" {
+		language = "en"
+	}
+
+	format := req.GetFormat()
+	if format == "" {
+		format = "markdown"
+	}
+
+	query := `
+		INSERT INTO problem_statements (problem_id, language, format, title, content)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (problem_id, language) DO UPDATE SET
+			format = EXCLUDED.format,
+			title = EXCLUDED.title,
+			content = EXCLUDED.content,
+			updated_at = NOW()
+		RETURNING id, problem_id, language, format, title, content, created_at, updated_at
+	`
+
+	var stmt pb.ProblemStatement
+	var stmtID, stmtProblemID pgtype.UUID
+	var createdAt, updatedAt pgtype.Timestamp
+
+	err = s.db.QueryRow(ctx, query,
+		parsedID, language, format, req.GetTitle(), req.GetContent(),
+	).Scan(
+		&stmtID, &stmtProblemID, &stmt.Language, &stmt.Format, &stmt.Title, &stmt.Content,
+		&createdAt, &updatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if stmtID.Valid {
+		stmt.Id = uuid.UUID(stmtID.Bytes).String()
+	}
+	if stmtProblemID.Valid {
+		stmt.ProblemId = uuid.UUID(stmtProblemID.Bytes).String()
+	}
+	if createdAt.Valid {
+		stmt.CreatedAt = createdAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if updatedAt.Valid {
+		stmt.UpdatedAt = updatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+
+	return &stmt, nil
+}

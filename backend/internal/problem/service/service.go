@@ -142,3 +142,21 @@ func (s *ProblemService) ListLanguages(ctx context.Context, req *emptypb.Empty) 
 
 	return &pb.ListLanguagesResponse{Languages: languages}, nil
 }
+
+func (s *ProblemService) GetProblemStatement(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error) {
+	statement, err := s.store.GetProblemStatement(ctx, req.GetProblemId(), req.GetLanguage())
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetProblemStatementResponse{Statement: statement}, nil
+}
+
+func (s *ProblemService) SetProblemStatement(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error) {
+	statement, err := s.store.SetProblemStatement(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.SetProblemStatementResponse{Statement: statement}, nil
+}
