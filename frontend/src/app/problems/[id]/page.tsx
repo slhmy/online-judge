@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import TestRunPanel from '@/components/TestRunPanel'
 import { TestRunResult } from '@/types'
 
@@ -51,6 +53,7 @@ export default function ProblemDetailPage() {
 
   const [problem, setProblem] = useState<Problem | null>(null)
   const [testCases, setTestCases] = useState<TestCase[]>([])
+  const [problemStatement, setProblemStatement] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -73,6 +76,14 @@ export default function ProblemDetailPage() {
         console.log('Received data:', data)
         setProblem(data.problem)
         setTestCases(data.sample_test_cases || [])
+
+        // Fetch problem statement
+        const statementUrl = `${BFF_URL}/api/v1/problems/${problemId}/statement`
+        const statementRes = await fetch(statementUrl)
+        if (statementRes.ok) {
+          const statementData = await statementRes.json()
+          setProblemStatement(statementData || '')
+        }
       } catch (err) {
         console.error('Fetch error:', err)
         setError(err instanceof Error ? err.message : 'Failed to load problem')
@@ -205,8 +216,13 @@ export default function ProblemDetailPage() {
         </div>
 
         <div className="prose prose-invert max-w-none">
-          <h2 className="text-gray-700 dark:text-gray-200">Description</h2>
-          <p className="text-gray-600 dark:text-gray-300">Problem description will be loaded from the problem statement file.</p>
+          {problemStatement ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {problemStatement}
+            </ReactMarkdown>
+          ) : (
+            <p className="text-gray-500">No problem statement available.</p>
+          )}
 
           <h2 className="text-gray-700 dark:text-gray-200">Sample Test Cases ({testCases.length})</h2>
           {testCases.length > 0 ? (
