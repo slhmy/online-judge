@@ -1,4 +1,4 @@
-.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-fix lint-backend lint-bff lint-judge
+.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-fix lint-backend lint-bff lint-judge check typecheck-frontend
 
 # Default target
 all: proto build
@@ -209,6 +209,17 @@ lint-fix-judge:
 
 lint-fix: lint-fix-backend lint-fix-bff lint-fix-judge
 	@echo "All auto-fix completed!"
+
+# ============================================
+# Quick Pre-commit Validation
+# ============================================
+
+typecheck-frontend:
+	@echo "Typechecking frontend..."
+	cd frontend && npm run typecheck
+
+check: lint-backend lint-bff lint-judge test-backend test-bff test-judge typecheck-frontend
+	@echo "All checks passed!"
 
 # ============================================
 # Testing
