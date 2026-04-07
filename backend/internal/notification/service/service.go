@@ -13,6 +13,7 @@ import (
 
 	pb "github.com/online-judge/backend/gen/go/notification/v1"
 	"github.com/online-judge/backend/internal/notification/store"
+	"github.com/online-judge/backend/internal/pkg/middleware"
 )
 
 // NotificationService implements the notification gRPC service
@@ -72,8 +73,8 @@ func NewNotificationServiceWithStore(redis *redis.Client, s NotificationStoreInt
 // GetNotifications retrieves notifications for a user
 func (s *NotificationService) GetNotifications(ctx context.Context, req *pb.GetNotificationsRequest) (*pb.GetNotificationsResponse, error) {
 	// Get user ID from context (extracted from JWT token in interceptor)
-	userID := ctx.Value("user_id")
-	if userID == nil {
+	userID := middleware.GetUserID(ctx)
+	if userID == "" {
 		return nil, fmt.Errorf("user not authenticated")
 	}
 
@@ -82,7 +83,7 @@ func (s *NotificationService) GetNotifications(ctx context.Context, req *pb.GetN
 		limit = 50
 	}
 
-	notifications, err := s.store.List(ctx, userID.(string), limit, req.UnreadOnly)
+	notifications, err := s.store.List(ctx, userID, limit, req.UnreadOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +95,12 @@ func (s *NotificationService) GetNotifications(ctx context.Context, req *pb.GetN
 
 // MarkAsRead marks a notification as read
 func (s *NotificationService) MarkAsRead(ctx context.Context, req *pb.MarkAsReadRequest) (*pb.MarkAsReadResponse, error) {
-	userID := ctx.Value("user_id")
-	if userID == nil {
+	userID := middleware.GetUserID(ctx)
+	if userID == "" {
 		return nil, fmt.Errorf("user not authenticated")
 	}
 
-	err := s.store.MarkAsRead(ctx, userID.(string), req.Id)
+	err := s.store.MarkAsRead(ctx, userID, req.Id)
 	if err != nil {
 		return &pb.MarkAsReadResponse{Success: false}, err
 	}
@@ -109,12 +110,12 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, req *pb.MarkAsRead
 
 // MarkAllAsRead marks all notifications as read for a user
 func (s *NotificationService) MarkAllAsRead(ctx context.Context, req *pb.MarkAllAsReadRequest) (*pb.MarkAllAsReadResponse, error) {
-	userID := ctx.Value("user_id")
-	if userID == nil {
+	userID := middleware.GetUserID(ctx)
+	if userID == "" {
 		return nil, fmt.Errorf("user not authenticated")
 	}
 
-	count, err := s.store.MarkAllAsRead(ctx, userID.(string), req.Type)
+	count, err := s.store.MarkAllAsRead(ctx, userID, req.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +125,12 @@ func (s *NotificationService) MarkAllAsRead(ctx context.Context, req *pb.MarkAll
 
 // GetUnreadCount gets the unread notification count
 func (s *NotificationService) GetUnreadCount(ctx context.Context, req *pb.GetUnreadCountRequest) (*pb.GetUnreadCountResponse, error) {
-	userID := ctx.Value("user_id")
-	if userID == nil {
+	userID := middleware.GetUserID(ctx)
+	if userID == "" {
 		return nil, fmt.Errorf("user not authenticated")
 	}
 
-	total, countByType, err := s.store.GetUnreadCount(ctx, userID.(string))
+	total, countByType, err := s.store.GetUnreadCount(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

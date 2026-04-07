@@ -10,6 +10,7 @@ import (
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/contest/v1"
 	"github.com/online-judge/backend/internal/contest/store"
+	"github.com/online-judge/backend/internal/pkg/middleware"
 )
 
 func TestContestService_ListContests(t *testing.T) {
@@ -317,7 +318,7 @@ func TestContestService_RegisterContest(t *testing.T) {
 			service := NewContestService(mockStore, nil)
 
 			// Create context with user ID for authorization
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 			resp, err := service.RegisterContest(ctx, tt.request)
 

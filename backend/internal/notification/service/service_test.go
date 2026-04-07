@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	pb "github.com/online-judge/backend/gen/go/notification/v1"
+	"github.com/online-judge/backend/internal/pkg/middleware"
 )
 
 func setupTestService(t *testing.T) (*NotificationService, *miniredis.Miniredis) {
@@ -29,7 +30,7 @@ func TestNotificationService_GetNotifications(t *testing.T) {
 	service, mr := setupTestService(t)
 	defer mr.Close()
 
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Create some test notifications
 	notifications := []*pb.Notification{
@@ -80,7 +81,7 @@ func TestNotificationService_MarkAsRead(t *testing.T) {
 	service, mr := setupTestService(t)
 	defer mr.Close()
 
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Create a test notification
 	notification := &pb.Notification{
@@ -118,7 +119,7 @@ func TestNotificationService_MarkAllAsRead(t *testing.T) {
 	service, mr := setupTestService(t)
 	defer mr.Close()
 
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Create test notifications
 	notifications := []*pb.Notification{
@@ -166,7 +167,7 @@ func TestNotificationService_GetUnreadCount(t *testing.T) {
 	service, mr := setupTestService(t)
 	defer mr.Close()
 
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Set unread counts
 	_ = mr.Set("notifications:user-1:unread", "5")
@@ -203,7 +204,7 @@ func TestNotificationService_CreateNotification(t *testing.T) {
 	assert.NotEmpty(t, notification.Id)
 
 	// Verify notification was created by checking via GetNotifications
-	ctxWithUser := context.WithValue(context.Background(), "user_id", "user-1")
+	ctxWithUser := middleware.ContextWithUserID(context.Background(), "user-1")
 	resp, err := service.GetNotifications(ctxWithUser, &pb.GetNotificationsRequest{
 		Limit:      10,
 		UnreadOnly: false,
@@ -225,7 +226,7 @@ func TestNotificationService_NotifySubmissionJudged(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify notification was created via GetNotifications
-	ctxWithUser := context.WithValue(context.Background(), "user_id", "user-1")
+	ctxWithUser := middleware.ContextWithUserID(context.Background(), "user-1")
 	resp, err := service.GetNotifications(ctxWithUser, &pb.GetNotificationsRequest{
 		Limit:      10,
 		UnreadOnly: false,
@@ -249,7 +250,7 @@ func TestNotificationService_NotifyContestAnnouncement(t *testing.T) {
 
 	// Verify notifications were created for all recipients
 	for _, userID := range recipients {
-		ctxWithUser := context.WithValue(context.Background(), "user_id", userID)
+		ctxWithUser := middleware.ContextWithUserID(context.Background(), userID)
 		resp, err := service.GetNotifications(ctxWithUser, &pb.GetNotificationsRequest{
 			Limit:      10,
 			UnreadOnly: false,
@@ -273,7 +274,7 @@ func TestNotificationService_NotifySystemAlert(t *testing.T) {
 
 	// Verify notifications were created
 	for _, userID := range recipients {
-		ctxWithUser := context.WithValue(context.Background(), "user_id", userID)
+		ctxWithUser := middleware.ContextWithUserID(context.Background(), userID)
 		resp, err := service.GetNotifications(ctxWithUser, &pb.GetNotificationsRequest{
 			Limit:      10,
 			UnreadOnly: false,
@@ -296,7 +297,7 @@ func TestNotificationService_NotifyContestStarting(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify notification was created
-	ctxWithUser := context.WithValue(context.Background(), "user_id", "user-1")
+	ctxWithUser := middleware.ContextWithUserID(context.Background(), "user-1")
 	resp, err := service.GetNotifications(ctxWithUser, &pb.GetNotificationsRequest{
 		Limit:      10,
 		UnreadOnly: false,

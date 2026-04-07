@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/online-judge/backend/gen/go/notification/v1"
 	"github.com/online-judge/backend/internal/notification/store"
+	"github.com/online-judge/backend/internal/pkg/middleware"
 )
 
 func TestNotificationService_Integration_GetNotifications(t *testing.T) {
@@ -93,7 +94,7 @@ func TestNotificationService_Integration_GetNotifications(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -153,7 +154,7 @@ func TestNotificationService_Integration_MarkAsRead(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -246,7 +247,7 @@ func TestNotificationService_Integration_MarkAllAsRead(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -304,7 +305,7 @@ func TestNotificationService_Integration_GetUnreadCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -452,7 +453,7 @@ func TestNotificationService_Integration_NotifySystemAlert(t *testing.T) {
 func TestNotificationService_Integration_FullFlow(t *testing.T) {
 	mockStore := store.NewMockNotificationStore()
 	service := NewNotificationServiceWithStore(nil, mockStore)
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Step 1: Create multiple notifications
 	err := service.NotifySubmissionJudged(ctx, "user-1", "sub-1", "correct")

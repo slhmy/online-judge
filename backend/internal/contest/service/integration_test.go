@@ -11,6 +11,7 @@ import (
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/contest/v1"
 	"github.com/online-judge/backend/internal/contest/store"
+	"github.com/online-judge/backend/internal/pkg/middleware"
 )
 
 func TestContestService_Integration_CRUDFlow(t *testing.T) {
@@ -72,7 +73,7 @@ func TestContestService_Integration_CRUDFlow(t *testing.T) {
 func TestContestService_Integration_Registration(t *testing.T) {
 	mockStore := store.NewMockContestStore()
 	service := NewContestService(mockStore, nil)
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Create a contest
 	_, err := service.CreateContest(ctx, &pb.CreateContestRequest{
@@ -286,7 +287,7 @@ func TestContestService_Integration_ErrorHandling(t *testing.T) {
 		errorStore := store.NewMockContestStore()
 		errorStore.RegisterError = assert.AnError
 		errorService := NewContestService(errorStore, nil)
-		ctxWithUser := context.WithValue(context.Background(), "user_id", "user-1")
+		ctxWithUser := middleware.ContextWithUserID(context.Background(), "user-1")
 
 		_, err := errorService.RegisterContest(ctxWithUser, &pb.RegisterContestRequest{
 			ContestId: "contest-1",
@@ -378,7 +379,7 @@ func TestContestService_Integration_ContestWithProblems(t *testing.T) {
 func TestContestService_Integration_FullFlow(t *testing.T) {
 	mockStore := store.NewMockContestStore()
 	service := NewContestService(mockStore, nil)
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := middleware.ContextWithUserID(context.Background(), "user-1")
 
 	// Step 1: Create contest
 	createResp, err := service.CreateContest(ctx, &pb.CreateContestRequest{

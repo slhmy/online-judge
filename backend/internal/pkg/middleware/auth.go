@@ -15,8 +15,8 @@ import (
 type contextKey string
 
 const (
-	contextKeyUserID  contextKey = "user_id"
-	contextKeyEmail   contextKey = "user_email"
+	contextKeyUserID contextKey = "user_id"
+	contextKeyEmail  contextKey = "user_email"
 )
 
 type JWTInterceptor struct {
@@ -148,9 +148,14 @@ func extractBearerToken(header string) string {
 	return header[7:]
 }
 
+// ContextWithUserID returns a new context with the user ID set.
+func ContextWithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, contextKeyUserID, userID)
+}
+
 // GetUserID extracts user ID from context
 func GetUserID(ctx context.Context) string {
-	if userID, ok := ctx.Value("user_id").(string); ok {
+	if userID, ok := ctx.Value(contextKeyUserID).(string); ok {
 		return userID
 	}
 	return ""
@@ -158,7 +163,7 @@ func GetUserID(ctx context.Context) string {
 
 // GetUserEmail extracts user email from context
 func GetUserEmail(ctx context.Context) string {
-	if email, ok := ctx.Value("user_email").(string); ok {
+	if email, ok := ctx.Value(contextKeyEmail).(string); ok {
 		return email
 	}
 	return ""
