@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -100,71 +99,67 @@ func (r *InteractiveRunner) RunInteractive(
 		return nil, fmt.Errorf("failed to write input file: %w", err)
 	}
 
-	// Set up pipe connections:
-	// interactorStdout -> solutionStdin
-	// solutionStdout -> interactorStdin
-	interactorStdinReader, interactorStdinWriter := io.Pipe()
-	interactorStdoutReader, interactorStdoutWriter := io.Pipe()
-	solutionStdinReader, solutionStdinWriter := io.Pipe()
-	solutionStdoutReader, solutionStdoutWriter := io.Pipe()
+	// Set up OS pipes for direct process-to-process communication.
+	// Using os.Pipe (real file descriptors) instead of io.Pipe avoids deadlocks:
+	// exec.Cmd.Wait() blocks on internal copy goroutines when io.Pipe is used,
+	// but with *os.File the fds are passed directly to child processes.
+	//
+	// Pipe 1: interactor stdout -> solution stdin
+	// Pipe 2: solution stdout -> interactor stdin
+	solStdinR, intStdoutW, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pipe: %w", err)
+	}
+	intStdinR, solStdoutW, err := os.Pipe()
+	if err != nil {
+		_ = solStdinR.Close()
+		_ = intStdoutW.Close()
+		return nil, fmt.Errorf("failed to create pipe: %w", err)
+	}
 
 	// Create interactor command
 	// DOMjudge-style: interactor receives testcase.in as first argument
 	interactorCmd := exec.CommandContext(ctx, interactorBinary.Path, inputFile)
-	interactorCmd.Stdin = interactorStdinReader
-	interactorCmd.Stdout = interactorStdoutWriter
+	interactorCmd.Stdin = intStdinR
+	interactorCmd.Stdout = intStdoutW
 	var interactorStderr bytes.Buffer
 	interactorCmd.Stderr = &interactorStderr
 
 	// Create solution command
 	solutionCmd := exec.CommandContext(ctx, solutionBinaryPath)
-	solutionCmd.Stdin = solutionStdinReader
-	solutionCmd.Stdout = solutionStdoutWriter
+	solutionCmd.Stdin = solStdinR
+	solutionCmd.Stdout = solStdoutW
 	var solutionStderr bytes.Buffer
 	solutionCmd.Stderr = &solutionStderr
-
-	// Copy data between pipes:
-	// interactor stdout -> solution stdin
-	// solution stdout -> interactor stdin
-	var copyWg sync.WaitGroup
-	copyErrChan := make(chan error, 2)
-
-	// Copy from interactor stdout to solution stdin
-	copyWg.Add(1)
-	go func() {
-		defer copyWg.Done()
-		defer func() { _ = solutionStdinWriter.Close() }()
-		_, err := io.Copy(solutionStdinWriter, interactorStdoutReader)
-		if err != nil && err != io.ErrClosedPipe {
-			copyErrChan <- fmt.Errorf("interactor->solution copy error: %w", err)
-		}
-	}()
-
-	// Copy from solution stdout to interactor stdin
-	copyWg.Add(1)
-	go func() {
-		defer copyWg.Done()
-		defer func() { _ = interactorStdinWriter.Close() }()
-		_, err := io.Copy(interactorStdinWriter, solutionStdoutReader)
-		if err != nil && err != io.ErrClosedPipe {
-			copyErrChan <- fmt.Errorf("solution->interactor copy error: %w", err)
-		}
-	}()
 
 	// Start both processes
 	startTime := time.Now()
 
 	// Start interactor first (it will drive the interaction)
 	if err := interactorCmd.Start(); err != nil {
+		_ = solStdinR.Close()
+		_ = intStdoutW.Close()
+		_ = intStdinR.Close()
+		_ = solStdoutW.Close()
 		return nil, fmt.Errorf("failed to start interactor: %w", err)
 	}
 
 	// Start solution
 	if err := solutionCmd.Start(); err != nil {
-		// Kill interactor if solution fails to start
 		_ = interactorCmd.Process.Kill()
+		_ = solStdinR.Close()
+		_ = intStdoutW.Close()
+		_ = intStdinR.Close()
+		_ = solStdoutW.Close()
 		return nil, fmt.Errorf("failed to start solution: %w", err)
 	}
+
+	// Close parent's copies of pipe ends so EOF propagates correctly
+	// when a child process exits and closes its end of the pipe.
+	_ = intStdoutW.Close()
+	_ = intStdinR.Close()
+	_ = solStdinR.Close()
+	_ = solStdoutW.Close()
 
 	// Wait for both processes to complete
 	var interactorWaitErr, solutionWaitErr error
@@ -182,22 +177,19 @@ func (r *InteractiveRunner) RunInteractive(
 		} else {
 			interactorExitCode = -1
 		}
-		// Close interactor stdout to signal EOF to solution
-		_ = interactorStdoutWriter.Close()
-		_ = interactorStdinReader.Close()
 	}()
 
 	// Wait for solution with timeout monitoring
 	go func() {
 		defer waitWg.Done()
-		// Create a separate timeout context for solution
-		solutionTimeoutCtx, solutionCancel := context.WithTimeout(context.Background(), solutionTimeLimit)
-		defer solutionCancel()
 
 		done := make(chan error, 1)
 		go func() {
 			done <- solutionCmd.Wait()
 		}()
+
+		timer := time.NewTimer(solutionTimeLimit)
+		defer timer.Stop()
 
 		select {
 		case err := <-done:
@@ -207,35 +199,25 @@ func (r *InteractiveRunner) RunInteractive(
 			} else {
 				solutionExitCode = -1
 			}
-		case <-solutionTimeoutCtx.Done():
+		case <-timer.C:
 			// Solution timed out
 			_ = solutionCmd.Process.Kill()
+			<-done // Wait for Wait() to return after kill
 			solutionWaitErr = fmt.Errorf("solution timed out")
 			solutionExitCode = -1
 		}
-		// Close solution stdout to unblock copy goroutines
-		_ = solutionStdoutWriter.Close()
-		_ = solutionStdinReader.Close()
+		// Kill interactor if still running (e.g. solution timed out)
+		_ = interactorCmd.Process.Kill()
 	}()
 
-	// Wait for both processes first (they close pipe ends needed by copy goroutines)
 	waitWg.Wait()
 
-	// Wait for all copy operations to finish
-	copyWg.Wait()
-
 	elapsed := time.Since(startTime)
-
-	// Check for copy errors
-	select {
-	case err := <-copyErrChan:
-		log.Printf("Pipe copy error: %v", err)
-	default:
-	}
 
 	// Determine result
 	result := &InteractiveResult{
 		TimeUsed:         elapsed,
+		InteractorExit:   interactorExitCode,
 		InteractorOutput: interactorStderr.Bytes(),
 	}
 
