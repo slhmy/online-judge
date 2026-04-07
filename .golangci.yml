@@ -1,0 +1,161 @@
+---
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  issues-exclude-rules-dirs:
+    - gen
+    - vendor
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  sort-results: true
+
+linters:
+  enable:
+    - errcheck      # unchecked errors
+    - gosimple      # simplifies code
+    - govet         # reports suspicious constructs
+    - ineffassign   # detects ineffectual assignments
+    - staticcheck   # extensive static analysis
+    - unused        # finds unused code
+    - bodyclose     # checks whether HTTP response body is closed
+    - dogsled       # checks assignments with too many blank identifiers
+    - dupl          # tool for code clone detection
+    - exportloopref # checks for pointers to looping variables
+    - gochecknoinits # checks that no init functions are present
+    - goconst       # finds repeated strings that could be constants
+    - gocritic      # provides diagnostics that check bugs, performance, style
+    - gocyclo       # computes and checks cyclomatic complexity of functions
+    - godot         # checks if comments end in a period
+    - gofmt         # checks whether code was gofmt-ed
+    - goimports     # checks import statements are formatted correctly
+    - goprintffuncname # checks that printf-like functions are named with f at end
+    - gosec         # inspects source code for security problems
+    - misspell      # checks for misspelled words in comments
+    - nakedret      # checks for naked returns
+    - noctx         # checks for sending http request without context.Context
+    - prealloc      # finds slice declarations that could potentially be preallocated
+    - revive        # fast, configurable, extensible, flexible linter
+    - rowserrcheck  # checks whether Err of rows is checked successfully
+    - sqlclosecheck # checks that sql.Rows and sql.Stmt are closed
+    - stylecheck    # checks for coding style violations
+    - unconvert     # checks for unnecessary type conversions
+    - unparam       # reports unused function parameters
+    - whitespace    # checks for unnecessary leading/trailing whitespace
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment  # too strict for initial setup
+
+  gocyclo:
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+    disabled-checks:
+      - hugeParam      # often not applicable
+      - paramTypeCombine # can be noisy
+
+  gosec:
+    excludes:
+      - G104  # Audit errors not checked (covered by errcheck)
+      - G304  # File path provided as taint input (common in config loading)
+      - G401  # Detect the usage of DES, RC4, MD5 or SHA1
+      - G501  # Import blacklist: crypto/md5
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: var-declaration
+      - name: var-naming
+
+  misspell:
+    locale: US
+
+  godot:
+    scope: all
+    exclude:
+      - 'nolint:'
+      - '^ TODO'
+      - '^ FIXME'
+      - '^ BUG'
+      - '^ NOTE'
+
+  unused:
+    check-exported: false
+
+issues:
+  exclude-rules:
+    # Exclude generated protobuf code
+    - path: gen/
+      linters:
+        - all
+
+    # Exclude test files from some linters
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - goconst
+        - gocyclo
+
+    # Exclude integration tests from complexity checks
+    - path: integration_test\.go
+      linters:
+        - gocyclo
+        - dupl
+
+    # Exclude mock files
+    - path: mock_.*\.go
+      linters:
+        - all
+
+    # Allow defer in loops for cleanup patterns
+    - linters:
+        - gosec
+      text: "G307:"
+
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      text: "unused-parameter"
+
+  max-issues-per-linter: 50
+  max-same-issues: 3
+  new: false

@@ -1,4 +1,4 @@
-.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image
+.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-fix lint-backend lint-bff lint-judge
 
 # Default target
 all: proto build
@@ -175,6 +175,40 @@ seed-reset:
 build-seed:
 	@echo "Building seed binary..."
 	cd backend && go build -o bin/seed ./cmd/seed
+
+# ============================================
+# Linting
+# ============================================
+
+lint-backend:
+	@echo "Linting backend..."
+	cd backend && golangci-lint run --config ../.golangci.yml
+
+lint-bff:
+	@echo "Linting BFF..."
+	cd bff && golangci-lint run --config ../.golangci.yml
+
+lint-judge:
+	@echo "Linting judge..."
+	cd judge && golangci-lint run --config ../.golangci.yml
+
+lint: lint-backend lint-bff lint-judge
+	@echo "All linting completed!"
+
+lint-fix-backend:
+	@echo "Auto-fixing backend lint issues..."
+	cd backend && golangci-lint run --fix --config ../.golangci.yml
+
+lint-fix-bff:
+	@echo "Auto-fixing BFF lint issues..."
+	cd bff && golangci-lint run --fix --config ../.golangci.yml
+
+lint-fix-judge:
+	@echo "Auto-fixing judge lint issues..."
+	cd judge && golangci-lint run --fix --config ../.golangci.yml
+
+lint-fix: lint-fix-backend lint-fix-bff lint-fix-judge
+	@echo "All auto-fix completed!"
 
 # ============================================
 # Testing
