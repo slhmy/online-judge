@@ -129,21 +129,18 @@ jobs:
         with:
           version: latest
           working-directory: backend
-          args: --config ../.golangci.yml
 
       - name: golangci-lint (BFF)
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           working-directory: bff
-          args: --config ../.golangci.yml
 
       - name: golangci-lint (Judge)
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           working-directory: judge
-          args: --config ../.golangci.yml
 
   build:
     name: Build

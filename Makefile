@@ -182,30 +182,30 @@ build-seed:
 
 lint-backend:
 	@echo "Linting backend..."
-	cd backend && golangci-lint run --config ../.golangci.yml
+	cd backend && golangci-lint run 
 
 lint-bff:
 	@echo "Linting BFF..."
-	cd bff && golangci-lint run --config ../.golangci.yml
+	cd bff && golangci-lint run 
 
 lint-judge:
 	@echo "Linting judge..."
-	cd judge && golangci-lint run --config ../.golangci.yml
+	cd judge && golangci-lint run 
 
 lint: lint-backend lint-bff lint-judge
 	@echo "All linting completed!"
 
 lint-fix-backend:
 	@echo "Auto-fixing backend lint issues..."
-	cd backend && golangci-lint run --fix --config ../.golangci.yml
+	cd backend && golangci-lint run --fix 
 
 lint-fix-bff:
 	@echo "Auto-fixing BFF lint issues..."
-	cd bff && golangci-lint run --fix --config ../.golangci.yml
+	cd bff && golangci-lint run --fix 
 
 lint-fix-judge:
 	@echo "Auto-fixing judge lint issues..."
-	cd judge && golangci-lint run --fix --config ../.golangci.yml
+	cd judge && golangci-lint run --fix 
 
 lint-fix: lint-fix-backend lint-fix-bff lint-fix-judge
 	@echo "All auto-fix completed!"
