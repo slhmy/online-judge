@@ -58,13 +58,13 @@ func (s *SubmissionStore) Create(ctx context.Context, userID, problemID, contest
 }
 
 type Submission struct {
-	ID           string
-	UserID       string
-	ProblemID    string
-	ContestID    string
-	LanguageID   string
-	SourceCode   string
-	SubmitTime   time.Time
+	ID         string
+	UserID     string
+	ProblemID  string
+	ContestID  string
+	LanguageID string
+	SourceCode string
+	SubmitTime time.Time
 }
 
 func (s *SubmissionStore) GetByID(ctx context.Context, id string) (*Submission, error) {
@@ -230,19 +230,19 @@ func (s *SubmissionStore) CreateJudgingRun(ctx context.Context, judgingID, testC
 
 // Judging represents a judging result
 type Judging struct {
-	ID              string
-	SubmissionID    string
-	JudgehostID     string
-	StartTime       time.Time
-	EndTime         time.Time
-	MaxRuntime      float64
-	MaxMemory       int32
-	Verdict         string
-	CompileSuccess  bool
-	Valid           bool
-	Verified        bool
-	VerifiedBy      string
-	Score           float64
+	ID             string
+	SubmissionID   string
+	JudgehostID    string
+	StartTime      time.Time
+	EndTime        time.Time
+	MaxRuntime     float64
+	MaxMemory      int32
+	Verdict        string
+	CompileSuccess bool
+	Valid          bool
+	Verified       bool
+	VerifiedBy     string
+	Score          float64
 }
 
 // GetJudging retrieves the judging result for a submission
@@ -362,16 +362,16 @@ func (s *SubmissionStore) GetJudgingByID(ctx context.Context, judgingID string) 
 
 // JudgingRun represents an individual test case run
 type JudgingRun struct {
-	ID             string
-	JudgingID      string
-	TestCaseID     string
-	Rank           int32
-	Runtime        float64
-	WallTime       float64
-	Memory         int32
-	Verdict        string
-	OutputRunPath  string
-	OutputDiffPath string
+	ID              string
+	JudgingID       string
+	TestCaseID      string
+	Rank            int32
+	Runtime         float64
+	WallTime        float64
+	Memory          int32
+	Verdict         string
+	OutputRunPath   string
+	OutputDiffPath  string
 	OutputErrorPath string
 }
 

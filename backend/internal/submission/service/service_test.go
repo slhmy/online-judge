@@ -129,13 +129,13 @@ func TestSubmissionService_ListSubmissions(t *testing.T) {
 			name: "list submissions by user",
 			setup: func(m *store.MockSubmissionStore) {
 				m.Submissions["sub-1"] = &store.Submission{
-					ID:     "sub-1",
-					UserID: "user-1",
+					ID:        "sub-1",
+					UserID:    "user-1",
 					ProblemID: "prob-1",
 				}
 				m.Submissions["sub-2"] = &store.Submission{
-					ID:     "sub-2",
-					UserID: "user-2",
+					ID:        "sub-2",
+					UserID:    "user-2",
 					ProblemID: "prob-2",
 				}
 			},
@@ -411,10 +411,10 @@ func TestSubmissionService_InternalUpdateJudging(t *testing.T) {
 				}
 			},
 			request: &pb.InternalUpdateJudgingRequest{
-				JudgingId:   "jud-1",
-				Verdict:     "correct",
-				MaxRuntime:  0.5,
-				MaxMemory:   1024,
+				JudgingId:  "jud-1",
+				Verdict:    "correct",
+				MaxRuntime: 0.5,
+				MaxMemory:  1024,
 			},
 			want: func(t *testing.T, resp *pb.InternalUpdateJudgingResponse, err error) {
 				require.NoError(t, err)

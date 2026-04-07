@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	pb "github.com/online-judge/backend/gen/go/user/v1"
+	"github.com/online-judge/backend/internal/pkg/config"
 	"github.com/online-judge/backend/internal/user/service"
 	"github.com/online-judge/backend/internal/user/store"
-	"github.com/online-judge/backend/internal/pkg/config"
 )
 
 func main() {

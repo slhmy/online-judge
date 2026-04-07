@@ -21,14 +21,14 @@ func TestNotificationService_Integration_GetNotifications(t *testing.T) {
 		{
 			name: "get notifications for user",
 			setup: func(m *store.MockNotificationStore, ctx context.Context) {
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-1",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SUBMISSION_JUDGED,
 					Title:  "Submission Judged",
 					Body:   "Your submission was accepted",
 				})
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-2",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SYSTEM_ALERT,
@@ -45,7 +45,7 @@ func TestNotificationService_Integration_GetNotifications(t *testing.T) {
 		{
 			name: "get unread only",
 			setup: func(m *store.MockNotificationStore, ctx context.Context) {
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-1",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SUBMISSION_JUDGED,
@@ -53,8 +53,8 @@ func TestNotificationService_Integration_GetNotifications(t *testing.T) {
 					Body:   "Unread notification",
 				})
 				// Mark one as read
-				m.MarkAsRead(ctx, "user-1", "notif-1")
-				m.Create(ctx, &pb.Notification{
+				_ = m.MarkAsRead(ctx, "user-1", "notif-1")
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-2",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SYSTEM_ALERT,
@@ -115,7 +115,7 @@ func TestNotificationService_Integration_MarkAsRead(t *testing.T) {
 		{
 			name: "mark notification as read",
 			setup: func(m *store.MockNotificationStore, ctx context.Context) {
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-1",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SUBMISSION_JUDGED,
@@ -175,14 +175,14 @@ func TestNotificationService_Integration_MarkAllAsRead(t *testing.T) {
 		{
 			name: "mark all as read",
 			setup: func(m *store.MockNotificationStore, ctx context.Context) {
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-1",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SUBMISSION_JUDGED,
 					Title:  "Test 1",
 					Body:   "Test",
 				})
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-2",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SYSTEM_ALERT,
@@ -199,14 +199,14 @@ func TestNotificationService_Integration_MarkAllAsRead(t *testing.T) {
 		{
 			name: "mark all as read with type filter",
 			setup: func(m *store.MockNotificationStore, ctx context.Context) {
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-1",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SUBMISSION_JUDGED,
 					Title:  "Test 1",
 					Body:   "Test",
 				})
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-2",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SYSTEM_ALERT,
@@ -268,14 +268,14 @@ func TestNotificationService_Integration_GetUnreadCount(t *testing.T) {
 		{
 			name: "get unread count",
 			setup: func(m *store.MockNotificationStore, ctx context.Context) {
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-1",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SUBMISSION_JUDGED,
 					Title:  "Test 1",
 					Body:   "Test",
 				})
-				m.Create(ctx, &pb.Notification{
+				_ = m.Create(ctx, &pb.Notification{
 					Id:     "notif-2",
 					UserId: "user-1",
 					Type:   pb.NotificationType_NOTIFICATION_TYPE_SYSTEM_ALERT,

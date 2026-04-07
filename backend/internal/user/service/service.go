@@ -27,17 +27,17 @@ func (s *UserService) GetUserProfile(ctx context.Context, req *pb.GetUserProfile
 
 	return &pb.GetUserProfileResponse{
 		Profile: &pb.UserProfile{
-			UserId:         profile.UserID,
-			Username:       profile.Username,
-			DisplayName:    profile.DisplayName,
-			Rating:         profile.Rating,
-			SolvedCount:    profile.SolvedCount,
+			UserId:          profile.UserID,
+			Username:        profile.Username,
+			DisplayName:     profile.DisplayName,
+			Rating:          profile.Rating,
+			SolvedCount:     profile.SolvedCount,
 			SubmissionCount: profile.SubmissionCount,
-			AvatarUrl:      profile.AvatarURL,
-			Bio:            profile.Bio,
-			Country:        profile.Country,
-			CreatedAt:      profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:      profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			AvatarUrl:       profile.AvatarURL,
+			Bio:             profile.Bio,
+			Country:         profile.Country,
+			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		},
 	}, nil
 }
@@ -58,17 +58,17 @@ func (s *UserService) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserP
 
 	return &pb.UpdateUserProfileResponse{
 		Profile: &pb.UserProfile{
-			UserId:         profile.UserID,
-			Username:       profile.Username,
-			DisplayName:    profile.DisplayName,
-			Rating:         profile.Rating,
-			SolvedCount:    profile.SolvedCount,
+			UserId:          profile.UserID,
+			Username:        profile.Username,
+			DisplayName:     profile.DisplayName,
+			Rating:          profile.Rating,
+			SolvedCount:     profile.SolvedCount,
 			SubmissionCount: profile.SubmissionCount,
-			AvatarUrl:      profile.AvatarURL,
-			Bio:            profile.Bio,
-			Country:        profile.Country,
-			CreatedAt:      profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:      profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			AvatarUrl:       profile.AvatarURL,
+			Bio:             profile.Bio,
+			Country:         profile.Country,
+			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		},
 	}, nil
 }
@@ -87,17 +87,17 @@ func (s *UserService) GetUserStats(ctx context.Context, req *pb.GetUserStatsRequ
 
 	return &pb.GetUserStatsResponse{
 		Stats: &pb.UserStats{
-			UserId:           stats.UserID,
-			SolvedCount:      stats.SolvedCount,
-			SubmissionCount:  stats.SubmissionCount,
-			Rating:           stats.Rating,
-			AcceptedCount:    stats.AcceptedCount,
-			WrongAnswerCount: stats.WrongAnswerCount,
-			TimeLimitCount:   stats.TimeLimitCount,
-			MemoryLimitCount: stats.MemoryLimitCount,
+			UserId:            stats.UserID,
+			SolvedCount:       stats.SolvedCount,
+			SubmissionCount:   stats.SubmissionCount,
+			Rating:            stats.Rating,
+			AcceptedCount:     stats.AcceptedCount,
+			WrongAnswerCount:  stats.WrongAnswerCount,
+			TimeLimitCount:    stats.TimeLimitCount,
+			MemoryLimitCount:  stats.MemoryLimitCount,
 			RuntimeErrorCount: stats.RuntimeErrorCount,
 			CompileErrorCount: stats.CompileErrorCount,
-			AcceptanceRate:   acceptanceRate,
+			AcceptanceRate:    acceptanceRate,
 		},
 	}, nil
 }

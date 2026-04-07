@@ -18,8 +18,8 @@ import (
 // NotificationService implements the notification gRPC service
 type NotificationService struct {
 	pb.UnimplementedNotificationServiceServer
-	redis  *redis.Client
-	store  NotificationStoreInterface
+	redis *redis.Client
+	store NotificationStoreInterface
 
 	// Local subscriber management for judging progress updates
 	// channel -> userID -> progressChan
@@ -167,13 +167,15 @@ func (s *NotificationService) StreamNotifications(req *pb.StreamNotificationsReq
 
 	// Send initial unread count
 	total, _, _ := s.store.GetUnreadCount(stream.Context(), userIDStr)
-	stream.Send(&pb.Notification{
-		Id:     "system:unread-count",
-		Type:   pb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED,
-		Title:  "Unread Count",
-		Body:   fmt.Sprintf("%d", total),
-		Data:   map[string]string{"total": fmt.Sprintf("%d", total)},
-	})
+	if err := stream.Send(&pb.Notification{
+		Id:    "system:unread-count",
+		Type:  pb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED,
+		Title: "Unread Count",
+		Body:  fmt.Sprintf("%d", total),
+		Data:  map[string]string{"total": fmt.Sprintf("%d", total)},
+	}); err != nil {
+		log.Printf("Failed to send initial unread count: %v", err)
+	}
 
 	// Stream notifications
 	for {
@@ -302,7 +304,11 @@ func (s *NotificationService) listenToRedisPubSub() {
 
 	// Subscribe to judging channels
 	pubsub := s.redis.PSubscribe(ctx, "judging:result:*", "judging:run:*")
-	defer pubsub.Close()
+	defer func() {
+		if err := pubsub.Close(); err != nil {
+			log.Printf("Failed to close pubsub: %v", err)
+		}
+	}()
 
 	ch := pubsub.Channel()
 	for msg := range ch {
@@ -359,7 +365,11 @@ func (s *NotificationService) listenToNotificationChannels() {
 
 	// Subscribe to all user notification channels
 	pubsub := s.redis.PSubscribe(ctx, "notifications:user:*")
-	defer pubsub.Close()
+	defer func() {
+		if err := pubsub.Close(); err != nil {
+			log.Printf("Failed to close pubsub: %v", err)
+		}
+	}()
 
 	ch := pubsub.Channel()
 	for msg := range ch {

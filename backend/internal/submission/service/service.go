@@ -80,13 +80,13 @@ func (s *SubmissionService) GetSubmission(ctx context.Context, req *pb.GetSubmis
 
 			maxRuntime := 0.0
 			if v, ok := data["max_runtime"]; ok {
-				fmt.Sscanf(v, "%f", &maxRuntime)
+				_, _ = fmt.Sscanf(v, "%f", &maxRuntime)
 			}
 
 			maxMemory := int32(0)
 			if v, ok := data["max_memory"]; ok {
 				var m int64
-				fmt.Sscanf(v, "%d", &m)
+				_, _ = fmt.Sscanf(v, "%d", &m)
 				maxMemory = int32(m)
 			}
 
@@ -120,19 +120,19 @@ func (s *SubmissionService) GetSubmission(ctx context.Context, req *pb.GetSubmis
 
 	if judging != nil {
 		response.LatestJudging = &pb.Judging{
-			Id:            judging.ID,
-			SubmissionId:  judging.SubmissionID,
-			JudgehostId:   judging.JudgehostID,
-			StartTime:     judging.StartTime.Format(time.RFC3339),
-			EndTime:       judging.EndTime.Format(time.RFC3339),
-			MaxRuntime:    judging.MaxRuntime,
-			MaxMemory:     judging.MaxMemory,
-			Verdict:       mapVerdictToProto(judging.Verdict),
+			Id:             judging.ID,
+			SubmissionId:   judging.SubmissionID,
+			JudgehostId:    judging.JudgehostID,
+			StartTime:      judging.StartTime.Format(time.RFC3339),
+			EndTime:        judging.EndTime.Format(time.RFC3339),
+			MaxRuntime:     judging.MaxRuntime,
+			MaxMemory:      judging.MaxMemory,
+			Verdict:        mapVerdictToProto(judging.Verdict),
 			CompileSuccess: judging.CompileSuccess,
-			Valid:         judging.Valid,
-			Verified:      judging.Verified,
-			VerifiedBy:    judging.VerifiedBy,
-			Score:         judging.Score,
+			Valid:          judging.Valid,
+			Verified:       judging.Verified,
+			VerifiedBy:     judging.VerifiedBy,
+			Score:          judging.Score,
 		}
 	}
 
@@ -171,11 +171,11 @@ func (s *SubmissionService) ListSubmissions(ctx context.Context, req *pb.ListSub
 				verdict = mapVerdictToProto(v)
 
 				if v, ok := data["max_runtime"]; ok {
-					fmt.Sscanf(v, "%f", &runtime)
+					_, _ = fmt.Sscanf(v, "%f", &runtime)
 				}
 				if v, ok := data["max_memory"]; ok {
 					var m int64
-					fmt.Sscanf(v, "%d", &m)
+					_, _ = fmt.Sscanf(v, "%d", &m)
 					memory = int32(m)
 				}
 			}
@@ -239,13 +239,13 @@ func (s *SubmissionService) GetJudging(ctx context.Context, req *pb.GetJudgingRe
 
 		maxRuntime := 0.0
 		if v, ok := data["max_runtime"]; ok {
-			fmt.Sscanf(v, "%f", &maxRuntime)
+			_, _ = fmt.Sscanf(v, "%f", &maxRuntime)
 		}
 
 		maxMemory := int32(0)
 		if v, ok := data["max_memory"]; ok {
 			var m int64
-			fmt.Sscanf(v, "%d", &m)
+			_, _ = fmt.Sscanf(v, "%d", &m)
 			maxMemory = int32(m)
 		}
 
@@ -264,19 +264,19 @@ func (s *SubmissionService) GetJudging(ctx context.Context, req *pb.GetJudgingRe
 
 	return &pb.GetJudgingResponse{
 		Judging: &pb.Judging{
-			Id:            judging.ID,
-			SubmissionId:  judging.SubmissionID,
-			JudgehostId:   judging.JudgehostID,
-			StartTime:     judging.StartTime.Format(time.RFC3339),
-			EndTime:       judging.EndTime.Format(time.RFC3339),
-			MaxRuntime:    judging.MaxRuntime,
-			MaxMemory:     judging.MaxMemory,
-			Verdict:       mapVerdictToProto(judging.Verdict),
+			Id:             judging.ID,
+			SubmissionId:   judging.SubmissionID,
+			JudgehostId:    judging.JudgehostID,
+			StartTime:      judging.StartTime.Format(time.RFC3339),
+			EndTime:        judging.EndTime.Format(time.RFC3339),
+			MaxRuntime:     judging.MaxRuntime,
+			MaxMemory:      judging.MaxMemory,
+			Verdict:        mapVerdictToProto(judging.Verdict),
 			CompileSuccess: judging.CompileSuccess,
-			Valid:         judging.Valid,
-			Verified:      judging.Verified,
-			VerifiedBy:    judging.VerifiedBy,
-			Score:         judging.Score,
+			Valid:          judging.Valid,
+			Verified:       judging.Verified,
+			VerifiedBy:     judging.VerifiedBy,
+			Score:          judging.Score,
 		},
 	}, nil
 }
@@ -427,11 +427,11 @@ func (s *SubmissionService) InternalUpdateJudging(ctx context.Context, req *pb.I
 	if s.redis != nil {
 		judgingKey := "judging:" + req.JudgingId + ":meta"
 		s.redis.HSet(ctx, judgingKey, map[string]interface{}{
-			"verdict":        req.Verdict,
-			"max_runtime":    req.MaxRuntime,
-			"max_memory":     req.MaxMemory,
+			"verdict":         req.Verdict,
+			"max_runtime":     req.MaxRuntime,
+			"max_memory":      req.MaxMemory,
 			"compile_success": compileSuccess,
-			"status":         "completed",
+			"status":          "completed",
 		})
 	}
 
@@ -464,12 +464,12 @@ func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.Rejud
 	// Invalidate the previous judging (mark as invalid)
 	judging, err := s.store.GetJudging(ctx, req.SubmissionId)
 	if err == nil && judging != nil {
-		s.store.InvalidateJudging(ctx, judging.ID)
+		_ = s.store.InvalidateJudging(ctx, judging.ID)
 	}
 
 	// Clear Redis cache for this submission's judging
 	judgingKey := "judging:judging-" + req.SubmissionId + ":meta"
-	s.redis.Del(ctx, judgingKey)
+	_ = s.redis.Del(ctx, judgingKey)
 
 	// Push to judge queue again
 	job := JudgeJob{

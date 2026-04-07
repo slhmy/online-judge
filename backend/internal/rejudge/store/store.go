@@ -19,32 +19,32 @@ func NewRejudgeStore(db *pgxpool.Pool) *RejudgeStore {
 
 // Rejudge represents a rejudging operation
 type Rejudge struct {
-	ID           string
-	UserID       string
-	ContestID    string
-	ProblemID    string
+	ID            string
+	UserID        string
+	ContestID     string
+	ProblemID     string
 	SubmissionIDs []string
-	FromVerdict  string
-	Status       string
-	Reason       string
+	FromVerdict   string
+	Status        string
+	Reason        string
 	AffectedCount int32
-	CreatedAt    time.Time
-	StartedAt    time.Time
-	FinishedAt   time.Time
-	AppliedAt    time.Time
-	RevertedAt   time.Time
+	CreatedAt     time.Time
+	StartedAt     time.Time
+	FinishedAt    time.Time
+	AppliedAt     time.Time
+	RevertedAt    time.Time
 }
 
 // RejudgeSubmission represents a submission in a rejudging operation
 type RejudgeSubmission struct {
-	RejudgingID      string
-	SubmissionID     string
+	RejudgingID       string
+	SubmissionID      string
 	OriginalJudgingID string
-	NewJudgingID     string
-	OriginalVerdict  string
-	NewVerdict       string
-	VerdictChanged   bool
-	Status           string
+	NewJudgingID      string
+	OriginalVerdict   string
+	NewVerdict        string
+	VerdictChanged    bool
+	Status            string
 }
 
 // CreateRejudge creates a new rejudging operation
@@ -542,7 +542,7 @@ func (s *RejudgeStore) ApplyRejudge(ctx context.Context, rejudgeID string) (int3
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Invalidate original judgings
 	_, err = tx.Exec(ctx, `
@@ -602,7 +602,7 @@ func (s *RejudgeStore) RevertRejudge(ctx context.Context, rejudgeID string) (int
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Invalidate new judgings
 	_, err = tx.Exec(ctx, `
@@ -662,7 +662,7 @@ func (s *RejudgeStore) CancelRejudge(ctx context.Context, rejudgeID string) erro
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Restore original judgings for pending submissions
 	_, err = tx.Exec(ctx, `

@@ -277,7 +277,7 @@ func (s *ContestStore) Register(ctx context.Context, contestID, userID, teamName
 	if err != nil {
 		return "", err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Create or get team
 	var teamID pgtype.UUID
@@ -449,7 +449,7 @@ func (s *ContestStore) getProblemScores(ctx context.Context, contestID, teamID s
 			if correctTime.Valid {
 				// Calculate time in minutes from contest start
 				var contestStart pgtype.Timestamp
-				s.db.QueryRow(ctx, `SELECT start_time FROM contests WHERE id = $1`, parsedContestID).Scan(&contestStart)
+				_ = s.db.QueryRow(ctx, `SELECT start_time FROM contests WHERE id = $1`, parsedContestID).Scan(&contestStart)
 				if contestStart.Valid {
 					score.Time = int32(correctTime.Time.Sub(contestStart.Time).Minutes())
 				}

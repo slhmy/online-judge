@@ -207,13 +207,13 @@ func TestProblemService_CreateProblem(t *testing.T) {
 			name:  "create problem successfully",
 			setup: func(m *store.MockProblemStore) {},
 			request: &pb.CreateProblemRequest{
-				ExternalId:   "A",
-				Name:         "New Problem",
-				TimeLimit:    1.5,
-				MemoryLimit:  512,
-				OutputLimit:  1024,
-				Difficulty:   "medium",
-				Points:       150,
+				ExternalId:  "A",
+				Name:        "New Problem",
+				TimeLimit:   1.5,
+				MemoryLimit: 512,
+				OutputLimit: 1024,
+				Difficulty:  "medium",
+				Points:      150,
 			},
 			want: func(t *testing.T, resp *pb.CreateProblemResponse, err error) {
 				require.NoError(t, err)

@@ -131,10 +131,10 @@ func (m *MockUserStore) CreateProfile(ctx context.Context, userID, username stri
 	}
 
 	m.Profiles[userID] = &UserProfile{
-		UserID:     userID,
-		Username:   username,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		UserID:    userID,
+		Username:  username,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	m.Stats[userID] = &UserStats{

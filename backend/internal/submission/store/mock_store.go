@@ -25,13 +25,13 @@ type SubmissionStoreInterface interface {
 
 // MockSubmissionStore is a mock implementation of SubmissionStoreInterface for testing
 type MockSubmissionStore struct {
-	Submissions   map[string]*Submission
-	Judgings      map[string]*Judging
-	JudgingRuns   map[string][]*JudgingRun
-	CreateError   error
-	GetError      error
-	ListError     error
-	JudgingError  error
+	Submissions  map[string]*Submission
+	Judgings     map[string]*Judging
+	JudgingRuns  map[string][]*JudgingRun
+	CreateError  error
+	GetError     error
+	ListError    error
+	JudgingError error
 }
 
 func NewMockSubmissionStore() *MockSubmissionStore {

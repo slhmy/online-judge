@@ -25,10 +25,10 @@ var ErrRejudgeInProgress = errors.New("rejudge is still in progress")
 
 type RejudgeService struct {
 	pb.UnimplementedRejudgeServiceServer
-	store          rejudgestore.RejudgeStoreInterface
+	store           rejudgestore.RejudgeStoreInterface
 	submissionStore submissionstore.SubmissionStoreInterface
-	contestStore   conteststore.ContestStoreInterface
-	redis          *redis.Client
+	contestStore    conteststore.ContestStoreInterface
+	redis           *redis.Client
 }
 
 func NewRejudgeService(
@@ -38,10 +38,10 @@ func NewRejudgeService(
 	redis *redis.Client,
 ) *RejudgeService {
 	return &RejudgeService{
-		store:          s,
+		store:           s,
 		submissionStore: subStore,
-		contestStore:   contestStore,
-		redis:          redis,
+		contestStore:    contestStore,
+		redis:           redis,
 	}
 }
 
@@ -107,10 +107,13 @@ func (s *RejudgeService) CreateRejudge(ctx context.Context, req *pb.CreateRejudg
 	}
 
 	// Update status to judging
-	s.store.UpdateRejudgeStatus(ctx, rejudgeID, "judging")
+	if err := s.store.UpdateRejudgeStatus(ctx, rejudgeID, "judging"); err != nil {
+		// Log but continue - status update is not critical
+		fmt.Printf("Failed to update rejudge status: %v\n", err)
+	}
 
 	return &pb.CreateRejudgeResponse{
-		Id:           rejudgeID,
+		Id:            rejudgeID,
 		AffectedCount: affectedCount,
 		Status:        pb.RejudgeStatus_REJUDGE_STATUS_JUDGING,
 	}, nil
@@ -133,20 +136,20 @@ func (s *RejudgeService) GetRejudge(ctx context.Context, req *pb.GetRejudgeReque
 
 	return &pb.GetRejudgeResponse{
 		Rejudge: &pb.Rejudge{
-			Id:           rejudge.ID,
-			UserId:       rejudge.UserID,
-			ContestId:    rejudge.ContestID,
-			ProblemId:    rejudge.ProblemID,
-			Status:       mapStatusToProto(rejudge.Status),
-			Reason:       rejudge.Reason,
+			Id:            rejudge.ID,
+			UserId:        rejudge.UserID,
+			ContestId:     rejudge.ContestID,
+			ProblemId:     rejudge.ProblemID,
+			Status:        mapStatusToProto(rejudge.Status),
+			Reason:        rejudge.Reason,
 			AffectedCount: rejudge.AffectedCount,
-			JudgedCount:  done,
-			PendingCount: pending + judging,
-			CreatedAt:    timestamppb.New(rejudge.CreatedAt),
-			StartedAt:    timestamppb.New(rejudge.StartedAt),
-			FinishedAt:   timestamppb.New(rejudge.FinishedAt),
-			AppliedAt:    timestamppb.New(rejudge.AppliedAt),
-			RevertedAt:   timestamppb.New(rejudge.RevertedAt),
+			JudgedCount:   done,
+			PendingCount:  pending + judging,
+			CreatedAt:     timestamppb.New(rejudge.CreatedAt),
+			StartedAt:     timestamppb.New(rejudge.StartedAt),
+			FinishedAt:    timestamppb.New(rejudge.FinishedAt),
+			AppliedAt:     timestamppb.New(rejudge.AppliedAt),
+			RevertedAt:    timestamppb.New(rejudge.RevertedAt),
 		},
 	}, nil
 }
@@ -170,18 +173,18 @@ func (s *RejudgeService) ListRejudges(ctx context.Context, req *pb.ListRejudgesR
 	var pbRejudges []*pb.Rejudge
 	for _, r := range rejudges {
 		pbRejudges = append(pbRejudges, &pb.Rejudge{
-			Id:           r.ID,
-			UserId:       r.UserID,
-			ContestId:    r.ContestID,
-			ProblemId:    r.ProblemID,
-			Status:       mapStatusToProto(r.Status),
-			Reason:       r.Reason,
+			Id:            r.ID,
+			UserId:        r.UserID,
+			ContestId:     r.ContestID,
+			ProblemId:     r.ProblemID,
+			Status:        mapStatusToProto(r.Status),
+			Reason:        r.Reason,
 			AffectedCount: r.AffectedCount,
-			CreatedAt:    timestamppb.New(r.CreatedAt),
-			StartedAt:    timestamppb.New(r.StartedAt),
-			FinishedAt:   timestamppb.New(r.FinishedAt),
-			AppliedAt:    timestamppb.New(r.AppliedAt),
-			RevertedAt:   timestamppb.New(r.RevertedAt),
+			CreatedAt:     timestamppb.New(r.CreatedAt),
+			StartedAt:     timestamppb.New(r.StartedAt),
+			FinishedAt:    timestamppb.New(r.FinishedAt),
+			AppliedAt:     timestamppb.New(r.AppliedAt),
+			RevertedAt:    timestamppb.New(r.RevertedAt),
 		})
 	}
 
@@ -248,9 +251,9 @@ func (s *RejudgeService) ApplyRejudge(ctx context.Context, req *pb.ApplyRejudgeR
 	}
 
 	return &pb.ApplyRejudgeResponse{
-		Id:            req.Id,
+		Id:              req.Id,
 		VerdictsChanged: verdictChanges,
-		Status:         pb.RejudgeStatus_REJUDGE_STATUS_APPLIED,
+		Status:          pb.RejudgeStatus_REJUDGE_STATUS_APPLIED,
 	}, nil
 }
 
@@ -280,9 +283,9 @@ func (s *RejudgeService) RevertRejudge(ctx context.Context, req *pb.RevertRejudg
 	}
 
 	return &pb.RevertRejudgeResponse{
-		Id:             req.Id,
+		Id:               req.Id,
 		VerdictsRestored: restoredCount,
-		Status:          pb.RejudgeStatus_REJUDGE_STATUS_REVERTED,
+		Status:           pb.RejudgeStatus_REJUDGE_STATUS_REVERTED,
 	}, nil
 }
 
@@ -310,13 +313,13 @@ func (s *RejudgeService) GetRejudgeSubmissions(ctx context.Context, req *pb.GetR
 	var pbSubmissions []*pb.RejudgeSubmission
 	for _, rs := range submissions {
 		pbSubmissions = append(pbSubmissions, &pb.RejudgeSubmission{
-			SubmissionId:     rs.SubmissionID,
+			SubmissionId:      rs.SubmissionID,
 			OriginalJudgingId: rs.OriginalJudgingID,
-			NewJudgingId:     rs.NewJudgingID,
-			OriginalVerdict:  rs.OriginalVerdict,
-			NewVerdict:       rs.NewVerdict,
-			VerdictChanged:   rs.VerdictChanged,
-			Status:           mapSubmissionStatusToProto(rs.Status),
+			NewJudgingId:      rs.NewJudgingID,
+			OriginalVerdict:   rs.OriginalVerdict,
+			NewVerdict:        rs.NewVerdict,
+			VerdictChanged:    rs.VerdictChanged,
+			Status:            mapSubmissionStatusToProto(rs.Status),
 		})
 	}
 
@@ -341,7 +344,10 @@ func (s *RejudgeService) InternalUpdateRejudgeSubmission(ctx context.Context, re
 	pending, judging, _, err := s.store.GetRejudgeProgress(ctx, req.RejudgeId)
 	if err == nil && pending == 0 && judging == 0 {
 		// All done, update rejudge status
-		s.store.UpdateRejudgeStatus(ctx, req.RejudgeId, "judged")
+		if err := s.store.UpdateRejudgeStatus(ctx, req.RejudgeId, "judged"); err != nil {
+			// Log but continue - status update is not critical
+			fmt.Printf("Failed to update rejudge status: %v\n", err)
+		}
 	}
 
 	return &pb.InternalUpdateRejudgeSubmissionResponse{

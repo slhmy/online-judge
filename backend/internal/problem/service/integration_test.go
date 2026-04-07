@@ -22,13 +22,13 @@ func TestProblemService_Integration_CRUDFlow(t *testing.T) {
 
 	// Step 1: Create a problem
 	createResp, err := service.CreateProblem(ctx, &pb.CreateProblemRequest{
-		ExternalId:   "A",
-		Name:         "Two Sum",
-		TimeLimit:    1.0,
-		MemoryLimit:  256,
-		OutputLimit:  10240,
-		Difficulty:   "easy",
-		Points:       100,
+		ExternalId:  "A",
+		Name:        "Two Sum",
+		TimeLimit:   1.0,
+		MemoryLimit: 256,
+		OutputLimit: 10240,
+		Difficulty:  "easy",
+		Points:      100,
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, createResp.Id)

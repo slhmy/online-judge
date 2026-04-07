@@ -132,12 +132,12 @@ func (m *MockContestStore) GetScoreboard(ctx context.Context, contestID string, 
 	rank := int32(1)
 	for _, team := range m.Teams {
 		entries = append(entries, &pb.ScoreboardEntry{
-			Rank:      rank,
-			TeamId:    team.Id,
-			TeamName:  team.DisplayName,
+			Rank:        rank,
+			TeamId:      team.Id,
+			TeamName:    team.DisplayName,
 			Affiliation: team.Affiliation,
-			NumSolved:  team.Points,
-			TotalTime:  team.TotalTime,
+			NumSolved:   team.Points,
+			TotalTime:   team.TotalTime,
 		})
 		rank++
 	}

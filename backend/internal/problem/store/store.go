@@ -3,9 +3,9 @@ package store
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/google/uuid"
 
 	pb "github.com/online-judge/backend/gen/go/problem/v1"
 )

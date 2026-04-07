@@ -110,11 +110,11 @@ func (s *StorageService) Exists(ctx context.Context, path string) (bool, error) 
 
 // Path helpers
 const (
-	PathTestcaseInput  = "testcases/{problem_id}/{testcase_id}/input"
-	PathTestcaseOutput = "testcases/{problem_id}/{testcase_id}/output"
+	PathTestcaseInput    = "testcases/{problem_id}/{testcase_id}/input"
+	PathTestcaseOutput   = "testcases/{problem_id}/{testcase_id}/output"
 	PathSubmissionSource = "submissions/{submission_id}/source"
 	PathSubmissionBinary = "submissions/{submission_id}/binary"
-	PathJudgingOutput = "judgings/{judging_id}/output"
-	PathJudgingError  = "judgings/{judging_id}/error"
-	PathJudgingDiff   = "judgings/{judging_id}/diff"
+	PathJudgingOutput    = "judgings/{judging_id}/output"
+	PathJudgingError     = "judgings/{judging_id}/error"
+	PathJudgingDiff      = "judgings/{judging_id}/diff"
 )

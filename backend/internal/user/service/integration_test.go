@@ -24,17 +24,17 @@ func TestUserService_GetUserProfile(t *testing.T) {
 			name: "get existing user profile",
 			setup: func(m *store.MockUserStore) {
 				m.Profiles["user-1"] = &store.UserProfile{
-					UserID:         "user-1",
-					Username:       "testuser",
-					DisplayName:    "Test User",
-					Rating:         1500,
-					SolvedCount:    50,
+					UserID:          "user-1",
+					Username:        "testuser",
+					DisplayName:     "Test User",
+					Rating:          1500,
+					SolvedCount:     50,
 					SubmissionCount: 100,
-					AvatarURL:      "https://example.com/avatar.png",
-					Bio:            "Hello world",
-					Country:        "US",
-					CreatedAt:      time.Now().Add(-24 * time.Hour),
-					UpdatedAt:      time.Now(),
+					AvatarURL:       "https://example.com/avatar.png",
+					Bio:             "Hello world",
+					Country:         "US",
+					CreatedAt:       time.Now().Add(-24 * time.Hour),
+					UpdatedAt:       time.Now(),
 				}
 			},
 			request: &pb.GetUserProfileRequest{UserId: "user-1"},
@@ -125,9 +125,9 @@ func TestUserService_UpdateUserProfile(t *testing.T) {
 				}
 			},
 			request: &pb.UpdateUserProfileRequest{
-				UserId:     "user-1",
-				AvatarUrl:  "https://example.com/new-avatar.png",
-				Country:    "UK",
+				UserId:    "user-1",
+				AvatarUrl: "https://example.com/new-avatar.png",
+				Country:   "UK",
 			},
 			want: func(t *testing.T, resp *pb.UpdateUserProfileResponse, err error) {
 				require.NoError(t, err)
@@ -182,14 +182,14 @@ func TestUserService_GetUserStats(t *testing.T) {
 			name: "get user stats with submissions",
 			setup: func(m *store.MockUserStore) {
 				m.Stats["user-1"] = &store.UserStats{
-					UserID:           "user-1",
-					SolvedCount:      50,
-					SubmissionCount:  100,
-					Rating:           1650,
-					AcceptedCount:    50,
-					WrongAnswerCount: 20,
-					TimeLimitCount:   15,
-					MemoryLimitCount: 5,
+					UserID:            "user-1",
+					SolvedCount:       50,
+					SubmissionCount:   100,
+					Rating:            1650,
+					AcceptedCount:     50,
+					WrongAnswerCount:  20,
+					TimeLimitCount:    15,
+					MemoryLimitCount:  5,
 					RuntimeErrorCount: 8,
 					CompileErrorCount: 2,
 				}

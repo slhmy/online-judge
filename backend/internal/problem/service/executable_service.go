@@ -8,7 +8,7 @@ import (
 
 // ExecutableService handles executable management
 type ExecutableService struct {
-	store  store.ExecutableStoreInterface
+	store   store.ExecutableStoreInterface
 	storage StorageFetcher
 }
 
@@ -20,7 +20,7 @@ type StorageFetcher interface {
 // NewExecutableService creates a new executable service
 func NewExecutableService(s store.ExecutableStoreInterface, storage StorageFetcher) *ExecutableService {
 	return &ExecutableService{
-		store:  s,
+		store:   s,
 		storage: storage,
 	}
 }

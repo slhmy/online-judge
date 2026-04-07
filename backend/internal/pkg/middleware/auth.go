@@ -123,13 +123,13 @@ func (i *JWTInterceptor) validateToken(tokenString string) (*UserClaims, error) 
 
 func isPublicEndpoint(method string) bool {
 	publicMethods := map[string]bool{
-		"/problem.v1.ProblemService/ListProblems":    true,
-		"/problem.v1.ProblemService/GetProblem":       true,
-		"/problem.v1.ProblemService/ListLanguages":    true,
-		"/contest.v1.ContestService/ListContests":     true,
-		"/contest.v1.ContestService/GetContest":       true,
-		"/contest.v1.ContestService/GetScoreboard":    true,
-		"/notification.v1.NotificationService/":        false, // Require auth
+		"/problem.v1.ProblemService/ListProblems":  true,
+		"/problem.v1.ProblemService/GetProblem":    true,
+		"/problem.v1.ProblemService/ListLanguages": true,
+		"/contest.v1.ContestService/ListContests":  true,
+		"/contest.v1.ContestService/GetContest":    true,
+		"/contest.v1.ContestService/GetScoreboard": true,
+		"/notification.v1.NotificationService/":    false, // Require auth
 	}
 	return publicMethods[method]
 }

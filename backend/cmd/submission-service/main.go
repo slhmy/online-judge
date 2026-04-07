@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	pb "github.com/online-judge/backend/gen/go/submission/v1"
+	"github.com/online-judge/backend/internal/pkg/config"
 	"github.com/online-judge/backend/internal/submission/service"
 	"github.com/online-judge/backend/internal/submission/store"
-	"github.com/online-judge/backend/internal/pkg/config"
 )
 
 func main() {

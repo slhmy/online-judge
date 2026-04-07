@@ -19,17 +19,17 @@ func NewUserStore(db *pgxpool.Pool) *UserStore {
 
 // UserProfile represents a user's profile from the database
 type UserProfile struct {
-	UserID        string
-	Username      string
-	DisplayName   string
-	Rating        int32
-	SolvedCount   int32
+	UserID          string
+	Username        string
+	DisplayName     string
+	Rating          int32
+	SolvedCount     int32
 	SubmissionCount int32
-	AvatarURL     string
-	Bio           string
-	Country       string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	AvatarURL       string
+	Bio             string
+	Country         string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // GetProfile retrieves a user profile by user_id
@@ -110,14 +110,14 @@ func (s *UserStore) UpdateProfile(ctx context.Context, userID string, displayNam
 
 // UserStats represents computed user statistics
 type UserStats struct {
-	UserID           string
-	SolvedCount      int32
-	SubmissionCount  int32
-	Rating           int32
-	AcceptedCount    int32
-	WrongAnswerCount int32
-	TimeLimitCount   int32
-	MemoryLimitCount int32
+	UserID            string
+	SolvedCount       int32
+	SubmissionCount   int32
+	Rating            int32
+	AcceptedCount     int32
+	WrongAnswerCount  int32
+	TimeLimitCount    int32
+	MemoryLimitCount  int32
 	RuntimeErrorCount int32
 	CompileErrorCount int32
 }

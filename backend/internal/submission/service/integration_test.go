@@ -314,10 +314,10 @@ func TestSubmissionService_Integration_InternalUpdateJudging(t *testing.T) {
 	}
 
 	resp, err := service.InternalUpdateJudging(ctx, &pb.InternalUpdateJudgingRequest{
-		JudgingId:   "jud-1",
-		Verdict:     "correct",
-		MaxRuntime:  0.5,
-		MaxMemory:   1024,
+		JudgingId:  "jud-1",
+		Verdict:    "correct",
+		MaxRuntime: 0.5,
+		MaxMemory:  1024,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "jud-1", resp.JudgingId)

@@ -25,12 +25,12 @@ type NotificationStoreInterface interface {
 
 // MockNotificationStore is a mock implementation of NotificationStoreInterface for testing
 type MockNotificationStore struct {
-	mu             sync.RWMutex
-	Notifications  map[string][]*pb.Notification // userID -> notifications
-	UnreadCounts   map[string]int32              // userID -> count
-	UnreadByType   map[string]map[string]int32   // userID -> type -> count
-	Subscribers    map[string]map[string]bool    // channel -> userID -> subscribed
-	PublishedMsgs  []interface{}                  // captured published messages
+	mu            sync.RWMutex
+	Notifications map[string][]*pb.Notification // userID -> notifications
+	UnreadCounts  map[string]int32              // userID -> count
+	UnreadByType  map[string]map[string]int32   // userID -> type -> count
+	Subscribers   map[string]map[string]bool    // channel -> userID -> subscribed
+	PublishedMsgs []interface{}                 // captured published messages
 
 	CreateError   error
 	ListError     error

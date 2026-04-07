@@ -146,10 +146,10 @@ func TestContestService_GetContest(t *testing.T) {
 				}
 				m.ContestProblems["contest-1"] = []*pb.ContestProblem{
 					{
-						ProblemId:  "prob-1",
-						ShortName:  "A",
-						Rank:       1,
-						Points:     100,
+						ProblemId:   "prob-1",
+						ShortName:   "A",
+						Rank:        1,
+						Points:      100,
 						AllowSubmit: true,
 					},
 				}
@@ -222,7 +222,7 @@ func TestContestService_CreateContest(t *testing.T) {
 			},
 		},
 		{
-			name: "create private contest",
+			name:  "create private contest",
 			setup: func(m *store.MockContestStore) {},
 			request: &pb.CreateContestRequest{
 				Name:      "Private Contest",
@@ -283,7 +283,7 @@ func TestContestService_RegisterContest(t *testing.T) {
 			},
 		},
 		{
-			name: "register without team name",
+			name:  "register without team name",
 			setup: func(m *store.MockContestStore) {},
 			request: &pb.RegisterContestRequest{
 				ContestId:   "contest-1",

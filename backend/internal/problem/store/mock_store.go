@@ -71,14 +71,14 @@ func (m *MockProblemStore) List(ctx context.Context, req *pb.ListProblemsRequest
 		}
 
 		problems = append(problems, &pb.ProblemSummary{
-			Id:           p.Id,
-			ExternalId:    p.ExternalId,
-			Name:         p.Name,
-			Difficulty:   p.Difficulty,
-			TimeLimit:    p.TimeLimit,
-			MemoryLimit:  p.MemoryLimit,
-			Points:       p.Points,
-			AllowSubmit:  p.AllowSubmit,
+			Id:          p.Id,
+			ExternalId:  p.ExternalId,
+			Name:        p.Name,
+			Difficulty:  p.Difficulty,
+			TimeLimit:   p.TimeLimit,
+			MemoryLimit: p.MemoryLimit,
+			Points:      p.Points,
+			AllowSubmit: p.AllowSubmit,
 		})
 	}
 
@@ -122,16 +122,16 @@ func (m *MockProblemStore) Create(ctx context.Context, req *pb.CreateProblemRequ
 
 	id := uuid.New().String()
 	m.Problems[id] = &pb.Problem{
-		Id:           id,
-		ExternalId:   req.GetExternalId(),
-		Name:         req.GetName(),
-		TimeLimit:    req.GetTimeLimit(),
-		MemoryLimit:  req.GetMemoryLimit(),
-		OutputLimit:  req.GetOutputLimit(),
-		Difficulty:   req.GetDifficulty(),
-		Points:       req.GetPoints(),
-		IsPublished:  true,
-		AllowSubmit:  true,
+		Id:          id,
+		ExternalId:  req.GetExternalId(),
+		Name:        req.GetName(),
+		TimeLimit:   req.GetTimeLimit(),
+		MemoryLimit: req.GetMemoryLimit(),
+		OutputLimit: req.GetOutputLimit(),
+		Difficulty:  req.GetDifficulty(),
+		Points:      req.GetPoints(),
+		IsPublished: true,
+		AllowSubmit: true,
 	}
 	return id, nil
 }
@@ -229,13 +229,13 @@ func (m *MockProblemStore) BatchCreateTestCases(ctx context.Context, req *pb.Bat
 	for _, tcData := range req.GetTestCases() {
 		id := uuid.New().String()
 		tc := &pb.TestCase{
-			Id:           id,
-			ProblemId:    req.GetProblemId(),
-			Rank:         tcData.GetRank(),
-			IsSample:     tcData.GetIsSample(),
-			InputContent: tcData.GetInputContent(),
+			Id:            id,
+			ProblemId:     req.GetProblemId(),
+			Rank:          tcData.GetRank(),
+			IsSample:      tcData.GetIsSample(),
+			InputContent:  tcData.GetInputContent(),
 			OutputContent: tcData.GetOutputContent(),
-			Description:  tcData.GetDescription(),
+			Description:   tcData.GetDescription(),
 		}
 		testCases = append(testCases, tc)
 		m.TestCases[req.GetProblemId()] = append(m.TestCases[req.GetProblemId()], tc)
@@ -260,15 +260,15 @@ func (m *MockProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, e
 				Version:        "g++ (GCC) 13",
 			},
 			{
-				Id:             "python3",
-				ExternalId:     "python3",
-				Name:           "Python 3",
-				TimeFactor:     2.0,
-				Extensions:     []string{".py", ".py3"},
-				AllowSubmit:    true,
-				AllowJudge:     true,
-				RunCommand:     "python3 {source}",
-				Version:        "Python 3.12",
+				Id:          "python3",
+				ExternalId:  "python3",
+				Name:        "Python 3",
+				TimeFactor:  2.0,
+				Extensions:  []string{".py", ".py3"},
+				AllowSubmit: true,
+				AllowJudge:  true,
+				RunCommand:  "python3 {source}",
+				Version:     "Python 3.12",
 			},
 			{
 				Id:             "java",
@@ -307,15 +307,15 @@ func (m *MockProblemStore) ListLanguages(ctx context.Context) ([]*pb.Language, e
 				Version:        "Rust 1.75",
 			},
 			{
-				Id:             "nodejs",
-				ExternalId:     "nodejs",
-				Name:           "Node.js 18",
-				TimeFactor:     2.0,
-				Extensions:     []string{".js", ".mjs"},
-				AllowSubmit:    true,
-				AllowJudge:     true,
-				RunCommand:     "node {source}",
-				Version:        "Node.js 18.19",
+				Id:          "nodejs",
+				ExternalId:  "nodejs",
+				Name:        "Node.js 18",
+				TimeFactor:  2.0,
+				Extensions:  []string{".js", ".mjs"},
+				AllowSubmit: true,
+				AllowJudge:  true,
+				RunCommand:  "node {source}",
+				Version:     "Node.js 18.19",
 			},
 		}, nil
 	}

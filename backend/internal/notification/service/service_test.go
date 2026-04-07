@@ -55,7 +55,7 @@ func TestNotificationService_GetNotifications(t *testing.T) {
 	key := "notifications:user-1"
 	for _, n := range notifications {
 		data, _ := json.Marshal(n)
-		mr.ZAdd(key, float64(time.Now().Unix()), string(data))
+		_, _ = mr.ZAdd(key, float64(time.Now().Unix()), string(data))
 	}
 
 	// Test GetNotifications
@@ -95,8 +95,8 @@ func TestNotificationService_MarkAsRead(t *testing.T) {
 	// Add notification to Redis
 	key := "notifications:user-1"
 	data, _ := json.Marshal(notification)
-	mr.ZAdd(key, float64(time.Now().Unix()), string(data))
-	mr.Set("notifications:user-1:unread", "1")
+	_, _ = mr.ZAdd(key, float64(time.Now().Unix()), string(data))
+	_ = mr.Set("notifications:user-1:unread", "1")
 
 	// Mark as read
 	resp, err := service.MarkAsRead(ctx, &pb.MarkAsReadRequest{
@@ -144,9 +144,9 @@ func TestNotificationService_MarkAllAsRead(t *testing.T) {
 	key := "notifications:user-1"
 	for _, n := range notifications {
 		data, _ := json.Marshal(n)
-		mr.ZAdd(key, float64(time.Now().Unix()), string(data))
+		_, _ = mr.ZAdd(key, float64(time.Now().Unix()), string(data))
 	}
-	mr.Set("notifications:user-1:unread", "2")
+	_ = mr.Set("notifications:user-1:unread", "2")
 
 	// Mark all as read
 	resp, err := service.MarkAllAsRead(ctx, &pb.MarkAllAsReadRequest{})
@@ -169,9 +169,9 @@ func TestNotificationService_GetUnreadCount(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "user_id", "user-1")
 
 	// Set unread counts
-	mr.Set("notifications:user-1:unread", "5")
-	mr.Set("notifications:user-1:unread:NOTIFICATION_TYPE_SUBMISSION_JUDGED", "3")
-	mr.Set("notifications:user-1:unread:NOTIFICATION_TYPE_CONTEST_ANNOUNCEMENT", "2")
+	_ = mr.Set("notifications:user-1:unread", "5")
+	_ = mr.Set("notifications:user-1:unread:NOTIFICATION_TYPE_SUBMISSION_JUDGED", "3")
+	_ = mr.Set("notifications:user-1:unread:NOTIFICATION_TYPE_CONTEST_ANNOUNCEMENT", "2")
 
 	// Get unread count
 	resp, err := service.GetUnreadCount(ctx, &pb.GetUnreadCountRequest{})

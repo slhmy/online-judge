@@ -14,14 +14,14 @@ import (
 
 // SampleProblem represents a problem to seed
 type SampleProblem struct {
-	ExternalID      string
-	Name            string
-	Difficulty      string
-	TimeLimit       float64
-	MemoryLimit     int32
-	Points          int32
+	ExternalID       string
+	Name             string
+	Difficulty       string
+	TimeLimit        float64
+	MemoryLimit      int32
+	Points           int32
 	ProblemStatement string
-	TestCases       []SampleTestCase
+	TestCases        []SampleTestCase
 }
 
 // SampleTestCase represents a test case
@@ -48,12 +48,12 @@ type SampleContest struct {
 // Sample problems data
 var sampleProblems = []SampleProblem{
 	{
-		ExternalID: "A",
-		Name:       "A + B",
-		Difficulty: "easy",
-		TimeLimit:  1.0,
+		ExternalID:  "A",
+		Name:        "A + B",
+		Difficulty:  "easy",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144, // 256 MB
-		Points:     100,
+		Points:      100,
 		ProblemStatement: `
 <h1>A + B</h1>
 <h2>Problem Description</h2>
@@ -86,12 +86,12 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID: "B",
-		Name:       "Sum of Array",
-		Difficulty: "easy",
-		TimeLimit:  1.0,
+		ExternalID:  "B",
+		Name:        "Sum of Array",
+		Difficulty:  "easy",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     100,
+		Points:      100,
 		ProblemStatement: `
 <h1>Sum of Array</h1>
 <h2>Problem Description</h2>
@@ -124,12 +124,12 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID: "C",
-		Name:       "Fibonacci Number",
-		Difficulty: "easy",
-		TimeLimit:  1.0,
+		ExternalID:  "C",
+		Name:        "Fibonacci Number",
+		Difficulty:  "easy",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     100,
+		Points:      100,
 		ProblemStatement: `
 <h1>Fibonacci Number</h1>
 <h2>Problem Description</h2>
@@ -164,12 +164,12 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID: "D",
-		Name:       "Binary Search",
-		Difficulty: "medium",
-		TimeLimit:  1.0,
+		ExternalID:  "D",
+		Name:        "Binary Search",
+		Difficulty:  "medium",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     200,
+		Points:      200,
 		ProblemStatement: `
 <h1>Binary Search</h1>
 <h2>Problem Description</h2>
@@ -206,12 +206,12 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID: "E",
-		Name:       "Two Sum",
-		Difficulty: "medium",
-		TimeLimit:  1.0,
+		ExternalID:  "E",
+		Name:        "Two Sum",
+		Difficulty:  "medium",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     200,
+		Points:      200,
 		ProblemStatement: `
 <h1>Two Sum</h1>
 <h2>Problem Description</h2>
@@ -246,12 +246,12 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID: "F",
-		Name:       "Longest Common Subsequence",
-		Difficulty: "hard",
-		TimeLimit:  2.0,
+		ExternalID:  "F",
+		Name:        "Longest Common Subsequence",
+		Difficulty:  "hard",
+		TimeLimit:   2.0,
 		MemoryLimit: 524288, // 512 MB
-		Points:     300,
+		Points:      300,
 		ProblemStatement: `
 <h1>Longest Common Subsequence</h1>
 <h2>Problem Description</h2>
@@ -289,12 +289,12 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID: "G",
-		Name:       "Shortest Path",
-		Difficulty: "hard",
-		TimeLimit:  2.0,
+		ExternalID:  "G",
+		Name:        "Shortest Path",
+		Difficulty:  "hard",
+		TimeLimit:   2.0,
 		MemoryLimit: 262144,
-		Points:     300,
+		Points:      300,
 		ProblemStatement: `
 <h1>Shortest Path</h1>
 <h2>Problem Description</h2>
@@ -335,12 +335,12 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID: "H",
-		Name:       "Maximum Subarray",
-		Difficulty: "medium",
-		TimeLimit:  1.0,
+		ExternalID:  "H",
+		Name:        "Maximum Subarray",
+		Difficulty:  "medium",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     200,
+		Points:      200,
 		ProblemStatement: `
 <h1>Maximum Subarray</h1>
 <h2>Problem Description</h2>
@@ -372,12 +372,12 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID: "I",
-		Name:       "Palindrome Check",
-		Difficulty: "easy",
-		TimeLimit:  1.0,
+		ExternalID:  "I",
+		Name:        "Palindrome Check",
+		Difficulty:  "easy",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     100,
+		Points:      100,
 		ProblemStatement: `
 <h1>Palindrome Check</h1>
 <h2>Problem Description</h2>
@@ -404,12 +404,12 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID: "J",
-		Name:       "Prime Factorization",
-		Difficulty: "medium",
-		TimeLimit:  1.0,
+		ExternalID:  "J",
+		Name:        "Prime Factorization",
+		Difficulty:  "medium",
+		TimeLimit:   1.0,
 		MemoryLimit: 262144,
-		Points:     200,
+		Points:      200,
 		ProblemStatement: `
 <h1>Prime Factorization</h1>
 <h2>Problem Description</h2>
@@ -441,60 +441,60 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID: "K",
-		Name:       "Stack",
-		Difficulty: "easy",
-		TimeLimit:  1.0,
-		MemoryLimit: 262144,
-		Points:     100,
+		ExternalID:       "K",
+		Name:             "Stack",
+		Difficulty:       "easy",
+		TimeLimit:        1.0,
+		MemoryLimit:      262144,
+		Points:           100,
 		ProblemStatement: `<h1>Stack Implementation</h1><p>Implement a stack.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "5\npush 10\ntop\n", Output: "10\n", Description: "test"},
 		},
 	},
 	{
-		ExternalID: "L",
-		Name:       "String Match",
-		Difficulty: "medium",
-		TimeLimit:  1.0,
-		MemoryLimit: 262144,
-		Points:     200,
+		ExternalID:       "L",
+		Name:             "String Match",
+		Difficulty:       "medium",
+		TimeLimit:        1.0,
+		MemoryLimit:      262144,
+		Points:           200,
 		ProblemStatement: `<h1>String Match</h1><p>Find pattern.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "abab\nab\n", Output: "0 2\n", Description: "test"},
 		},
 	},
 	{
-		ExternalID: "M",
-		Name:       "Sorting",
-		Difficulty: "easy",
-		TimeLimit:  2.0,
-		MemoryLimit: 262144,
-		Points:     100,
+		ExternalID:       "M",
+		Name:             "Sorting",
+		Difficulty:       "easy",
+		TimeLimit:        2.0,
+		MemoryLimit:      262144,
+		Points:           100,
 		ProblemStatement: `<h1>Sorting</h1><p>Sort array.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "3\n3 1 2\n", Output: "1 2 3\n", Description: "test"},
 		},
 	},
 	{
-		ExternalID: "N",
-		Name:       "Tree",
-		Difficulty: "hard",
-		TimeLimit:  2.0,
-		MemoryLimit: 524288,
-		Points:     300,
+		ExternalID:       "N",
+		Name:             "Tree",
+		Difficulty:       "hard",
+		TimeLimit:        2.0,
+		MemoryLimit:      524288,
+		Points:           300,
 		ProblemStatement: `<h1>Tree</h1><p>Tree traversal.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "3\n2 1 3\n1 2 3\n", Output: "2 3 1\n", Description: "test"},
 		},
 	},
 	{
-		ExternalID: "O",
-		Name:       "DFS",
-		Difficulty: "medium",
-		TimeLimit:  1.0,
-		MemoryLimit: 262144,
-		Points:     200,
+		ExternalID:       "O",
+		Name:             "DFS",
+		Difficulty:       "medium",
+		TimeLimit:        1.0,
+		MemoryLimit:      262144,
+		Points:           200,
 		ProblemStatement: `<h1>DFS</h1><p>DFS traversal.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "3 2\n1 2\n2 3\n", Output: "1 2 3\n", Description: "test"},
