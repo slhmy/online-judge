@@ -1,4 +1,4 @@
-.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-fix lint-backend lint-bff lint-judge check typecheck-frontend
+.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-backend lint-bff lint-judge lint-frontend check typecheck-frontend typecheck
 
 # Default target
 all: proto build
@@ -175,51 +175,6 @@ seed-reset:
 build-seed:
 	@echo "Building seed binary..."
 	cd backend && go build -o bin/seed ./cmd/seed
-
-# ============================================
-# Linting
-# ============================================
-
-lint-backend:
-	@echo "Linting backend..."
-	cd backend && golangci-lint run 
-
-lint-bff:
-	@echo "Linting BFF..."
-	cd bff && golangci-lint run 
-
-lint-judge:
-	@echo "Linting judge..."
-	cd judge && golangci-lint run 
-
-lint: lint-backend lint-bff lint-judge
-	@echo "All linting completed!"
-
-lint-fix-backend:
-	@echo "Auto-fixing backend lint issues..."
-	cd backend && golangci-lint run --fix 
-
-lint-fix-bff:
-	@echo "Auto-fixing BFF lint issues..."
-	cd bff && golangci-lint run --fix 
-
-lint-fix-judge:
-	@echo "Auto-fixing judge lint issues..."
-	cd judge && golangci-lint run --fix 
-
-lint-fix: lint-fix-backend lint-fix-bff lint-fix-judge
-	@echo "All auto-fix completed!"
-
-# ============================================
-# Quick Pre-commit Validation
-# ============================================
-
-typecheck-frontend:
-	@echo "Typechecking frontend..."
-	cd frontend && npm run typecheck
-
-check: lint-backend lint-bff lint-judge test-backend test-bff test-judge typecheck-frontend
-	@echo "All checks passed!"
 
 # ============================================
 # Testing
