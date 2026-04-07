@@ -5,8 +5,11 @@ import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 import TestRunPanel from '@/components/TestRunPanel'
 import { TestRunResult } from '@/types'
+import 'katex/dist/katex.min.css'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -53,7 +56,7 @@ export default function ProblemDetailPage() {
 
   const [problem, setProblem] = useState<Problem | null>(null)
   const [testCases, setTestCases] = useState<TestCase[]>([])
-  const [problemStatement, setProblemStatement] = useState<string>('')
+  const [problemStatement, setProblemStatement] = useState<{ format: string; content: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -78,11 +81,13 @@ export default function ProblemDetailPage() {
         setTestCases(data.sample_test_cases || [])
 
         // Fetch problem statement
-        const statementUrl = `${BFF_URL}/api/v1/problems/${problemId}/statement`
+        const statementUrl = `${BFF_URL}/api/v1/problems/${problemId}/statement?language=en`
         const statementRes = await fetch(statementUrl)
         if (statementRes.ok) {
           const statementData = await statementRes.json()
-          setProblemStatement(statementData || '')
+          if (statementData && statementData.format && statementData.content) {
+            setProblemStatement({ format: statementData.format, content: statementData.content })
+          }
         }
       } catch (err) {
         console.error('Fetch error:', err)
@@ -217,9 +222,28 @@ export default function ProblemDetailPage() {
 
         <div className="prose prose-invert max-w-none">
           {problemStatement ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {problemStatement}
-            </ReactMarkdown>
+            problemStatement.format === 'html' ? (
+              <div dangerouslySetInnerHTML={{ __html: problemStatement.content }} />
+            ) : problemStatement.format === 'pdf' ? (
+              <div className="text-gray-500">
+                <p>Problem statement is available as a PDF file.</p>
+                <a
+                  href={`${BFF_URL}/api/v1/problems/${problemId}/statement/pdf?language=en`}
+                  className="text-blue-500 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View PDF
+                </a>
+              </div>
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {problemStatement.content}
+              </ReactMarkdown>
+            )
           ) : (
             <p className="text-gray-500">No problem statement available.</p>
           )}

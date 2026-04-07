@@ -427,8 +427,9 @@ func TestProblemHandler_GetProblemStatement(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
-				assert.Contains(t, body, "Two Sum")
-				// Now returns just the content string, not the full object
+				assert.Contains(t, body, "format")
+				assert.Contains(t, body, "markdown")
+				assert.Contains(t, body, "content")
 				assert.Contains(t, body, "Given an array")
 			},
 		},
@@ -466,7 +467,7 @@ func TestProblemHandler_GetProblemStatement(t *testing.T) {
 			},
 		},
 		{
-			name:      "nil statement returns empty string",
+			name:      "nil statement returns null",
 			problemID: "prob-no-statement",
 			language:  "en",
 			mockFunc: func(ctx context.Context, req *pb.GetProblemStatementRequest) (*pb.GetProblemStatementResponse, error) {
@@ -476,7 +477,7 @@ func TestProblemHandler_GetProblemStatement(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
-				assert.Equal(t, "\"\"", body) // JSON-encoded empty string
+				assert.Equal(t, "null", body) // JSON-encoded null
 			},
 		},
 	}

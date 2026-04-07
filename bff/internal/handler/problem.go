@@ -230,15 +230,16 @@ func (h *ProblemHandler) GetProblemStatement(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Return just the content string for markdown rendering
+	// Return the full statement object with format information
+	w.Header().Set("Content-Type", "application/json")
 	if resp.Statement == nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode("")
+		json.NewEncoder(w).Encode(nil)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp.Statement.Content)
+	json.NewEncoder(w).Encode(map[string]string{
+		"format":  resp.Statement.Format,
+		"content": resp.Statement.Content,
+	})
 }
 
 // SetProblemStatement updates the problem statement content (markdown)
