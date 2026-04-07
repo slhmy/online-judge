@@ -15,62 +15,62 @@ import (
 
 // CompileConfig defines detailed compilation settings for each language
 type CompileConfig struct {
-	ID              string
-	LanguageName    string
-	Version         string
-	SourceFile      string
-	BinaryFile      string
-	NeedsCompile    bool
-	TimeFactor      float64
-	MemoryFactor    float64
+	ID           string
+	LanguageName string
+	Version      string
+	SourceFile   string
+	BinaryFile   string
+	NeedsCompile bool
+	TimeFactor   float64
+	MemoryFactor float64
 
 	// Compilation settings
-	CompilerPath    string
-	CompileArgs     []string
-	CompileTimeout  time.Duration
-	CompileMemory   int64 // KB
+	CompilerPath   string
+	CompileArgs    []string
+	CompileTimeout time.Duration
+	CompileMemory  int64 // KB
 
 	// Runtime settings
-	RunnerPath      string
-	RunArgs         []string
+	RunnerPath string
+	RunArgs    []string
 
 	// Error parsing patterns
 	ErrorPatterns   []ErrorPattern
 	WarningPatterns []ErrorPattern
 
 	// Additional files/directories needed
-	ExtraFiles      []string
+	ExtraFiles []string
 }
 
 // ErrorPattern defines how to parse compiler errors
 type ErrorPattern struct {
-	Pattern     *regexp.Regexp
-	Type        string // "error", "warning", "info"
-	MessageGroup int   // Which group contains the message
-	LineGroup    int   // Which group contains line number (0 if none)
-	FileGroup    int   // Which group contains file name (0 if none)
-	ColumnGroup  int   // Which group contains column number (0 if none)
+	Pattern      *regexp.Regexp
+	Type         string // "error", "warning", "info"
+	MessageGroup int    // Which group contains the message
+	LineGroup    int    // Which group contains line number (0 if none)
+	FileGroup    int    // Which group contains file name (0 if none)
+	ColumnGroup  int    // Which group contains column number (0 if none)
 }
 
 // CompileError represents a parsed compilation error
 type CompileError struct {
-	Type     string // "error", "warning"
-	Message  string
-	File     string
-	Line     int
-	Column   int
-	Raw      string // Original error line
+	Type    string // "error", "warning"
+	Message string
+	File    string
+	Line    int
+	Column  int
+	Raw     string // Original error line
 }
 
 // CompileResult contains compilation results with parsed errors
 type CompileResult struct {
-	Success     bool
-	BinaryPath  string
-	Errors      []CompileError
-	Warnings    []CompileError
-	RawOutput   string
-	TimeUsed    time.Duration
-	MemoryUsed  int64
+	Success    bool
+	BinaryPath string
+	Errors     []CompileError
+	Warnings   []CompileError
+	RawOutput  string
+	TimeUsed   time.Duration
+	MemoryUsed int64
 }
 
 // bt is a helper to create a regex pattern with backtick character
@@ -1093,11 +1093,11 @@ func CompileScript(language string) string {
 	}
 
 	var script strings.Builder
-	script.WriteString(fmt.Sprintf("#!/bin/bash\n# Compilation script for %s (%s)\n\n", cfg.LanguageName, cfg.Version))
+	fmt.Fprintf(&script, "#!/bin/bash\n# Compilation script for %s (%s)\n\n", cfg.LanguageName, cfg.Version)
 
 	if cfg.NeedsCompile {
 		script.WriteString("# Compile\n")
-		script.WriteString(fmt.Sprintf("%s %s\n\n", cfg.CompilerPath, strings.Join(cfg.CompileArgs, " ")))
+		fmt.Fprintf(&script, "%s %s\n\n", cfg.CompilerPath, strings.Join(cfg.CompileArgs, " "))
 
 		script.WriteString("# Check if compilation succeeded\n")
 		script.WriteString("if [ $? -eq 0 ]; then\n")
@@ -1107,11 +1107,11 @@ func CompileScript(language string) string {
 		script.WriteString("    exit 1\n")
 		script.WriteString("fi\n\n")
 	} else {
-		script.WriteString(fmt.Sprintf("# No compilation needed for %s\n", cfg.LanguageName))
+		fmt.Fprintf(&script, "# No compilation needed for %s\n", cfg.LanguageName)
 	}
 
 	script.WriteString("# Run\n")
-	script.WriteString(fmt.Sprintf("%s %s\n", cfg.RunnerPath, strings.Join(cfg.RunArgs, " ")))
+	fmt.Fprintf(&script, "%s %s\n", cfg.RunnerPath, strings.Join(cfg.RunArgs, " "))
 
 	return script.String()
 }
