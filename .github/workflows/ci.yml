@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Download dependencies
+        working-directory: backend
+        run: go mod download
+
+      - name: Run tests
+        working-directory: backend
+        run: go test ./... -v -race
+
+  test-bff:
+    name: Test BFF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Download dependencies
+        working-directory: bff
+        run: go mod download
+
+      - name: Run tests
+        working-directory: bff
+        run: go test ./... -v -race
+
+  test-judge:
+    name: Test Judge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Download dependencies
+        working-directory: judge
+        run: go mod download
+
+      - name: Run tests
+        working-directory: judge
+        run: go test ./... -v -race
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          working-directory: backend
+          args: --config ../.golangci.yml
+
+      - name: golangci-lint (BFF)
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          working-directory: bff
+          args: --config ../.golangci.yml
+
+      - name: golangci-lint (Judge)
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          working-directory: judge
+          args: --config ../.golangci.yml
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-bff, test-judge, lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build Backend Services
+        working-directory: backend
+        run: |
+          go build -o bin/problem-service ./cmd/problem-service
+          go build -o bin/submission-service ./cmd/submission-service
+          go build -o bin/contest-service ./cmd/contest-service
+          go build -o bin/notification-service ./cmd/notification-service
+          go build -o bin/user-service ./cmd/user-service
+
+      - name: Build BFF
+        working-directory: bff
+        run: go build -o bin/bff ./cmd/bff
+
+      - name: Build Judge
+        working-directory: judge
+        run: go build -o bin/judgedaemon ./cmd/judgedaemon
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
