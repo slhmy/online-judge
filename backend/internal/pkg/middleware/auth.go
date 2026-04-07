@@ -12,6 +12,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type contextKey string
+
+const (
+	contextKeyUserID  contextKey = "user_id"
+	contextKeyEmail   contextKey = "user_email"
+)
+
 type JWTInterceptor struct {
 	jwksURL string
 	keySet  jwk.Set
@@ -61,8 +68,8 @@ func (i *JWTInterceptor) Unary() grpc.UnaryServerInterceptor {
 		}
 
 		// Add user info to context
-		ctx = context.WithValue(ctx, "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "user_email", claims.Email)
+		ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
+		ctx = context.WithValue(ctx, contextKeyEmail, claims.Email)
 
 		return handler(ctx, req)
 	}

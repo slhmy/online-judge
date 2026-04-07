@@ -125,7 +125,7 @@ func (h *Hub) startSubscription(submissionID string) {
 func (h *Hub) stopSubscription(submissionID string) {
 	if pubsub, ok := h.subscriptions[submissionID]; ok {
 		if ps, ok := pubsub.(*redis.PubSub); ok {
-			ps.Close()
+			_ = ps.Close()
 		}
 		delete(h.subscriptions, submissionID)
 		log.Printf("Stopped Redis subscription for submission %s", submissionID)
@@ -211,7 +211,7 @@ func (h *Hub) Stop() {
 	// Close all subscriptions
 	for submissionID, pubsub := range h.subscriptions {
 		if ps, ok := pubsub.(*redis.PubSub); ok {
-			ps.Close()
+			_ = ps.Close()
 		}
 		delete(h.subscriptions, submissionID)
 	}
@@ -247,7 +247,7 @@ func (c *Client) ServeHTTP(w http.ResponseWriter, r *http.Request, hub *Hub) {
 	defer hub.RemoveClient(c)
 
 	// Send initial connection message
-	fmt.Fprintf(w, "event: connected\ndata: {\"submission_id\":\"%s\"}\n\n", c.submissionID)
+	_, _ = fmt.Fprintf(w, "event: connected\ndata: {\"submission_id\":\"%s\"}\n\n", c.submissionID)
 	flusher.Flush()
 
 	// Keep connection alive and send events
@@ -266,12 +266,12 @@ func (c *Client) ServeHTTP(w http.ResponseWriter, r *http.Request, hub *Hub) {
 
 		case <-ticker.C:
 			// Send keepalive comment to prevent connection timeout
-			fmt.Fprintf(w, ": keepalive\n\n")
+			_, _ = fmt.Fprintf(w, ": keepalive\n\n")
 			flusher.Flush()
 
 		case event := <-c.send:
 			// Send SSE event
-			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Event, event.Data)
+			_, _ = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Event, event.Data)
 			flusher.Flush()
 		}
 	}

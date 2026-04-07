@@ -144,17 +144,6 @@ func (m *MockContestStore) GetScoreboard(ctx context.Context, contestID string, 
 	return entries, "01:00:00", false, nil
 }
 
-func (m *MockContestStore) getProblemScores(ctx context.Context, contestID, teamID string, showFrozen bool) ([]*pb.ProblemScore, error) {
-	problems, _ := m.GetContestProblems(ctx, contestID)
-	var scores []*pb.ProblemScore
-	for _, p := range problems {
-		scores = append(scores, &pb.ProblemScore{
-			ProblemShortName: p.ShortName,
-		})
-	}
-	return scores, nil
-}
-
 // RefreshScoreboard refreshes the scoreboard for a contest
 func (m *MockContestStore) RefreshScoreboard(ctx context.Context, contestID string) error {
 	return nil

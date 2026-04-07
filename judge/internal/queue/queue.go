@@ -139,7 +139,10 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 	}
 
 	var job JudgeJob
-	memberStr := result[0].Member
+	memberStr, ok := result[0].Member.(string)
+	if !ok {
+		return nil, fmt.Errorf("unexpected member type in queue: %T", result[0].Member)
+	}
 	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
 		return nil, err
 	}
@@ -196,7 +199,7 @@ func (q *JudgeQueue) FetchSubmission(ctx context.Context, submissionID string) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch submission: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -247,7 +250,7 @@ func (q *JudgeQueue) fetchSourceCode(ctx context.Context, submissionID string) (
 		// Fallback: try to get from cache or queue data
 		return q.getSourceFromQueue(ctx, submissionID)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return q.getSourceFromQueue(ctx, submissionID)
@@ -285,7 +288,7 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch problem: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -330,7 +333,7 @@ func (q *JudgeQueue) FetchTestCases(ctx context.Context, problemID string) ([]*T
 		// Fallback to public API (sample test cases only)
 		return q.fetchSampleTestCases(ctx, problemID)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		// Fallback to public API
@@ -383,7 +386,7 @@ func (q *JudgeQueue) fetchSampleTestCases(ctx context.Context, problemID string)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch problem with samples: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch problem: status %d", resp.StatusCode)
@@ -441,7 +444,7 @@ func (q *JudgeQueue) FetchTestCaseData(ctx context.Context, testCase *TestCase) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch test case input: %w", err)
 	}
-	defer inputResp.Body.Close()
+	defer func() { _ = inputResp.Body.Close() }()
 
 	if inputResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch input: status %d", inputResp.StatusCode)
@@ -456,7 +459,7 @@ func (q *JudgeQueue) FetchTestCaseData(ctx context.Context, testCase *TestCase) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch test case output: %w", err)
 	}
-	defer outputResp.Body.Close()
+	defer func() { _ = outputResp.Body.Close() }()
 
 	if outputResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch output: status %d", outputResp.StatusCode)
@@ -491,7 +494,7 @@ func (q *JudgeQueue) CreateJudging(ctx context.Context, submissionID string, jud
 	if err != nil {
 		return "", fmt.Errorf("failed to create judging: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -536,7 +539,7 @@ func (q *JudgeQueue) UpdateJudging(ctx context.Context, judgingID string, result
 	if err != nil {
 		return fmt.Errorf("failed to update judging: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -569,7 +572,7 @@ func (q *JudgeQueue) CreateJudgingRun(ctx context.Context, judgingID string, tes
 	if err != nil {
 		return fmt.Errorf("failed to create judging run: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -621,7 +624,7 @@ func (q *JudgeQueue) UpdateRejudgeSubmission(ctx context.Context, rejudgeID, sub
 	if err != nil {
 		return fmt.Errorf("failed to update rejudge submission: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -639,7 +642,7 @@ func (q *JudgeQueue) FetchExecutable(ctx context.Context, executableID string) (
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch executable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -684,7 +687,7 @@ func (q *JudgeQueue) Get(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP error: status %d", resp.StatusCode)

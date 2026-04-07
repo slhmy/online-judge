@@ -64,7 +64,7 @@ func TestGetInteractor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(cacheDir)
+	defer func() { _ = os.RemoveAll(cacheDir) }()
 
 	config := InteractiveRunnerConfig{
 		InteractorTimeLimit:    30 * time.Second,
@@ -123,7 +123,7 @@ func TestRunInteractive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(workDir)
+	defer func() { _ = os.RemoveAll(workDir) }()
 
 	// Create a simple solution that echoes back
 	solutionScript := filepath.Join(workDir, "solution")
@@ -207,7 +207,7 @@ func TestRunInteractiveTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(workDir)
+	defer func() { _ = os.RemoveAll(workDir) }()
 
 	// Create a solution that loops forever
 	solutionScript := filepath.Join(workDir, "solution")
@@ -277,7 +277,7 @@ func TestRunInteractiveWrongAnswer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(workDir)
+	defer func() { _ = os.RemoveAll(workDir) }()
 
 	// Create a solution that returns wrong response
 	solutionScript := filepath.Join(workDir, "solution")

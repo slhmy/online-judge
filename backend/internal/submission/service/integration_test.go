@@ -422,7 +422,7 @@ func TestSubmissionService_Integration_GetSourceCode(t *testing.T) {
 	assert.Equal(t, "cached code", source)
 
 	// Get from database when not in cache
-	source, err = service.GetSourceCode(ctx, "sub-1")
+	_, err = service.GetSourceCode(ctx, "sub-1")
 	require.NoError(t, err)
 	// Should have been re-cached
 }

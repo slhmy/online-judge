@@ -17,8 +17,8 @@ func (s *StorageService) uploadLocal(path string, reader io.Reader, size int64) 
 		return err
 	}
 	defer func() {
-		if cerr := file.Close(); cerr != nil {
-			// Log or handle close error
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
 		}
 	}()
 

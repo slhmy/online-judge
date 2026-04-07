@@ -171,7 +171,7 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 			Error:        fmt.Sprintf("Failed to create sandbox: %v", err),
 		}
 	}
-	defer sb.Cleanup()
+	defer func() { _ = sb.Cleanup() }()
 
 	// 5. Create judging record (before compilation so CE is recorded)
 	judgingID, err := w.queue.CreateJudging(ctx, job.SubmissionID, w.id)
@@ -191,7 +191,7 @@ func (w *JudgeWorker) processJob(ctx context.Context, job *queue.JudgeJob) *queu
 		}
 		// Push result to database even for CE
 		if judgingID != "" {
-			w.queue.PushJudgingResult(ctx, result, judgingID, nil)
+			_ = w.queue.PushJudgingResult(ctx, result, judgingID, nil)
 		}
 		return result
 	}

@@ -91,7 +91,7 @@ func (r *InteractiveRunner) RunInteractive(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create work directory: %w", err)
 	}
-	defer os.RemoveAll(workDir)
+	defer func() { _ = os.RemoveAll(workDir) }()
 
 	// Write test case input file
 	inputFile := filepath.Join(workDir, "testcase.in")
@@ -132,7 +132,7 @@ func (r *InteractiveRunner) RunInteractive(
 	copyWg.Add(1)
 	go func() {
 		defer copyWg.Done()
-		defer solutionStdinWriter.Close()
+		defer func() { _ = solutionStdinWriter.Close() }()
 		_, err := io.Copy(solutionStdinWriter, interactorStdoutReader)
 		if err != nil && err != io.ErrClosedPipe {
 			copyErrChan <- fmt.Errorf("interactor->solution copy error: %w", err)
@@ -143,7 +143,7 @@ func (r *InteractiveRunner) RunInteractive(
 	copyWg.Add(1)
 	go func() {
 		defer copyWg.Done()
-		defer interactorStdinWriter.Close()
+		defer func() { _ = interactorStdinWriter.Close() }()
 		_, err := io.Copy(interactorStdinWriter, solutionStdoutReader)
 		if err != nil && err != io.ErrClosedPipe {
 			copyErrChan <- fmt.Errorf("solution->interactor copy error: %w", err)
@@ -161,7 +161,7 @@ func (r *InteractiveRunner) RunInteractive(
 	// Start solution
 	if err := solutionCmd.Start(); err != nil {
 		// Kill interactor if solution fails to start
-		interactorCmd.Process.Kill()
+		_ = interactorCmd.Process.Kill()
 		return nil, fmt.Errorf("failed to start solution: %w", err)
 	}
 
@@ -182,7 +182,7 @@ func (r *InteractiveRunner) RunInteractive(
 			interactorExitCode = -1
 		}
 		// Close interactor stdout to signal EOF to solution
-		interactorStdoutWriter.Close()
+		_ = interactorStdoutWriter.Close()
 	}()
 
 	// Wait for solution with timeout monitoring
@@ -207,7 +207,7 @@ func (r *InteractiveRunner) RunInteractive(
 			}
 		case <-solutionTimeoutCtx.Done():
 			// Solution timed out
-			solutionCmd.Process.Kill()
+			_ = solutionCmd.Process.Kill()
 			solutionWaitErr = fmt.Errorf("solution timed out")
 			solutionExitCode = -1
 		}

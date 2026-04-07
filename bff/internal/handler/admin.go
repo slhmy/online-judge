@@ -83,10 +83,10 @@ type ListRejudgesRequest struct {
 }
 
 type ListRejudgesResponse struct {
-	Rejudges   []*Rejudge `json:"rejudges"`
-	Total      int32      `json:"total"`
-	Page       int32      `json:"page"`
-	PageSize   int32      `json:"page_size"`
+	Rejudges []*Rejudge `json:"rejudges"`
+	Total    int32      `json:"total"`
+	Page     int32      `json:"page"`
+	PageSize int32      `json:"page_size"`
 }
 
 type CancelRejudgeRequest struct {
@@ -103,9 +103,9 @@ type ApplyRejudgeRequest struct {
 }
 
 type ApplyRejudgeResponse struct {
-	ID             string `json:"id"`
+	ID              string `json:"id"`
 	VerdictsChanged int32  `json:"verdicts_changed"`
-	Status         string `json:"status"`
+	Status          string `json:"status"`
 }
 
 type RevertRejudgeRequest struct {
@@ -113,17 +113,17 @@ type RevertRejudgeRequest struct {
 }
 
 type RevertRejudgeResponse struct {
-	ID              string `json:"id"`
+	ID               string `json:"id"`
 	VerdictsRestored int32  `json:"verdicts_restored"`
-	Status          string `json:"status"`
+	Status           string `json:"status"`
 }
 
 type GetRejudgeSubmissionsRequest struct {
-	RejudgeID string `json:"rejudge_id"`
-	OnlyChanged bool  `json:"only_changed"`
-	Status     string `json:"status"`
-	Page       int32  `json:"page"`
-	PageSize   int32  `json:"page_size"`
+	RejudgeID   string `json:"rejudge_id"`
+	OnlyChanged bool   `json:"only_changed"`
+	Status      string `json:"status"`
+	Page        int32  `json:"page"`
+	PageSize    int32  `json:"page_size"`
 }
 
 type GetRejudgeSubmissionsResponse struct {
@@ -166,7 +166,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "database error"}`, http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type User struct {
 		ID              string `json:"id"`
@@ -187,7 +187,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		users = append(users, u)
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"users": users,
 	})
 }
@@ -225,7 +225,7 @@ func (h *AdminHandler) UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 // CreateRejudge creates a new rejudging operation
@@ -243,7 +243,7 @@ func (h *AdminHandler) CreateRejudge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // GetRejudge retrieves a rejudging operation
@@ -256,7 +256,7 @@ func (h *AdminHandler) GetRejudge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // ListRejudges lists rejudging operations
@@ -271,10 +271,10 @@ func (h *AdminHandler) ListRejudges(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if page := query.Get("page"); page != "" {
-		json.NewDecoder(strings.NewReader(page)).Decode(&req.Page)
+		_ = json.NewDecoder(strings.NewReader(page)).Decode(&req.Page)
 	}
 	if pageSize := query.Get("page_size"); pageSize != "" {
-		json.NewDecoder(strings.NewReader(pageSize)).Decode(&req.PageSize)
+		_ = json.NewDecoder(strings.NewReader(pageSize)).Decode(&req.PageSize)
 	}
 
 	resp, err := h.rejudgeService.ListRejudges(r.Context(), req)
@@ -283,7 +283,7 @@ func (h *AdminHandler) ListRejudges(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // CancelRejudge cancels a pending rejudging operation
@@ -296,7 +296,7 @@ func (h *AdminHandler) CancelRejudge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // ApplyRejudge applies the rejudge results
@@ -309,7 +309,7 @@ func (h *AdminHandler) ApplyRejudge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // RevertRejudge reverts the rejudge results
@@ -322,7 +322,7 @@ func (h *AdminHandler) RevertRejudge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // GetRejudgeSubmissions retrieves submissions for a rejudging operation
@@ -331,16 +331,16 @@ func (h *AdminHandler) GetRejudgeSubmissions(w http.ResponseWriter, r *http.Requ
 	query := r.URL.Query()
 
 	req := &GetRejudgeSubmissionsRequest{
-		RejudgeID:  rejudgeID,
+		RejudgeID:   rejudgeID,
 		OnlyChanged: query.Get("only_changed") == "true",
-		Status:     query.Get("status"),
+		Status:      query.Get("status"),
 	}
 
 	if page := query.Get("page"); page != "" {
-		json.NewDecoder(strings.NewReader(page)).Decode(&req.Page)
+		_ = json.NewDecoder(strings.NewReader(page)).Decode(&req.Page)
 	}
 	if pageSize := query.Get("page_size"); pageSize != "" {
-		json.NewDecoder(strings.NewReader(pageSize)).Decode(&req.PageSize)
+		_ = json.NewDecoder(strings.NewReader(pageSize)).Decode(&req.PageSize)
 	}
 
 	resp, err := h.rejudgeService.GetRejudgeSubmissions(r.Context(), req)
@@ -349,7 +349,7 @@ func (h *AdminHandler) GetRejudgeSubmissions(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // ListTestCases returns all test cases for a problem
@@ -366,7 +366,7 @@ func (h *AdminHandler) ListTestCases(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "database error"}`, http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type TestCase struct {
 		ID            string `json:"id"`
@@ -400,7 +400,7 @@ func (h *AdminHandler) ListTestCases(w http.ResponseWriter, r *http.Request) {
 		testCases = append(testCases, tc)
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"test_cases": testCases,
 	})
 }
@@ -433,7 +433,7 @@ func (h *AdminHandler) CreateTestCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"id": id})
+	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
 // UpdateTestCase updates a test case
@@ -461,7 +461,7 @@ func (h *AdminHandler) UpdateTestCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 // DeleteTestCase deletes a test case
@@ -498,7 +498,7 @@ func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Reque
 	// Check if ZIP file is uploaded
 	zipFile, _, err := r.FormFile("zip_file")
 	if err == nil {
-		defer zipFile.Close()
+		defer func() { _ = zipFile.Close() }()
 
 		// Read ZIP file
 		buf := new(bytes.Buffer)
@@ -535,14 +535,15 @@ func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Reque
 			}
 
 			content, err := io.ReadAll(reader)
-			reader.Close()
+			_ = reader.Close()
 			if err != nil {
 				continue
 			}
 
-			if ext == ".in" {
+			switch ext {
+			case ".in":
 				inputFiles[rank] = content
-			} else if ext == ".out" {
+			case ".out":
 				outputFiles[rank] = content
 			}
 		}
@@ -580,7 +581,7 @@ func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Reque
 				continue
 			}
 			content, err := io.ReadAll(file)
-			file.Close()
+			_ = file.Close()
 			if err != nil {
 				continue
 			}
@@ -603,7 +604,7 @@ func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Reque
 				continue
 			}
 			content, err := io.ReadAll(file)
-			file.Close()
+			_ = file.Close()
 			if err != nil {
 				continue
 			}
@@ -647,11 +648,12 @@ func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Reque
 	// Get custom is_sample values per rank
 	for i := range testCases {
 		customIsSample := r.FormValue("is_sample_" + strconv.Itoa(testCases[i].Rank))
-		if customIsSample == "true" {
+		switch customIsSample {
+		case "true":
 			testCases[i].IsSample = true
-		} else if customIsSample == "false" {
+		case "false":
 			testCases[i].IsSample = false
-		} else {
+		default:
 			testCases[i].IsSample = defaultIsSample
 		}
 	}
@@ -672,7 +674,7 @@ func (h *AdminHandler) BatchUploadTestCases(w http.ResponseWriter, r *http.Reque
 		createdIDs = append(createdIDs, id)
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"ids":        createdIDs,
 		"count":      len(createdIDs),
 		"test_cases": testCases,
@@ -698,7 +700,7 @@ func (h *AdminHandler) ToggleTestCaseSample(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]bool{
+	_ = json.NewEncoder(w).Encode(map[string]bool{
 		"is_sample": !currentIsSample,
 	})
 }

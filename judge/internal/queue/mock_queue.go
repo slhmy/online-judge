@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"errors"
 )
 
 // MockJudgeQueue is a mock implementation of JudgeQueue for testing
@@ -197,12 +196,4 @@ func (m *MockJudgeQueue) CreateJudgingRun(ctx context.Context, judgingID string,
 
 func (m *MockJudgeQueue) PushJudgingResult(ctx context.Context, result *JudgeResult, judgingID string, runResults []*TestCaseResult) error {
 	return m.PushJudgingResultError
-}
-
-func (m *MockJudgeQueue) fetchSampleTestCases(ctx context.Context, problemID string) ([]*TestCase, error) {
-	return m.FetchTestCases(ctx, problemID)
-}
-
-func (m *MockJudgeQueue) getSourceFromQueue(ctx context.Context, submissionID string) (string, error) {
-	return "", errors.New("not found")
 }

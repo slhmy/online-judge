@@ -17,6 +17,7 @@ type Client struct {
 
 // NewClient creates a new identra client
 func NewClient(addr string) (*Client, error) {
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err

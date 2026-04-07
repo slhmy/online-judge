@@ -39,7 +39,7 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +52,7 @@ func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
 	if err == nil && cached != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Cache", "hit")
-		w.Write(cached)
+		_, _ = w.Write(cached)
 		return
 	}
 
@@ -65,11 +65,11 @@ func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
 
 	// Cache the response
 	data, _ := json.Marshal(resp)
-	h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ProblemTTL, "problem:"+id)
+	_ = h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ProblemTTL, "problem:"+id)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "miss")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ProblemHandler) ListLanguages(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +81,7 @@ func (h *ProblemHandler) ListLanguages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // Admin handlers for problem CRUD
@@ -135,7 +135,7 @@ func (h *ProblemHandler) CreateProblem(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"id": resp.Id})
+	_ = json.NewEncoder(w).Encode(map[string]string{"id": resp.Id})
 }
 
 func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
@@ -189,9 +189,9 @@ func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate problem cache
-	h.cache.InvalidateProblemCache(ctx, id)
+	_ = h.cache.InvalidateProblemCache(ctx, id)
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
@@ -205,7 +205,7 @@ func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate problem cache
-	h.cache.InvalidateProblemCache(ctx, id)
+	_ = h.cache.InvalidateProblemCache(ctx, id)
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -233,10 +233,10 @@ func (h *ProblemHandler) GetProblemStatement(w http.ResponseWriter, r *http.Requ
 	// Return the full statement object with format information
 	w.Header().Set("Content-Type", "application/json")
 	if resp.Statement == nil {
-		json.NewEncoder(w).Encode(nil)
+		_ = json.NewEncoder(w).Encode(nil)
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"format":  resp.Statement.Format,
 		"content": resp.Statement.Content,
 	})
@@ -282,10 +282,10 @@ func (h *ProblemHandler) SetProblemStatement(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Invalidate problem cache
-	h.cache.InvalidateProblemCache(ctx, problemID)
+	_ = h.cache.InvalidateProblemCache(ctx, problemID)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp.Statement)
+	_ = json.NewEncoder(w).Encode(resp.Statement)
 }
 
 // RegisterRoutes registers problem routes

@@ -144,7 +144,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	`, userID, username, role)
 	if err != nil {
 		// Try to clean up identra user
-		h.identraDB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", userID)
+		_, _ = h.identraDB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", userID)
 		http.Error(w, `{"error": "failed to create user profile"}`, http.StatusInternalServerError)
 		return
 	}
@@ -153,7 +153,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
 	if err != nil {
 		// User created but login failed - still return success
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "registration successful, please login",
 			"user": map[string]interface{}{
 				"id":       userID,
@@ -166,7 +166,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.Token != nil && resp.Token.AccessToken != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token":  resp.Token.AccessToken.Token,
 			"refresh_token": resp.Token.RefreshToken.Token,
 			"expires_in":    resp.Token.AccessToken.ExpiresAt,
@@ -178,7 +178,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 	} else {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "registration successful, please login",
 		})
 	}
@@ -248,7 +248,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token":  resp.Token.AccessToken.Token,
 		"refresh_token": resp.Token.RefreshToken.Token,
 		"expires_in":    resp.Token.AccessToken.ExpiresAt,
@@ -298,7 +298,7 @@ func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
 		state,
 	)
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"authorization_url": authURL,
 		"state":             state,
 		"provider":          provider,
@@ -427,7 +427,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		loginResp, err = h.identraClient.LoginByPassword(ctx, email, randomPassword)
 		if err != nil {
 			// Fallback: return user info without tokens
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"user": map[string]interface{}{
 					"id":         userID,
 					"email":      email,
@@ -442,7 +442,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Existing user - they should use their existing password
 		// Return user info only, they'll need to login manually
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"user": map[string]interface{}{
 				"id":         userID,
 				"email":      email,
@@ -455,7 +455,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token":  loginResp.Token.AccessToken.Token,
 		"refresh_token": loginResp.Token.RefreshToken.Token,
 		"expires_in":    loginResp.Token.AccessToken.ExpiresAt,
@@ -511,7 +511,7 @@ func (h *AuthHandler) exchangeGitHubCode(code string) (*GitHubTokenResponse, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -543,7 +543,7 @@ func (h *AuthHandler) getGitHubUserInfo(accessToken string) (*GitHubUser, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -571,7 +571,7 @@ func (h *AuthHandler) getGitHubEmails(accessToken string) ([]GitHubEmail, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -598,9 +598,12 @@ func (h *AuthHandler) findOrCreateOAuthUser(ctx context.Context, email, githubLo
 
 	if err == nil {
 		// User exists - return their ID (no password needed for existing users)
-		_, err = h.identraDB.ExecContext(ctx, `
+		_, updateErr := h.identraDB.ExecContext(ctx, `
 			UPDATE users SET updated_at = NOW() WHERE id = $1
 		`, userID)
+		if updateErr != nil {
+			return "", "", updateErr
+		}
 		return userID, "", nil
 	}
 
@@ -647,7 +650,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token":  resp.Token.AccessToken.Token,
 		"refresh_token": resp.Token.RefreshToken.Token,
 		"expires_in":    resp.Token.AccessToken.ExpiresAt,
@@ -693,7 +696,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		role = "user"
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":       userID,
 		"email":    email,
 		"username": username,
@@ -704,7 +707,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 // Logout handles logout
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 // RegisterRoutes registers auth routes

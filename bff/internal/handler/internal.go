@@ -78,7 +78,7 @@ func (h *InternalHandler) GetSubmissionSource(w http.ResponseWriter, r *http.Req
 	source, err := h.redis.Get(ctx, sourceKey).Result()
 	if err == nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"submission_id": id,
 			"source_code":   source,
 		})
@@ -121,7 +121,7 @@ func (h *InternalHandler) GetProblemTestCases(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"test_cases": testCases,
 	})
 }
@@ -136,14 +136,14 @@ func (h *InternalHandler) GetTestCaseInput(w http.ResponseWriter, r *http.Reques
 	input, err := h.redis.Get(ctx, inputKey).Result()
 	if err == nil {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(input))
+		_, _ = w.Write([]byte(input))
 		return
 	}
 
 	// For now, return placeholder until we implement object storage integration
 	// In production, this would fetch from MinIO/S3
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("Sample input for test case " + testCaseID + "\n"))
+	_, _ = w.Write([]byte("Sample input for test case " + testCaseID + "\n"))
 }
 
 // GetTestCaseOutput returns the expected output for a test case
@@ -156,13 +156,13 @@ func (h *InternalHandler) GetTestCaseOutput(w http.ResponseWriter, r *http.Reque
 	output, err := h.redis.Get(ctx, outputKey).Result()
 	if err == nil {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(output))
+		_, _ = w.Write([]byte(output))
 		return
 	}
 
 	// For now, return placeholder until we implement object storage integration
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("Sample output for test case " + testCaseID + "\n"))
+	_, _ = w.Write([]byte("Sample output for test case " + testCaseID + "\n"))
 }
 
 // CreateJudging creates a new judging record
@@ -203,7 +203,7 @@ func (h *InternalHandler) CreateJudging(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"judging_id": resp.JudgingId,
 	})
 }
@@ -261,21 +261,21 @@ func (h *InternalHandler) UpdateJudging(w http.ResponseWriter, r *http.Request) 
 
 		// Invalidate scoreboard cache if contest ID is provided
 		if req.ContestID != "" {
-			h.cache.InvalidateScoreboardCache(ctx, req.ContestID)
+			_ = h.cache.InvalidateScoreboardCache(ctx, req.ContestID)
 			log.Printf("Invalidated scoreboard cache for contest %s", req.ContestID)
 		} else {
 			// Try to get contest ID from submission metadata
 			contestingKey := "submission:" + submissionID + ":contest_id"
 			contestID, err := h.redis.Get(ctx, contestingKey).Result()
 			if err == nil && contestID != "" {
-				h.cache.InvalidateScoreboardCache(ctx, contestID)
+				_ = h.cache.InvalidateScoreboardCache(ctx, contestID)
 				log.Printf("Invalidated scoreboard cache for contest %s (from submission metadata)", contestID)
 			}
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"judging_id": judgingID,
 		"status":     "updated",
 	})
@@ -353,7 +353,7 @@ func (h *InternalHandler) CreateJudgingRun(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"judging_id": judgingID,
 		"status":     "created",
 	})
@@ -403,7 +403,7 @@ func (h *InternalHandler) UpdateProgress(w http.ResponseWriter, r *http.Request)
 	log.Printf("Published progress update for submission %s: status=%s, progress=%d", submissionID, req.Status, req.Progress)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"submission_id": submissionID,
 		"status":        "updated",
 	})
@@ -419,7 +419,7 @@ func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) 
 	binaryData, err := h.redis.Get(ctx, binaryCacheKey).Result()
 	if err == nil {
 		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Write([]byte(binaryData))
+		_, _ = w.Write([]byte(binaryData))
 		return
 	}
 
@@ -458,7 +458,7 @@ func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) 
 					// Cache the binary for future requests
 					h.redis.Set(ctx, binaryCacheKey, string(decoded), 3600) // 1 hour TTL
 					w.Header().Set("Content-Type", "application/octet-stream")
-					w.Write(decoded)
+					_, _ = w.Write(decoded)
 					return
 				}
 			}
@@ -477,7 +477,7 @@ func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) 
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 			return
 		}
 	}
@@ -491,7 +491,7 @@ func (h *InternalHandler) GetExecutable(w http.ResponseWriter, r *http.Request) 
 		execPath, _ := h.redis.HGet(ctx, metaKey, "executable_path").Result()
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"executable": map[string]interface{}{
 				"id":              executableID,
 				"type":            execType,
@@ -539,5 +539,5 @@ fi
 `
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write([]byte(placeholderValidator))
+	_, _ = w.Write([]byte(placeholderValidator))
 }

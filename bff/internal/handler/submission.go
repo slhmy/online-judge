@@ -45,7 +45,7 @@ func (h *SubmissionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SubmissionHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +58,7 @@ func (h *SubmissionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SubmissionHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +78,7 @@ func (h *SubmissionHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SubmissionHandler) GetJudging(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +93,7 @@ func (h *SubmissionHandler) GetJudging(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SubmissionHandler) GetRuns(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +108,7 @@ func (h *SubmissionHandler) GetRuns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SubmissionHandler) Rejudge(w http.ResponseWriter, r *http.Request) {
@@ -125,5 +125,5 @@ func (h *SubmissionHandler) Rejudge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }

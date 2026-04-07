@@ -140,7 +140,7 @@ func TestAdminHandler_CreateRejudge(t *testing.T) {
 			wantStatus: http.StatusCreated,
 			wantBody: func(t *testing.T, body string) {
 				var resp CreateRejudgeResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Equal(t, "rejudge-new", resp.ID)
 				assert.Equal(t, int32(3), resp.AffectedCount)
 			},
@@ -166,7 +166,7 @@ func TestAdminHandler_CreateRejudge(t *testing.T) {
 			wantStatus: http.StatusCreated,
 			wantBody: func(t *testing.T, body string) {
 				var resp CreateRejudgeResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Equal(t, int32(50), resp.AffectedCount)
 			},
 		},
@@ -239,7 +239,7 @@ func TestAdminHandler_GetRejudge(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp GetRejudgeResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Equal(t, "rejudge-1", resp.Rejudge.ID)
 				assert.Equal(t, "completed", resp.Rejudge.Status)
 				assert.Equal(t, int32(10), resp.Rejudge.AffectedCount)
@@ -306,7 +306,7 @@ func TestAdminHandler_ListRejudges(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp ListRejudgesResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Len(t, resp.Rejudges, 3)
 				assert.Equal(t, int32(3), resp.Total)
 			},
@@ -329,7 +329,7 @@ func TestAdminHandler_ListRejudges(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp ListRejudgesResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Len(t, resp.Rejudges, 1)
 			},
 		},
@@ -347,7 +347,7 @@ func TestAdminHandler_ListRejudges(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp ListRejudgesResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Len(t, resp.Rejudges, 0)
 			},
 		},
@@ -397,7 +397,7 @@ func TestAdminHandler_CancelRejudge(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp CancelRejudgeResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Equal(t, "cancelled", resp.Status)
 			},
 		},
@@ -462,7 +462,7 @@ func TestAdminHandler_ApplyRejudge(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp ApplyRejudgeResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Equal(t, "rejudge-1", resp.ID)
 	assert.Equal(t, int32(5), resp.VerdictsChanged)
 	assert.Equal(t, "applied", resp.Status)
@@ -494,7 +494,7 @@ func TestAdminHandler_RevertRejudge(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var resp RevertRejudgeResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Equal(t, "rejudge-1", resp.ID)
 	assert.Equal(t, int32(5), resp.VerdictsRestored)
 	assert.Equal(t, "reverted", resp.Status)
@@ -539,7 +539,7 @@ func TestAdminHandler_GetRejudgeSubmissions(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp GetRejudgeSubmissionsResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Len(t, resp.Submissions, 2)
 			},
 		},
@@ -562,7 +562,7 @@ func TestAdminHandler_GetRejudgeSubmissions(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp GetRejudgeSubmissionsResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Len(t, resp.Submissions, 1)
 			},
 		},

@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -252,10 +251,4 @@ func (m *MockNotificationStore) Reset() {
 	m.UnreadByType = make(map[string]map[string]int32)
 	m.Subscribers = make(map[string]map[string]bool)
 	m.PublishedMsgs = make([]interface{}, 0)
-}
-
-// Helper to create JSON of notifications (for tests that need JSON marshaling)
-func notificationsToJSON(notifications []*pb.Notification) string {
-	data, _ := json.Marshal(notifications)
-	return string(data)
 }

@@ -587,9 +587,9 @@ fi
 	answerFile := filepath.Join(tmpDir, "answer.txt")
 	outputFile := filepath.Join(tmpDir, "output.txt")
 
-	os.WriteFile(inputFile, []byte("test input"), 0644)
-	os.WriteFile(answerFile, []byte("expected output"), 0644)
-	os.WriteFile(outputFile, []byte("expected output"), 0644)
+	_ = os.WriteFile(inputFile, []byte("test input"), 0644)
+	_ = os.WriteFile(answerFile, []byte("expected output"), 0644)
+	_ = os.WriteFile(outputFile, []byte("expected output"), 0644)
 
 	// Create ValidatorBinary
 	binary := &ValidatorBinary{

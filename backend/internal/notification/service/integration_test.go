@@ -11,6 +11,10 @@ import (
 	"github.com/online-judge/backend/internal/notification/store"
 )
 
+type contextKey string
+
+const contextKeyUserID contextKey = "user_id"
+
 func TestNotificationService_Integration_GetNotifications(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -93,7 +97,7 @@ func TestNotificationService_Integration_GetNotifications(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := context.WithValue(context.Background(), contextKeyUserID, "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -153,7 +157,7 @@ func TestNotificationService_Integration_MarkAsRead(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := context.WithValue(context.Background(), contextKeyUserID, "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -246,7 +250,7 @@ func TestNotificationService_Integration_MarkAllAsRead(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := context.WithValue(context.Background(), contextKeyUserID, "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -304,7 +308,7 @@ func TestNotificationService_Integration_GetUnreadCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := store.NewMockNotificationStore()
-			ctx := context.WithValue(context.Background(), "user_id", "user-1")
+			ctx := context.WithValue(context.Background(), contextKeyUserID, "user-1")
 
 			tt.setup(mockStore, ctx)
 
@@ -452,7 +456,7 @@ func TestNotificationService_Integration_NotifySystemAlert(t *testing.T) {
 func TestNotificationService_Integration_FullFlow(t *testing.T) {
 	mockStore := store.NewMockNotificationStore()
 	service := NewNotificationServiceWithStore(nil, mockStore)
-	ctx := context.WithValue(context.Background(), "user_id", "user-1")
+	ctx := context.WithValue(context.Background(), contextKeyUserID, "user-1")
 
 	// Step 1: Create multiple notifications
 	err := service.NotifySubmissionJudged(ctx, "user-1", "sub-1", "correct")

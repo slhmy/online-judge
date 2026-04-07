@@ -37,7 +37,7 @@ func (h *ContestHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ContestHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,7 @@ func (h *ContestHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if err == nil && cached != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Cache", "hit")
-		w.Write(cached)
+		_, _ = w.Write(cached)
 		return
 	}
 
@@ -63,11 +63,11 @@ func (h *ContestHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Cache the response
 	data, _ := json.Marshal(resp)
-	h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ContestTTL, "contest:"+id)
+	_ = h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ContestTTL, "contest:"+id)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "miss")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ContestHandler) GetProblems(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +82,7 @@ func (h *ContestHandler) GetProblems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ContestHandler) GetScoreboard(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +95,7 @@ func (h *ContestHandler) GetScoreboard(w http.ResponseWriter, r *http.Request) {
 	if err == nil && cached != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Cache", "hit")
-		w.Write(cached)
+		_, _ = w.Write(cached)
 		return
 	}
 
@@ -110,11 +110,11 @@ func (h *ContestHandler) GetScoreboard(w http.ResponseWriter, r *http.Request) {
 
 	// Cache the response with short TTL (scoreboard changes frequently during contest)
 	data, _ := json.Marshal(resp)
-	h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ScoreboardTTL, "contest:"+contestID, "scoreboard:"+contestID)
+	_ = h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ScoreboardTTL, "contest:"+contestID, "scoreboard:"+contestID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "miss")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (h *ContestHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -141,5 +141,5 @@ func (h *ContestHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }

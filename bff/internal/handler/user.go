@@ -31,7 +31,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp.Profile)
+	_ = json.NewEncoder(w).Encode(resp.Profile)
 }
 
 // GetMyProfile returns the current user's profile
@@ -50,7 +50,7 @@ func (h *UserHandler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp.Profile)
+	_ = json.NewEncoder(w).Encode(resp.Profile)
 }
 
 // UpdateProfile updates a user's profile
@@ -84,7 +84,7 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp.Profile)
+	_ = json.NewEncoder(w).Encode(resp.Profile)
 }
 
 // GetStats returns user statistics
@@ -98,7 +98,7 @@ func (h *UserHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp.Stats)
+	_ = json.NewEncoder(w).Encode(resp.Stats)
 }
 
 // GetSubmissions returns user submissions with pagination
@@ -140,7 +140,7 @@ func (h *UserHandler) GetSubmissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // RegisterRoutes registers user routes

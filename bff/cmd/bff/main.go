@@ -59,29 +59,33 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
 	problemConn, err := grpc.Dial(cfg.ProblemServiceAddr, opts...)
 	if err != nil {
 		log.Fatalf("Failed to connect to problem service: %v", err)
 	}
-	defer problemConn.Close()
+	defer func() { _ = problemConn.Close() }()
 
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
 	submissionConn, err := grpc.Dial(cfg.SubmissionServiceAddr, opts...)
 	if err != nil {
 		log.Fatalf("Failed to connect to submission service: %v", err)
 	}
-	defer submissionConn.Close()
+	defer func() { _ = submissionConn.Close() }()
 
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
 	contestConn, err := grpc.Dial(cfg.ContestServiceAddr, opts...)
 	if err != nil {
 		log.Fatalf("Failed to connect to contest service: %v", err)
 	}
-	defer contestConn.Close()
+	defer func() { _ = contestConn.Close() }()
 
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
 	userConn, err := grpc.Dial(cfg.UserServiceAddr, opts...)
 	if err != nil {
 		log.Fatalf("Failed to connect to user service: %v", err)
 	}
-	defer userConn.Close()
+	defer func() { _ = userConn.Close() }()
 
 	// Create gRPC clients
 	problemClient := pbProblem.NewProblemServiceClient(problemConn)
@@ -146,7 +150,7 @@ func main() {
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	// API routes

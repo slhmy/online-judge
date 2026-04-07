@@ -1,7 +1,6 @@
 package sandbox
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"fmt"
@@ -399,67 +398,13 @@ func (s *DockerSandbox) runDockerWithCopy(ctx context.Context, image string, cmd
 	return result, nil
 }
 
-// createTarArchive creates a tar archive of the work directory
-func (s *DockerSandbox) createTarArchive(tarPath string) error {
-	tarFile, err := os.Create(tarPath)
-	if err != nil {
-		return err
-	}
-	defer tarFile.Close()
-
-	tw := tar.NewWriter(tarFile)
-	defer tw.Close()
-
-	// Walk the work directory and add files to the tar
-	return filepath.Walk(s.workDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Get relative path
-		relPath, err := filepath.Rel(s.workDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Skip the root directory itself
-		if relPath == "." {
-			return nil
-		}
-
-		// Create tar header
-		header, err := tar.FileInfoHeader(info, "")
-		if err != nil {
-			return err
-		}
-		header.Name = relPath
-
-		if err := tw.WriteHeader(header); err != nil {
-			return err
-		}
-
-		// If it's a file, write content
-		if !info.IsDir() {
-			content, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			if _, err := tw.Write(content); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-}
-
 // Cleanup removes the work directory
 func (s *DockerSandbox) Cleanup() error {
 	if s.containerID != "" {
 		// Attempt to remove any lingering container
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		exec.CommandContext(ctx, "docker", "rm", "-f", s.containerID).Run()
+		_ = exec.CommandContext(ctx, "docker", "rm", "-f", s.containerID).Run()
 	}
 	return os.RemoveAll(s.workDir)
 }
@@ -570,51 +515,9 @@ func (s *DockerSandbox) RunInteractive(
 
 	// Create interactive runner script that will orchestrate the pipe communication
 	runnerScript := filepath.Join(interactiveDir, "run_interactive.sh")
-	scriptContent := fmt.Sprintf(`#!/bin/bash
-set -e
-
-INTERACTOR="%s"
-SOLUTION="%s"
-INPUT="%s"
-WORKDIR="%s"
-
-# Create pipes for communication
-mkfifo "$WORKDIR/interactor_to_solution"
-mkfifo "$WORKDIR/solution_to_interactor"
-
-# Run interactor with testcase input as argument
-# Interactor stdin receives from solution stdout
-# Interactor stdout sends to solution stdin
-"$INTERACTOR" "$INPUT" < "$WORKDIR/solution_to_interactor" > "$WORKDIR/interactor_to_solution" 2> "$WORKDIR/interactor_stderr.txt" &
-INTERACTOR_PID=$!
-
-# Run solution
-# Solution stdin receives from interactor stdout
-# Solution stdout sends to interactor stdin
-"%s" < "$WORKDIR/interactor_to_solution" > "$WORKDIR/solution_to_interactor" 2> "$WORKDIR/solution_stderr.txt" &
-SOLUTION_PID=$!
-
-# Wait for both processes
-wait $SOLUTION_PID
-SOLUTION_EXIT=$?
-wait $INTERACTOR_PID
-INTERACTOR_EXIT=$?
-
-# Clean up pipes
-rm -f "$WORKDIR/interactor_to_solution" "$WORKDIR/solution_to_interactor"
-
-# Exit with interactor's exit code (DOMjudge-style)
-exit $INTERACTOR_EXIT
-`,
-		"/workspace/interactive/interactor", // Interactor path in container
-		strings.Join(cfg.RunCmd, " "),       // Solution command
-		"/workspace/interactive/testcase.in", // Input path in container
-		"/workspace/interactive",             // Work dir in container
-		strings.Join(cfg.RunCmd, " "),       // Solution command (repeated for clarity)
-	)
 
 	// For container execution, we need simpler paths
-	scriptContent = fmt.Sprintf(`#!/bin/bash
+	scriptContent := fmt.Sprintf(`#!/bin/bash
 INTERACTOR="/workspace/interactive/interactor"
 INPUT="/workspace/interactive/testcase.in"
 WORKDIR="/workspace/interactive"

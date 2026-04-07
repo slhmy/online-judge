@@ -353,7 +353,6 @@ func (s *RejudgeStore) GetSubmissionsForRejudge(ctx context.Context, contestID, 
 	if fromVerdict != "" {
 		query += " AND j.verdict = $" + string(rune('0'+argIdx))
 		args = append(args, fromVerdict)
-		argIdx++
 	}
 
 	rows, err := s.db.Query(ctx, query, args...)

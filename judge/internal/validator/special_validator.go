@@ -95,7 +95,7 @@ func (v *SpecialValidator) Validate(ctx context.Context, validatorID string, arg
 	if err != nil {
 		return VerdictInternalError, fmt.Sprintf("Failed to create work directory: %v", err)
 	}
-	defer os.RemoveAll(workDir)
+	defer func() { _ = os.RemoveAll(workDir) }()
 
 	// Write test case files
 	inputFile := filepath.Join(workDir, "testcase.in")

@@ -153,7 +153,7 @@ func (h *TestRunHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to create sandbox: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer sb.Cleanup()
+	defer func() { _ = sb.Cleanup() }()
 
 	// Run test cases (with extended timeout for HTTP request)
 	runCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -164,7 +164,7 @@ func (h *TestRunHandler) Create(w http.ResponseWriter, r *http.Request) {
 		// Check if it's a compilation error
 		if result != nil && result.Verdict == "compiler-error" {
 			// Return compilation error result
-			json.NewEncoder(w).Encode(TestRunResult{
+			_ = json.NewEncoder(w).Encode(TestRunResult{
 				ID:           testRunID,
 				Status:       "completed",
 				Verdict:      "compiler-error",
@@ -205,5 +205,5 @@ func (h *TestRunHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Return results
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }

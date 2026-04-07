@@ -307,7 +307,7 @@ func (rl *RateLimiter) writeRateLimitResponse(w http.ResponseWriter, limit, rema
 		ResetIn:     resetIn,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // getClientIP extracts the client IP from the request

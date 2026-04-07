@@ -433,7 +433,7 @@ func TestContestHandler_Integration_GetProblems(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp pb.GetContestProblemsResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.Len(t, resp.Problems, 0)
 			},
 		},
@@ -494,7 +494,7 @@ func TestContestHandler_Integration_Register(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp pb.RegisterContestResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.NotEmpty(t, resp.TeamId)
 			},
 		},
@@ -510,7 +510,7 @@ func TestContestHandler_Integration_Register(t *testing.T) {
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
 				var resp pb.RegisterContestResponse
-				json.Unmarshal([]byte(body), &resp)
+				_ = json.Unmarshal([]byte(body), &resp)
 				assert.NotEmpty(t, resp.TeamId)
 			},
 		},
