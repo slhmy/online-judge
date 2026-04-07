@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install git, buf CLI, and protoc plugins for protobuf generation
 RUN apk add --no-cache git curl && \
-    curl -sSL "https://github.com/bufbuild/buf/releases/download/v1.47.2/buf_$(uname -s)_$(uname -m)" -o /usr/local/bin/buf && \
+    curl -sSL "https://github.com/bufbuild/buf/releases/download/v1.47.2/buf-$(uname -s)-$(uname -m)" -o /usr/local/bin/buf && \
     chmod +x /usr/local/bin/buf && \
     go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
     go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && \
