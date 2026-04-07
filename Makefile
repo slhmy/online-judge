@@ -406,3 +406,35 @@ install-frontend:
 	cd frontend && npm install
 
 install: install-backend install-frontend
+
+# ============================================
+# Linting and Type Checking
+# ============================================
+
+.PHONY: check lint lint-backend lint-bff lint-judge lint-frontend typecheck-frontend
+
+lint-backend:
+	@echo "Linting backend..."
+	cd backend && golangci-lint run ./... || go vet ./...
+
+lint-bff:
+	@echo "Linting BFF..."
+	cd bff && golangci-lint run ./... || go vet ./...
+
+lint-judge:
+	@echo "Linting judge..."
+	cd judge && golangci-lint run ./... || go vet ./...
+
+lint-frontend:
+	@echo "Linting frontend..."
+	cd frontend && npm run lint
+
+typecheck-frontend:
+	@echo "Type checking frontend..."
+	cd frontend && npm run typecheck
+
+lint: lint-backend lint-bff lint-judge lint-frontend
+
+typecheck: typecheck-frontend
+
+check: lint typecheck
