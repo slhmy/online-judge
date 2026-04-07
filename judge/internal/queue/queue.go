@@ -45,39 +45,39 @@ type TestCaseResult struct {
 
 // SubmissionDetails contains submission information needed for judging
 type SubmissionDetails struct {
-	ID          string `json:"id"`
-	UserID      string `json:"user_id"`
-	ProblemID   string `json:"problem_id"`
-	ContestID   string `json:"contest_id,omitempty"`
-	LanguageID  string `json:"language_id"`
-	SourceCode  string `json:"source_code"`
-	SubmitTime  string `json:"submit_time"`
+	ID         string `json:"id"`
+	UserID     string `json:"user_id"`
+	ProblemID  string `json:"problem_id"`
+	ContestID  string `json:"contest_id,omitempty"`
+	LanguageID string `json:"language_id"`
+	SourceCode string `json:"source_code"`
+	SubmitTime string `json:"submit_time"`
 }
 
 // ProblemDetails contains problem configuration for judging
 type ProblemDetails struct {
-	ID              string  `json:"id"`
-	TimeLimit       float64 `json:"time_limit"`   // in seconds
-	MemoryLimit     int32   `json:"memory_limit"` // in kilobytes
-	OutputLimit     int32   `json:"output_limit"` // in kilobytes
-	ProcessLimit    int32   `json:"process_limit"`
-	SpecialRunID    string  `json:"special_run_id,omitempty"`    // For interactive problems
-	SpecialCompare  string  `json:"special_compare_id,omitempty"`
-	SpecialCompareArgs string `json:"special_compare_args,omitempty"`
+	ID                 string  `json:"id"`
+	TimeLimit          float64 `json:"time_limit"`   // in seconds
+	MemoryLimit        int32   `json:"memory_limit"` // in kilobytes
+	OutputLimit        int32   `json:"output_limit"` // in kilobytes
+	ProcessLimit       int32   `json:"process_limit"`
+	SpecialRunID       string  `json:"special_run_id,omitempty"` // For interactive problems
+	SpecialCompare     string  `json:"special_compare_id,omitempty"`
+	SpecialCompareArgs string  `json:"special_compare_args,omitempty"`
 }
 
 // TestCase contains test case data
 type TestCase struct {
-	ID           string `json:"id"`
-	ProblemID    string `json:"problem_id"`
-	Rank         int32  `json:"rank"`
-	IsSample     bool   `json:"is_sample"`
-	InputPath    string `json:"input_path"`
-	OutputPath   string `json:"output_path"`
-	Description  string `json:"description,omitempty"`
-	IsInteractive bool  `json:"is_interactive"`
-	InputData    string `json:"input_data,omitempty"`  // Base64 encoded or direct
-	OutputData   string `json:"output_data,omitempty"` // Base64 encoded or direct
+	ID            string `json:"id"`
+	ProblemID     string `json:"problem_id"`
+	Rank          int32  `json:"rank"`
+	IsSample      bool   `json:"is_sample"`
+	InputPath     string `json:"input_path"`
+	OutputPath    string `json:"output_path"`
+	Description   string `json:"description,omitempty"`
+	IsInteractive bool   `json:"is_interactive"`
+	InputData     string `json:"input_data,omitempty"`  // Base64 encoded or direct
+	OutputData    string `json:"output_data,omitempty"` // Base64 encoded or direct
 }
 
 // TestCaseData contains the actual test case input/output
@@ -88,8 +88,8 @@ type TestCaseData struct {
 
 // JudgeQueue manages the judging job queue
 type JudgeQueue struct {
-	redis          *redis.Client
-	httpClient     *http.Client
+	redis           *redis.Client
+	httpClient      *http.Client
 	orchestratorURL string
 }
 
@@ -139,10 +139,7 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 	}
 
 	var job JudgeJob
-	memberStr, ok := result[0].Member.(string)
-	if !ok {
-		return nil, fmt.Errorf("unexpected member type in queue: %T", result[0].Member)
-	}
+	memberStr := fmt.Sprint(result[0].Member)
 	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
 		return nil, err
 	}
@@ -297,14 +294,14 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 
 	var rawResp struct {
 		Problem struct {
-			Id              string  `json:"id"`
-			TimeLimit       float64 `json:"time_limit"`
-			MemoryLimit     int32   `json:"memory_limit"`
-			OutputLimit     int32   `json:"output_limit"`
-			ProcessLimit    int32   `json:"process_limit"`
-			SpecialRunId    string  `json:"special_run_id"`
-			SpecialCompareId string `json:"special_compare_id"`
-			SpecialCompareArgs string `json:"special_compare_args"`
+			Id                 string  `json:"id"`
+			TimeLimit          float64 `json:"time_limit"`
+			MemoryLimit        int32   `json:"memory_limit"`
+			OutputLimit        int32   `json:"output_limit"`
+			ProcessLimit       int32   `json:"process_limit"`
+			SpecialRunId       string  `json:"special_run_id"`
+			SpecialCompareId   string  `json:"special_compare_id"`
+			SpecialCompareArgs string  `json:"special_compare_args"`
 		} `json:"problem"`
 	}
 
@@ -313,13 +310,13 @@ func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*Probl
 	}
 
 	return &ProblemDetails{
-		ID:            rawResp.Problem.Id,
-		TimeLimit:     rawResp.Problem.TimeLimit,
-		MemoryLimit:   rawResp.Problem.MemoryLimit,
-		OutputLimit:   rawResp.Problem.OutputLimit,
-		ProcessLimit:  rawResp.Problem.ProcessLimit,
-		SpecialRunID:  rawResp.Problem.SpecialRunId,
-		SpecialCompare: rawResp.Problem.SpecialCompareId,
+		ID:                 rawResp.Problem.Id,
+		TimeLimit:          rawResp.Problem.TimeLimit,
+		MemoryLimit:        rawResp.Problem.MemoryLimit,
+		OutputLimit:        rawResp.Problem.OutputLimit,
+		ProcessLimit:       rawResp.Problem.ProcessLimit,
+		SpecialRunID:       rawResp.Problem.SpecialRunId,
+		SpecialCompare:     rawResp.Problem.SpecialCompareId,
 		SpecialCompareArgs: rawResp.Problem.SpecialCompareArgs,
 	}, nil
 }
@@ -517,10 +514,10 @@ func (q *JudgeQueue) UpdateJudging(ctx context.Context, judgingID string, result
 	url := fmt.Sprintf("%s/internal/judgings/%s", q.orchestratorURL, judgingID)
 
 	body := map[string]interface{}{
-		"verdict":     result.Verdict,
-		"max_runtime": result.Runtime,
-		"max_memory":  result.Memory,
-		"error":       result.Error,
+		"verdict":       result.Verdict,
+		"max_runtime":   result.Runtime,
+		"max_memory":    result.Memory,
+		"error":         result.Error,
 		"compile_error": result.CompileError,
 	}
 
@@ -651,11 +648,11 @@ func (q *JudgeQueue) FetchExecutable(ctx context.Context, executableID string) (
 
 	var rawResp struct {
 		Executable struct {
-			Id            string `json:"id"`
-			Type          string `json:"type"`
+			Id             string `json:"id"`
+			Type           string `json:"type"`
 			ExecutablePath string `json:"executable_path"`
-			Md5sum        string `json:"md5sum"`
-			BinaryData    string `json:"binary_data"` // Base64 encoded binary
+			Md5sum         string `json:"md5sum"`
+			BinaryData     string `json:"binary_data"` // Base64 encoded binary
 		} `json:"executable"`
 	}
 

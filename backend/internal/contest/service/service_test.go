@@ -317,7 +317,7 @@ func TestContestService_RegisterContest(t *testing.T) {
 			service := NewContestService(mockStore, nil)
 
 			// Create context with user ID for authorization
-			ctx := context.WithValue(context.Background(), contextKeyUserID, "user-1")
+			ctx := context.WithValue(context.Background(), "user_id", "user-1")
 
 			resp, err := service.RegisterContest(ctx, tt.request)
 

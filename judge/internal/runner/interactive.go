@@ -17,8 +17,8 @@ import (
 
 // DOMjudge-style exit codes (same as validator)
 const (
-	ExitCodeCorrect     = 42
-	ExitCodeWrongAnswer = 43
+	ExitCodeCorrect      = 42
+	ExitCodeWrongAnswer  = 43
 	ExitCodePresentation = 44
 )
 
@@ -37,10 +37,10 @@ type InteractiveRunnerConfig struct {
 // DefaultInteractiveRunnerConfig returns default configuration
 func DefaultInteractiveRunnerConfig() InteractiveRunnerConfig {
 	return InteractiveRunnerConfig{
-		InteractorTimeLimit:    60 * time.Second,
-		InteractorMemoryLimit:  524288, // 512 MB
-		CacheDir:               "/tmp/interactor-cache",
-		EnableCache:            true,
+		InteractorTimeLimit:   60 * time.Second,
+		InteractorMemoryLimit: 524288, // 512 MB
+		CacheDir:              "/tmp/interactor-cache",
+		EnableCache:           true,
 	}
 }
 
@@ -77,6 +77,7 @@ type InteractiveResult struct {
 // The interactor communicates with the solution via bidirectional pipes:
 //   - Interactor stdout -> Solution stdin
 //   - Solution stdout -> Interactor stdin
+//
 // Test case input is passed to the interactor as a file argument
 func (r *InteractiveRunner) RunInteractive(
 	ctx context.Context,
@@ -183,6 +184,7 @@ func (r *InteractiveRunner) RunInteractive(
 		}
 		// Close interactor stdout to signal EOF to solution
 		_ = interactorStdoutWriter.Close()
+		_ = interactorStdinReader.Close()
 	}()
 
 	// Wait for solution with timeout monitoring
@@ -211,13 +213,16 @@ func (r *InteractiveRunner) RunInteractive(
 			solutionWaitErr = fmt.Errorf("solution timed out")
 			solutionExitCode = -1
 		}
+		// Close solution stdout to unblock copy goroutines
+		_ = solutionStdoutWriter.Close()
+		_ = solutionStdinReader.Close()
 	}()
+
+	// Wait for both processes first (they close pipe ends needed by copy goroutines)
+	waitWg.Wait()
 
 	// Wait for all copy operations to finish
 	copyWg.Wait()
-
-	// Wait for both processes
-	waitWg.Wait()
 
 	elapsed := time.Since(startTime)
 
@@ -230,7 +235,7 @@ func (r *InteractiveRunner) RunInteractive(
 
 	// Determine result
 	result := &InteractiveResult{
-		TimeUsed: elapsed,
+		TimeUsed:         elapsed,
 		InteractorOutput: interactorStderr.Bytes(),
 	}
 
