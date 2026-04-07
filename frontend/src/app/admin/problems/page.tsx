@@ -152,16 +152,31 @@ export default function AdminProblemsPage() {
       if (res.ok) {
         const data = await res.json()
         setEditingProblem(data.problem || problem)
-        if (data.problem?.problem_statement_path) {
-          // If there's a problem statement path, we might need to fetch it separately
+
+        // Fetch the problem statement content
+        const statementRes = await fetch(`${BFF_URL}/api/v1/problems/${problem.id}/statement`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (statementRes.ok) {
+          const statementData = await statementRes.json()
+          setMarkdownContent(statementData || '')
+        } else {
           setMarkdownContent('')
         }
+
+        setShowForm(true)
       } else {
         setEditingProblem(problem)
+        setMarkdownContent('')
+        setShowForm(true)
       }
     } catch (err) {
       console.error('Failed to fetch problem details:', err)
       setEditingProblem(problem)
+      setMarkdownContent('')
+      setShowForm(true)
     }
   }
 

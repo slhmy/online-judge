@@ -151,6 +151,22 @@ export class BFFClient {
     })
   }
 
+  async getProblemStatement(id: string, language = 'en') {
+    return this.fetch(`/api/v1/problems/${id}/statement?language=${language}`)
+  }
+
+  async setProblemStatement(id: string, data: {
+    language?: string
+    format?: string
+    title?: string
+    content: string
+  }) {
+    return this.fetch(`/api/v1/problems/${id}/statement`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
   // Admin - User management
   async getUsers() {
     return this.fetch('/api/v1/admin/users')

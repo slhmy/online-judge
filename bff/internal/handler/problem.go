@@ -121,15 +121,18 @@ func (h *ProblemHandler) CreateProblem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If description is provided, update the problem statement
+	// If description is provided, set the problem statement
 	if req.Description != "" && resp.Id != "" {
-		// Update the problem with the description
-		updateReq := &pb.UpdateProblemRequest{
-			Id: resp.Id,
-			// Note: The proto doesn't have description field in UpdateProblemRequest
-			// We need to handle this separately if the backend supports it
+		_, err = h.client.SetProblemStatement(ctx, &pb.SetProblemStatementRequest{
+			ProblemId: resp.Id,
+			Language:  "en",
+			Format:    "markdown",
+			Content:   req.Description,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		h.client.UpdateProblem(ctx, updateReq)
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{"id": resp.Id})
@@ -169,6 +172,20 @@ func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// If description is provided, update the problem statement
+	if req.Description != "" {
+		_, err = h.client.SetProblemStatement(ctx, &pb.SetProblemStatementRequest{
+			ProblemId: id,
+			Language:  "en",
+			Format:    "markdown",
+			Content:   req.Description,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Invalidate problem cache
