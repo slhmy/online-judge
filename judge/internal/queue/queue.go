@@ -140,11 +140,7 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
 
 	var job JudgeJob
 	memberStr := result[0].Member
-	memberBytes, ok := memberStr.(string)
-	if !ok {
-		return nil, fmt.Errorf("unexpected member type in queue result")
-	}
-	if err := json.Unmarshal([]byte(memberBytes), &job); err != nil {
+	if err := json.Unmarshal([]byte(memberStr), &job); err != nil {
 		return nil, err
 	}
 

@@ -477,7 +477,7 @@ func TestProblemHandler_GetProblemStatement(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 			wantBody: func(t *testing.T, body string) {
-				assert.Equal(t, "null", body) // JSON-encoded null
+				assert.Equal(t, "null", strings.TrimSpace(body)) // JSON-encoded null
 			},
 		},
 	}
@@ -574,7 +574,7 @@ func TestProblemHandler_SetProblemStatement(t *testing.T) {
 			mockFunc:   nil,
 			wantStatus: http.StatusBadRequest,
 			wantBody: func(t *testing.T, body string) {
-				assert.Contains(t, body, "error")
+				assert.Contains(t, body, "invalid")
 			},
 		},
 		{

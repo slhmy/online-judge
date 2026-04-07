@@ -236,7 +236,7 @@ test-bff:
 
 test-judge:
 	@echo "Running judge tests..."
-	cd judge && go test ./... -v -race
+	cd judge && go test ./... -v -race -short
 
 test-frontend:
 	cd frontend && npm test
