@@ -134,10 +134,17 @@ full-logs:
 
 migrate-up:
 	@echo "Running migrations..."
-	migrate -path backend/migrations -database "postgres://oj:oj@localhost:5432/oj?sslmode=disable" up
+	@for f in backend/migrations/*.up.sql; do \
+		echo "Applying $$f..."; \
+		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj; \
+	done
 
 migrate-down:
-	migrate -path backend/migrations -database "postgres://oj:oj@localhost:5432/oj?sslmode=disable" down
+	@echo "Running down migrations..."
+	@for f in backend/migrations/*.down.sql; do \
+		echo "Applying $$f..."; \
+		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj; \
+	done
 
 migrate-create:
 	@read -p "Migration name: " name; \
@@ -152,14 +159,16 @@ seed:
 	cd backend && go run ./cmd/seed
 
 seed-docker:
-	@echo "Running database seed in Docker..."
-	docker-compose exec problem-service sh -c "cd /app && ./seed" || \
-		cd backend && go run ./cmd/seed
+	@echo "Running migrations and seeding..."
+	@for f in backend/migrations/*.up.sql; do \
+		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj 2>/dev/null || true; \
+	done
+	cd backend && go run ./cmd/seed
 
 seed-reset:
 	@echo "Resetting and re-seeding database..."
-	migrate -path backend/migrations -database "postgres://oj:oj@localhost:5432/oj?sslmode=disable" down
-	migrate -path backend/migrations -database "postgres://oj:oj@localhost:5432/oj?sslmode=disable" up
+	docker-compose exec -T postgres psql -U oj -d oj -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	$(MAKE) migrate-up
 	$(MAKE) seed
 
 # Build seed binary (for Docker deployment)
