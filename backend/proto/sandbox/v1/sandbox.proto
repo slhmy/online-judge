@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package sandbox.v1;
+
+option go_package = "github.com/online-judge/backend/gen/go/sandbox/v1;sandboxv1";
+
+import "google/api/annotations.proto";
+
+// Sandbox Service - Code compilation and execution
+service SandboxService {
+  // Compile source code and return binary path or error
+  rpc Compile(CompileRequest) returns (CompileResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/sandbox/compile"
+      body: "*"
+    };
+  }
+
+  // Execute binary file and return result
+  rpc Run(RunRequest) returns (RunResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/sandbox/run"
+      body: "*"
+    };
+  }
+
+  // Execute interactive problem
+  rpc RunInteractive(RunInteractiveRequest) returns (RunInteractiveResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/sandbox/run-interactive"
+      body: "*"
+    };
+  }
+
+  // Cleanup working directory
+  rpc Cleanup(CleanupRequest) returns (CleanupResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/sandbox/cleanup"
+      body: "*"
+    };
+  }
+}
+
+// Execution verdict
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  VERDICT_ACCEPTED = 1;           // Accepted
+  VERDICT_WRONG_ANSWER = 2;       // Wrong Answer
+  VERDICT_TIME_LIMIT_EXCEEDED = 3;
+  VERDICT_MEMORY_LIMIT_EXCEEDED = 4;
+  VERDICT_RUNTIME_ERROR = 5;      // Runtime Error (SIGSEGV, SIGFPE, etc.)
+  VERDICT_OUTPUT_LIMIT_EXCEEDED = 6;
+  VERDICT_COMPILATION_ERROR = 7;
+  VERDICT_SYSTEM_ERROR = 8;       // Internal system error
+}
+
+// Resource limits for execution
+message ResourceLimits {
+  double time_limit = 1;          // CPU time limit in seconds
+  double wall_time_limit = 2;     // Wall time limit in seconds
+  int64 memory_limit = 3;         // Memory limit in kilobytes
+  int64 output_limit = 4;         // Output limit in kilobytes
+  int32 process_limit = 5;        // Max number of processes
+  int64 file_size_limit = 6;      // Max file size in kilobytes
+}
+
+// Compile request
+message CompileRequest {
+  string language_id = 1;         // Language identifier (e.g., "cpp17", "python3")
+  string source_code = 2;         // Source code to compile
+  map<string, string> options = 3; // Compiler options (optimization level, etc.)
+  ResourceLimits limits = 4;      // Resource limits for compilation
+  string work_dir = 5;            // Working directory (optional, auto-generated if empty)
+}
+
+// Compile response
+message CompileResponse {
+  bool success = 1;               // Whether compilation succeeded
+  string binary_path = 2;         // Path to compiled binary (if success)
+  string work_dir = 3;            // Working directory path
+  string error_output = 4;        // Compiler error/warning output (if failed)
+  int32 exit_code = 5;            // Compiler exit code
+  double time_used = 6;           // Compilation time in seconds
+  int64 memory_used = 7;          // Memory used in kilobytes
+}
+
+// Run request
+message RunRequest {
+  string binary_path = 1;         // Path to binary file
+  string work_dir = 2;            // Working directory
+  string input = 3;               // Standard input (optional)
+  string input_path = 4;          // Path to input file (alternative to input field)
+  ResourceLimits limits = 5;      // Execution resource limits
+  repeated string args = 6;       // Command line arguments
+  map<string, string> env = 7;    // Environment variables
+  bool trusted = 8;               // Run without sandbox (for trusted judges)
+}
+
+// Run response
+message RunResponse {
+  Verdict verdict = 1;           // Execution result
+  string output = 2;              // Standard output
+  string error_output = 3;        // Standard error output
+  double time_used = 4;           // CPU time used in seconds
+  double wall_time_used = 5;      // Wall time used in seconds
+  int64 memory_used = 6;          // Memory used in kilobytes
+  int32 exit_code = 7;            // Process exit code
+  int32 signal = 8;               // Signal that terminated the process (if any)
+  string error_message = 9;       // Additional error details (for system errors)
+}
+
+// Run interactive request
+message RunInteractiveRequest {
+  string solution_binary_path = 1;  // Path to solution binary
+  string judge_binary_path = 2;     // Path to judge/interactor binary
+  string work_dir = 3;              // Working directory
+  ResourceLimits solution_limits = 4;  // Limits for solution process
+  ResourceLimits judge_limits = 5;     // Limits for judge/interactor process
+  repeated string solution_args = 6;   // Arguments for solution
+  repeated string judge_args = 7;      // Arguments for judge/interactor
+  map<string, string> solution_env = 8;  // Environment for solution
+  map<string, string> judge_env = 9;     // Environment for judge/interactor
+}
+
+// Run interactive response
+message RunInteractiveResponse {
+  Verdict verdict = 1;           // Final verdict from interactor
+  string judge_output = 2;        // Output from judge/interactor
+  string solution_output = 3;     // Output from solution (for debugging)
+  double solution_time_used = 4;  // Solution CPU time in seconds
+  double solution_wall_time = 5;  // Solution wall time in seconds
+  int64 solution_memory_used = 6; // Solution memory in kilobytes
+  int32 solution_exit_code = 7;   // Solution exit code
+  int32 solution_signal = 8;       // Signal that terminated solution
+  string error_message = 9;       // Additional error details
+}
+
+// Cleanup request
+message CleanupRequest {
+  string work_dir = 1;            // Working directory to cleanup
+  bool force = 2;                 // Force cleanup even if processes running
+}
+
+// Cleanup response
+message CleanupResponse {
+  bool success = 1;              // Whether cleanup succeeded
+  string error_message = 2;       // Error message if cleanup failed
+  repeated string cleaned_files = 3;  // List of cleaned files (for debugging)
+}
