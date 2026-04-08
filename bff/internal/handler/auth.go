@@ -23,6 +23,60 @@ import (
 	"github.com/online-judge/bff/internal/identra"
 )
 
+// AuthErrorCode represents structured error codes for auth operations
+type AuthErrorCode string
+
+const (
+	AuthErrorCodeInvalidCredentials AuthErrorCode = "INVALID_CREDENTIALS"
+	AuthErrorCodeEmailExists        AuthErrorCode = "EMAIL_EXISTS"
+	AuthErrorCodeValidationError    AuthErrorCode = "VALIDATION_ERROR"
+	AuthErrorCodeUnauthorized       AuthErrorCode = "UNAUTHORIZED"
+	AuthErrorCodeOAuthNotConfigured AuthErrorCode = "OAUTH_NOT_CONFIGURED"
+	AuthErrorCodeOAuthStateExpired  AuthErrorCode = "OAUTH_STATE_EXPIRED"
+	AuthErrorCodeOAuthFailed        AuthErrorCode = "OAUTH_FAILED"
+	AuthErrorCodeTokenInvalid       AuthErrorCode = "TOKEN_INVALID"
+	AuthErrorCodeDatabaseError      AuthErrorCode = "DATABASE_ERROR"
+	AuthErrorCodeInternalError      AuthErrorCode = "INTERNAL_ERROR"
+)
+
+// AuthErrorResponse represents a structured error response
+type AuthErrorResponse struct {
+	ErrorCode AuthErrorCode `json:"error_code"`
+	Message   string        `json:"message"`
+	Field     string        `json:"field,omitempty"`
+}
+
+// authErrorHTTPStatus maps error codes to HTTP status codes
+var authErrorHTTPStatus = map[AuthErrorCode]int{
+	AuthErrorCodeInvalidCredentials: http.StatusUnauthorized,
+	AuthErrorCodeEmailExists:        http.StatusConflict,
+	AuthErrorCodeValidationError:    http.StatusBadRequest,
+	AuthErrorCodeUnauthorized:       http.StatusUnauthorized,
+	AuthErrorCodeOAuthNotConfigured: http.StatusBadRequest,
+	AuthErrorCodeOAuthStateExpired:  http.StatusBadRequest,
+	AuthErrorCodeOAuthFailed:        http.StatusInternalServerError,
+	AuthErrorCodeTokenInvalid:       http.StatusUnauthorized,
+	AuthErrorCodeDatabaseError:      http.StatusInternalServerError,
+	AuthErrorCodeInternalError:      http.StatusInternalServerError,
+}
+
+// writeAuthError writes a structured auth error response
+func writeAuthError(w http.ResponseWriter, errorCode AuthErrorCode, message string, field string) {
+	resp := AuthErrorResponse{
+		ErrorCode: errorCode,
+		Message:   message,
+		Field:     field,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(authErrorHTTPStatus[errorCode])
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// writeAuthErrorSimple writes a structured auth error response without a field
+func writeAuthErrorSimple(w http.ResponseWriter, errorCode AuthErrorCode, message string) {
+	writeAuthError(w, errorCode, message, "")
+}
+
 type AuthHandler struct {
 	identraClient      *identra.Client
 	db                 *sql.DB
@@ -76,18 +130,22 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "请求格式错误")
 		return
 	}
 
 	// Validate input
-	if req.Email == "" || req.Password == "" {
-		http.Error(w, `{"error": "email and password required"}`, http.StatusBadRequest)
+	if req.Email == "" {
+		writeAuthError(w, AuthErrorCodeValidationError, "邮箱不能为空", "email")
+		return
+	}
+	if req.Password == "" {
+		writeAuthError(w, AuthErrorCodeValidationError, "密码不能为空", "password")
 		return
 	}
 
 	if len(req.Password) < 6 {
-		http.Error(w, `{"error": "password must be at least 6 characters"}`, http.StatusBadRequest)
+		writeAuthError(w, AuthErrorCodeValidationError, "密码长度至少为6位", "password")
 		return
 	}
 
@@ -100,11 +158,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	`, req.Email).Scan(&existingID)
 
 	if err == nil {
-		http.Error(w, `{"error": "email already registered"}`, http.StatusConflict)
+		writeAuthError(w, AuthErrorCodeEmailExists, "该邮箱已被注册", "email")
 		return
 	}
 	if err != sql.ErrNoRows {
-		http.Error(w, `{"error": "database error"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeDatabaseError, "数据库查询错误")
 		return
 	}
 
@@ -112,7 +170,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	userID := uuid.New().String()
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, `{"error": "failed to hash password"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "密码处理失败")
 		return
 	}
 
@@ -121,7 +179,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, NOW(), NOW())
 	`, userID, req.Email, string(hashedPassword))
 	if err != nil {
-		http.Error(w, `{"error": "failed to create user"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户失败")
 		return
 	}
 
@@ -145,7 +203,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Try to clean up identra user
 		_, _ = h.identraDB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", userID)
-		http.Error(w, `{"error": "failed to create user profile"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
 		return
 	}
 
@@ -153,8 +211,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
 	if err != nil {
 		// User created but login failed - still return success
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "registration successful, please login",
+			"message": "注册成功，请登录",
 			"user": map[string]interface{}{
 				"id":       userID,
 				"email":    req.Email,
@@ -165,6 +224,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if resp.Token != nil && resp.Token.AccessToken != nil {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token":  resp.Token.AccessToken.Token,
@@ -179,7 +239,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		})
 	} else {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "registration successful, please login",
+			"message": "注册成功，请登录",
 		})
 	}
 }
@@ -192,7 +252,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "请求格式错误")
+		return
+	}
+
+	// Validate input
+	if req.Email == "" {
+		writeAuthError(w, AuthErrorCodeValidationError, "邮箱不能为空", "email")
+		return
+	}
+	if req.Password == "" {
+		writeAuthError(w, AuthErrorCodeValidationError, "密码不能为空", "password")
 		return
 	}
 
@@ -200,12 +270,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
 	if err != nil {
-		http.Error(w, `{"error": "invalid credentials"}`, http.StatusUnauthorized)
+		writeAuthError(w, AuthErrorCodeInvalidCredentials, "邮箱或密码错误", "email")
 		return
 	}
 
 	if resp.Token == nil || resp.Token.AccessToken == nil {
-		http.Error(w, `{"error": "login failed"}`, http.StatusUnauthorized)
+		writeAuthError(w, AuthErrorCodeInvalidCredentials, "登录失败", "")
 		return
 	}
 
@@ -216,7 +286,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	`, req.Email).Scan(&userID)
 
 	if err != nil {
-		http.Error(w, `{"error": "user not found"}`, http.StatusUnauthorized)
+		writeAuthError(w, AuthErrorCodeInvalidCredentials, "用户不存在", "email")
 		return
 	}
 
@@ -240,14 +310,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, NOW(), NOW())
 		`, userID, username, role)
 		if err != nil {
-			http.Error(w, `{"error": "failed to create user profile"}`, http.StatusInternalServerError)
+			writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
 			return
 		}
 	} else if err != nil {
-		http.Error(w, `{"error": "database error"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeDatabaseError, "数据库查询错误")
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token":  resp.Token.AccessToken.Token,
 		"refresh_token": resp.Token.RefreshToken.Token,
@@ -270,14 +341,14 @@ func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
 
 	// Check if OAuth is configured
 	if h.githubClientID == "" {
-		http.Error(w, `{"error": "OAuth not configured"}`, http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeOAuthNotConfigured, "OAuth未配置")
 		return
 	}
 
 	// Generate random state token
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
-		http.Error(w, `{"error": "failed to generate state"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "生成状态令牌失败")
 		return
 	}
 	state := hex.EncodeToString(stateBytes)
@@ -286,7 +357,7 @@ func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	key := fmt.Sprintf("oauth:state:%s", state)
 	if err := h.redis.Set(ctx, key, state, 5*time.Minute).Err(); err != nil {
-		http.Error(w, `{"error": "failed to store state"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "存储状态令牌失败")
 		return
 	}
 
@@ -298,6 +369,7 @@ func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
 		state,
 	)
 
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"authorization_url": authURL,
 		"state":             state,
@@ -311,7 +383,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 
 	if code == "" || state == "" {
-		http.Error(w, `{"error": "missing code or state"}`, http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "缺少code或state参数")
 		return
 	}
 
@@ -320,7 +392,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	key := fmt.Sprintf("oauth:state:%s", state)
 	storedState, err := h.redis.Get(ctx, key).Result()
 	if err != nil || storedState != state {
-		http.Error(w, `{"error": "invalid or expired state"}`, http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeOAuthStateExpired, "无效或过期的状态令牌")
 		return
 	}
 
@@ -330,14 +402,14 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	// Exchange code for access token
 	tokenResp, err := h.exchangeGitHubCode(code)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "failed to exchange code: %s"}`, err.Error()), http.StatusInternalServerError)
+		writeAuthError(w, AuthErrorCodeOAuthFailed, "交换授权码失败: "+err.Error(), "")
 		return
 	}
 
 	// Get user info from GitHub
 	githubUser, err := h.getGitHubUserInfo(tokenResp.AccessToken)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "failed to get user info: %s"}`, err.Error()), http.StatusInternalServerError)
+		writeAuthError(w, AuthErrorCodeOAuthFailed, "获取用户信息失败: "+err.Error(), "")
 		return
 	}
 
@@ -347,7 +419,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		// Fetch emails separately if not in user info
 		emails, err := h.getGitHubEmails(tokenResp.AccessToken)
 		if err != nil {
-			http.Error(w, `{"error": "failed to get user emails"}`, http.StatusInternalServerError)
+			writeAuthErrorSimple(w, AuthErrorCodeOAuthFailed, "获取用户邮箱失败")
 			return
 		}
 		// Find primary verified email
@@ -369,14 +441,14 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if email == "" {
-		http.Error(w, `{"error": "no verified email found"}`, http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "未找到已验证的邮箱")
 		return
 	}
 
 	// Find or create user in identra database
 	userID, randomPassword, err := h.findOrCreateOAuthUser(ctx, email, githubUser.Login, githubUser.ID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "failed to create user: %s"}`, err.Error()), http.StatusInternalServerError)
+		writeAuthError(w, AuthErrorCodeInternalError, "创建用户失败: "+err.Error(), "")
 		return
 	}
 
@@ -400,7 +472,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, NOW(), NOW())
 		`, userID, username, role, githubUser.AvatarURL)
 		if err != nil {
-			http.Error(w, `{"error": "failed to create user profile"}`, http.StatusInternalServerError)
+			writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
 			return
 		}
 	} else if err == nil {
@@ -409,12 +481,12 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 			UPDATE user_profiles SET avatar_url = $1, updated_at = NOW() WHERE user_id = $2
 		`, githubUser.AvatarURL, userID)
 		if err != nil {
-			http.Error(w, `{"error": "failed to update profile"}`, http.StatusInternalServerError)
+			writeAuthErrorSimple(w, AuthErrorCodeInternalError, "更新用户资料失败")
 			return
 		}
 		username = existingUsername
 	} else if err != nil {
-		http.Error(w, `{"error": "database error"}`, http.StatusInternalServerError)
+		writeAuthErrorSimple(w, AuthErrorCodeDatabaseError, "数据库查询错误")
 		return
 	}
 
@@ -427,6 +499,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		loginResp, err = h.identraClient.LoginByPassword(ctx, email, randomPassword)
 		if err != nil {
 			// Fallback: return user info without tokens
+			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"user": map[string]interface{}{
 					"id":         userID,
@@ -435,13 +508,14 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 					"role":       role,
 					"avatar_url": githubUser.AvatarURL,
 				},
-				"message": "OAuth login successful, please set a password to complete registration",
+				"message": "OAuth登录成功，请设置密码完成注册",
 			})
 			return
 		}
 	} else {
 		// Existing user - they should use their existing password
 		// Return user info only, they'll need to login manually
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"user": map[string]interface{}{
 				"id":         userID,
@@ -450,11 +524,12 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 				"role":       role,
 				"avatar_url": githubUser.AvatarURL,
 			},
-			"message": "Account linked successfully. Please login with your password.",
+			"message": "账号已关联，请使用密码登录",
 		})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token":  loginResp.Token.AccessToken.Token,
 		"refresh_token": loginResp.Token.RefreshToken.Token,
@@ -639,17 +714,23 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "请求格式错误")
+		return
+	}
+
+	if req.RefreshToken == "" {
+		writeAuthError(w, AuthErrorCodeValidationError, "刷新令牌不能为空", "refresh_token")
 		return
 	}
 
 	ctx := context.Background()
 	resp, err := h.identraClient.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
-		http.Error(w, `{"error": "invalid refresh token"}`, http.StatusUnauthorized)
+		writeAuthErrorSimple(w, AuthErrorCodeTokenInvalid, "无效的刷新令牌")
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"access_token":  resp.Token.AccessToken.Token,
 		"refresh_token": resp.Token.RefreshToken.Token,
@@ -661,14 +742,14 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, `{"error": "unauthorized"}`, http.StatusUnauthorized)
+		writeAuthErrorSimple(w, AuthErrorCodeUnauthorized, "未授权访问")
 		return
 	}
 
 	// Extract token
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		http.Error(w, `{"error": "invalid authorization header"}`, http.StatusUnauthorized)
+		writeAuthErrorSimple(w, AuthErrorCodeTokenInvalid, "无效的授权头格式")
 		return
 	}
 	token := parts[1]
@@ -677,7 +758,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	userInfo, err := h.identraClient.GetCurrentUser(ctx, token)
 	if err != nil {
-		http.Error(w, `{"error": "invalid token"}`, http.StatusUnauthorized)
+		writeAuthErrorSimple(w, AuthErrorCodeTokenInvalid, "无效的令牌")
 		return
 	}
 
@@ -696,6 +777,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		role = "user"
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":       userID,
 		"email":    email,
