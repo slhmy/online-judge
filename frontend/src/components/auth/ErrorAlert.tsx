@@ -72,7 +72,7 @@ export function ErrorAlert({
 }
 
 export interface FieldErrorProps {
-  error: ParsedError | null
+  error: ParsedError | null | undefined
   className?: string
 }
 

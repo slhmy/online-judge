@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
+import { useAuthError, parseAuthResponse, createTimeoutController } from '@/hooks/useAuthError'
+import { ErrorAlert, FieldError } from '@/components/auth/ErrorAlert'
+import { cn } from '@/lib/utils'
 
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
 
@@ -15,33 +18,40 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [githubLoading, setGithubLoading] = useState(false)
-  const [error, setError] = useState('')
+
+  const {
+    error,
+    fieldErrors,
+    parseError,
+    setError,
+    clearError,
+    clearFieldError,
+    hasFieldError,
+  } = useAuthError()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
+    clearError()
+
+    const { controller, timeoutId } = createTimeoutController()
 
     try {
       const res = await fetch(`${BFF_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       })
 
-      const data = await res.json()
+      window.clearTimeout(timeoutId)
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
+      const data = await parseAuthResponse<{ user: any; access_token: string; refresh_token: string }>(res)
 
-      // Store tokens and user info
       login(data.user, data.access_token, data.refresh_token)
-
-      // Redirect to home
       router.push('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(parseError(err))
     } finally {
       setLoading(false)
     }
@@ -49,20 +59,15 @@ export default function LoginPage() {
 
   const handleGitHubLogin = async () => {
     setGithubLoading(true)
-    setError('')
+    clearError()
 
     try {
       const res = await fetch(`${BFF_URL}/api/v1/auth/oauth/url?provider=github`)
-      const data = await res.json()
+      const data = await parseAuthResponse<{ authorization_url: string }>(res)
 
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'OAuth not configured')
-      }
-
-      // Redirect to GitHub authorization URL
       window.location.href = data.authorization_url
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'GitHub login failed')
+      setError(parseError(err))
       setGithubLoading(false)
     }
   }
@@ -72,11 +77,7 @@ export default function LoginPage() {
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">Login</h1>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded">
-            {error}
-          </div>
-        )}
+        <ErrorAlert error={error} onDismiss={clearError} className="mb-4" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -86,10 +87,19 @@ export default function LoginPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setEmail(e.target.value)
+                clearFieldError('email')
+              }}
+              className={cn(
+                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                hasFieldError('email')
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-gray-300 dark:border-gray-600'
+              )}
               required
             />
+            <FieldError error={fieldErrors['email']} />
           </div>
 
           <div>
@@ -99,10 +109,19 @@ export default function LoginPage() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setPassword(e.target.value)
+                clearFieldError('password')
+              }}
+              className={cn(
+                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                hasFieldError('password')
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-gray-300 dark:border-gray-600'
+              )}
               required
             />
+            <FieldError error={fieldErrors['password']} />
           </div>
 
           <button

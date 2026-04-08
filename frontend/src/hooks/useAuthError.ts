@@ -5,18 +5,11 @@ import {
   ErrorCode,
   ErrorType,
   AuthErrorResponse,
+  ParsedError,
   authErrorMessages,
   errorCodeToType,
   fieldTranslations,
 } from '@/types/auth'
-
-export interface ParsedError {
-  code: ErrorCode
-  message: string
-  type: ErrorType
-  field?: string
-  fieldLabel?: string
-}
 
 export interface UseAuthErrorReturn {
   error: ParsedError | null

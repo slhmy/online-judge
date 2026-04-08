@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
+import { useAuthError, parseAuthResponse, createTimeoutController } from '@/hooks/useAuthError'
+import { ErrorAlert, FieldError } from '@/components/auth/ErrorAlert'
+import { cn } from '@/lib/utils'
+import { ErrorCode, ParsedError, ErrorType } from '@/types/auth'
 
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
 
@@ -16,44 +20,58 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+
+  const {
+    error,
+    fieldErrors,
+    parseError,
+    setError,
+    clearError,
+    clearFieldError,
+    hasFieldError,
+  } = useAuthError()
+
+  const createValidationError = (message: string, field?: string): ParsedError => ({
+    code: ErrorCode.VALIDATION_ERROR,
+    message,
+    type: ErrorType.VALIDATION,
+    field,
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    clearError()
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(createValidationError('密码不匹配', 'confirm_password'))
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(createValidationError('密码长度至少6个字符', 'password'))
       return
     }
 
     setLoading(true)
+
+    const { controller, timeoutId } = createTimeoutController()
 
     try {
       const res = await fetch(`${BFF_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, username }),
+        signal: controller.signal,
       })
 
-      const data = await res.json()
+      window.clearTimeout(timeoutId)
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed')
-      }
+      const data = await parseAuthResponse<{ user: any; access_token: string; refresh_token: string }>(res)
 
-      // Store tokens and user info
       login(data.user, data.access_token, data.refresh_token)
-
-      // Redirect to home
       router.push('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(parseError(err))
     } finally {
       setLoading(false)
     }
@@ -64,11 +82,7 @@ export default function RegisterPage() {
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">Register</h1>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded">
-            {error}
-          </div>
-        )}
+        <ErrorAlert error={error} onDismiss={clearError} className="mb-4" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -78,10 +92,19 @@ export default function RegisterPage() {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setUsername(e.target.value)
+                clearFieldError('username')
+              }}
+              className={cn(
+                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                hasFieldError('username')
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-gray-300 dark:border-gray-600'
+              )}
               placeholder="Optional"
             />
+            <FieldError error={fieldErrors['username']} />
           </div>
 
           <div>
@@ -91,10 +114,19 @@ export default function RegisterPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setEmail(e.target.value)
+                clearFieldError('email')
+              }}
+              className={cn(
+                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                hasFieldError('email')
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-gray-300 dark:border-gray-600'
+              )}
               required
             />
+            <FieldError error={fieldErrors['email']} />
           </div>
 
           <div>
@@ -104,11 +136,20 @@ export default function RegisterPage() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setPassword(e.target.value)
+                clearFieldError('password')
+              }}
+              className={cn(
+                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                hasFieldError('password')
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-gray-300 dark:border-gray-600'
+              )}
               required
               minLength={6}
             />
+            <FieldError error={fieldErrors['password']} />
           </div>
 
           <div>
@@ -118,10 +159,19 @@ export default function RegisterPage() {
             <input
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setConfirmPassword(e.target.value)
+                clearFieldError('confirm_password')
+              }}
+              className={cn(
+                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                hasFieldError('confirm_password')
+                  ? 'border-red-500 dark:border-red-400'
+                  : 'border-gray-300 dark:border-gray-600'
+              )}
               required
             />
+            <FieldError error={fieldErrors['confirm_password']} />
           </div>
 
           <button

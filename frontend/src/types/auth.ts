@@ -21,6 +21,15 @@ export interface AuthErrorResponse {
   field?: string
 }
 
+// Parsed error structure for UI display
+export interface ParsedError {
+  code: ErrorCode
+  message: string
+  type: ErrorType
+  field?: string
+  fieldLabel?: string
+}
+
 // Error type classification for display styling
 export enum ErrorType {
   VALIDATION = 'validation',    // Input validation errors (yellow)
