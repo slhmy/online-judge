@@ -162,7 +162,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != sql.ErrNoRows {
-		writeAuthErrorSimple(w, AuthErrorCodeDatabaseError, "数据库查询错误")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "查询用户失败")
 		return
 	}
 
@@ -314,7 +314,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeDatabaseError, "数据库查询错误")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户资料失败")
 		return
 	}
 
@@ -486,7 +486,7 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		}
 		username = existingUsername
 	} else if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeDatabaseError, "数据库查询错误")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户资料失败")
 		return
 	}
 
