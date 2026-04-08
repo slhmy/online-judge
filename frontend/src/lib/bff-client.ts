@@ -1,4 +1,6 @@
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+// Default to empty string for relative paths (works with Next.js rewrites in dev)
+// In production, NEXT_PUBLIC_BFF_URL can be set if needed for standalone deployments
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
 export class BFFClient {
   private baseUrl: string

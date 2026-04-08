@@ -9,8 +9,6 @@ import { ErrorAlert, FieldError } from '@/components/auth/ErrorAlert'
 import { cn } from '@/lib/utils'
 import { ErrorCode, ParsedError, ErrorType } from '@/types/auth'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
-
 export default function RegisterPage() {
   const router = useRouter()
   const { login } = useAuthStore()
@@ -57,7 +55,7 @@ export default function RegisterPage() {
     const { controller, timeoutId } = createTimeoutController()
 
     try {
-      const res = await fetch(`${BFF_URL}/api/v1/auth/register`, {
+      const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, username }),

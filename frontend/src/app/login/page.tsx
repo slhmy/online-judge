@@ -8,8 +8,6 @@ import { useAuthError, parseAuthResponse, createTimeoutController } from '@/hook
 import { ErrorAlert, FieldError } from '@/components/auth/ErrorAlert'
 import { cn } from '@/lib/utils'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
-
 export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuthStore()
@@ -37,7 +35,7 @@ export default function LoginPage() {
     const { controller, timeoutId } = createTimeoutController()
 
     try {
-      const res = await fetch(`${BFF_URL}/api/v1/auth/login`, {
+      const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -62,7 +60,7 @@ export default function LoginPage() {
     clearError()
 
     try {
-      const res = await fetch(`${BFF_URL}/api/v1/auth/oauth/url?provider=github`)
+      const res = await fetch('/api/v1/auth/oauth/url?provider=github')
       const data = await parseAuthResponse<{ authorization_url: string }>(res)
 
       window.location.href = data.authorization_url
