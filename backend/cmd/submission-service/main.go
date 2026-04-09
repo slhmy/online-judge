@@ -12,6 +12,7 @@ import (
 
 	pb "github.com/online-judge/backend/gen/go/submission/v1"
 	"github.com/online-judge/backend/internal/pkg/config"
+	"github.com/online-judge/backend/internal/queue"
 	"github.com/online-judge/backend/internal/submission/service"
 	"github.com/online-judge/backend/internal/submission/store"
 )
@@ -30,14 +31,18 @@ func main() {
 	}
 	defer dbpool.Close()
 
-	// Redis (for queue + cache + pub/sub)
+	// Redis (for cache + pub/sub)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.RedisURL,
 	})
 
+	// Asynq client (for task queue)
+	asynqClient := queue.NewAsynqClient(cfg.RedisURL)
+	defer asynqClient.Close()
+
 	// Create service
 	submissionStore := store.NewSubmissionStore(dbpool)
-	submissionService := service.NewSubmissionService(submissionStore, rdb)
+	submissionService := service.NewSubmissionService(submissionStore, rdb, asynqClient)
 
 	// gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)

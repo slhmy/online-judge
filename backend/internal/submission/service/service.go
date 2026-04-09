@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 
 	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
 	pb "github.com/online-judge/backend/gen/go/submission/v1"
+	"github.com/online-judge/backend/internal/queue"
 	"github.com/online-judge/backend/internal/submission/store"
 )
 
@@ -17,12 +17,14 @@ type SubmissionService struct {
 	pb.UnimplementedSubmissionServiceServer
 	store store.SubmissionStoreInterface
 	redis *redis.Client
+	queue *queue.AsynqClient
 }
 
-func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client) *SubmissionService {
+func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client, asynqClient *queue.AsynqClient) *SubmissionService {
 	return &SubmissionService{
 		store: s,
 		redis: redis,
+		queue: asynqClient,
 	}
 }
 
@@ -41,15 +43,14 @@ func (s *SubmissionService) CreateSubmission(ctx context.Context, req *pb.Create
 	s.redis.Set(ctx, sourceKey, req.SourceCode, 24*time.Hour)
 
 	// Push to judge queue
-	job := JudgeJob{
+	payload := &queue.JudgeJobPayload{
 		SubmissionID: id,
 		ProblemID:    req.ProblemId,
 		Language:     req.LanguageId,
 		Priority:     0,
-		SubmitTime:   time.Now(),
 	}
 
-	if err := s.pushToQueue(ctx, &job); err != nil {
+	if _, err := s.queue.EnqueueJudgeTask(payload); err != nil {
 		return nil, err
 	}
 
@@ -367,29 +368,7 @@ func mapVerdictToProto(verdict string) pb.Verdict {
 	}
 }
 
-func (s *SubmissionService) pushToQueue(ctx context.Context, job *JudgeJob) error {
-	data, err := json.Marshal(job)
-	if err != nil {
-		return err
-	}
-
-	score := float64(job.Priority*1000000) - float64(job.SubmitTime.Unix())
-
-	return s.redis.ZAdd(ctx, "judge:queue", redis.Z{
-		Score:  score,
-		Member: string(data),
-	}).Err()
-}
-
-type JudgeJob struct {
-	SubmissionID string    `json:"submission_id"`
-	ProblemID    string    `json:"problem_id"`
-	Language     string    `json:"language"`
-	Priority     int       `json:"priority"`
-	SubmitTime   time.Time `json:"submit_time"`
-}
-
-// InternalCreateJudging creates a judging record in the database
+// RejudgeSubmission re-runs the judging for a submission
 func (s *SubmissionService) InternalCreateJudging(ctx context.Context, req *pb.InternalCreateJudgingRequest) (*pb.InternalCreateJudgingResponse, error) {
 	judgingID, err := s.store.CreateJudging(ctx, req.SubmissionId, req.JudgehostId)
 	if err != nil {
@@ -472,15 +451,14 @@ func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.Rejud
 	_ = s.redis.Del(ctx, judgingKey)
 
 	// Push to judge queue again
-	job := JudgeJob{
+	payload := &queue.JudgeJobPayload{
 		SubmissionID: req.SubmissionId,
 		ProblemID:    sub.ProblemID,
 		Language:     sub.LanguageID,
 		Priority:     10, // Higher priority for rejudges
-		SubmitTime:   time.Now(),
 	}
 
-	if err := s.pushToQueue(ctx, &job); err != nil {
+	if _, err := s.queue.EnqueueJudgeTask(payload); err != nil {
 		return nil, fmt.Errorf("failed to queue rejudge: %w", err)
 	}
 
