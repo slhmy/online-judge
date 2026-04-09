@@ -39,6 +39,13 @@ type Config struct {
 
 	// Heartbeat
 	HeartbeatInterval int `mapstructure:"heartbeat_interval"` // seconds
+
+	// Queue Mode (migration support)
+	// Options: "asynq" (default), "legacy", "both"
+	// "asynq" - use asynq task queue (new system)
+	// "legacy" - use Redis sorted set queue (old system)
+	// "both" - process both queues during migration
+	QueueMode string `mapstructure:"queue_mode"`
 }
 
 func Load() (*Config, error) {
@@ -57,6 +64,7 @@ func Load() (*Config, error) {
 	v.SetDefault("compile_cache_ttl", 24)        // 24 hours
 	v.SetDefault("compile_cache_enabled", true)  // Cache enabled by default
 	v.SetDefault("heartbeat_interval", 10)       // 10 seconds
+	v.SetDefault("queue_mode", "asynq")          // Default to asynq mode
 
 	v.AutomaticEnv()
 

@@ -82,7 +82,7 @@ func TestSubmissionService_GetSubmission(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.GetSubmission(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -201,7 +201,7 @@ func TestSubmissionService_ListSubmissions(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.ListSubmissions(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -272,7 +272,7 @@ func TestSubmissionService_GetJudging(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.GetJudging(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -339,7 +339,7 @@ func TestSubmissionService_GetJudgingRuns(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.GetJudgingRuns(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -387,7 +387,7 @@ func TestSubmissionService_InternalCreateJudging(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.InternalCreateJudging(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -457,7 +457,7 @@ func TestSubmissionService_InternalUpdateJudging(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.InternalUpdateJudging(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -498,7 +498,7 @@ func TestSubmissionService_InternalCreateJudgingRun(t *testing.T) {
 			mockStore := store.NewMockSubmissionStore()
 			tt.setup(mockStore)
 
-			service := NewSubmissionService(mockStore, nil, nil)
+			service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 			resp, err := service.InternalCreateJudgingRun(context.Background(), tt.request)
 
 			tt.want(t, resp, err)

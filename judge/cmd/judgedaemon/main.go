@@ -16,6 +16,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/online-judge/judge/internal/config"
+	"github.com/online-judge/judge/internal/queue"
 	"github.com/online-judge/judge/internal/worker"
 )
 
@@ -55,9 +56,9 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	log.Printf("Judge daemon starting with ID: %s", cfg.JudgehostID)
+	log.Printf("Judge daemon starting with ID: %s, queue_mode: %s", cfg.JudgehostID, cfg.QueueMode)
 
-	// Redis connection (for asynq + cache)
+	// Redis connection (for asynq + cache + legacy queue)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: cfg.RedisURL,
 	})
@@ -75,13 +76,99 @@ func main() {
 		httpClient:      &http.Client{Timeout: 30 * time.Second},
 	}
 
-	// Register judgehost
-	queueName, err := judgeClient.Register(ctx, cfg.JudgehostID)
-	if err != nil {
-		log.Fatalf("Failed to register judgehost: %v", err)
+	// Register judgehost (only for asynq mode)
+	var queueName string
+	if cfg.QueueMode != "legacy" {
+		queueName, err = judgeClient.Register(ctx, cfg.JudgehostID)
+		if err != nil {
+			log.Fatalf("Failed to register judgehost: %v", err)
+		}
+		log.Printf("Registered judgehost %s, assigned queue: %s", cfg.JudgehostID, queueName)
 	}
-	log.Printf("Registered judgehost %s, assigned queue: %s", cfg.JudgehostID, queueName)
 
+	// Handle graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Track completed jobs for heartbeat
+	completedJobs := make([]string, 0)
+	completedJobsChan := make(chan string, 100)
+
+	// Start workers based on queue mode
+	switch cfg.QueueMode {
+	case "asynq":
+		// Asynq mode only
+		startAsynqWorker(cfg, rdb, ctx, queueName, judgeClient, completedJobsChan)
+	case "legacy":
+		// Legacy mode only - no registration, no heartbeat
+		startLegacyWorker(cfg, rdb, ctx)
+	case "both":
+		// Both modes during migration
+		startAsynqWorker(cfg, rdb, ctx, queueName, judgeClient, completedJobsChan)
+		startLegacyWorker(cfg, rdb, ctx)
+	default:
+		log.Fatalf("Unknown queue mode: %s", cfg.QueueMode)
+	}
+
+	// Start heartbeat goroutine (only for asynq mode)
+	if cfg.QueueMode != "legacy" {
+		go func() {
+			ticker := time.NewTicker(time.Duration(cfg.HeartbeatInterval) * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case jobID := <-completedJobsChan:
+					completedJobs = append(completedJobs, jobID)
+					// Keep only recent completed jobs (last 100)
+					if len(completedJobs) > 100 {
+						completedJobs = completedJobs[len(completedJobs)-100:]
+					}
+				case <-ticker.C:
+					// Send heartbeat
+					// Get current job from asynq handler
+					var currentJobID string
+					var status string
+					// Note: We'll need to track this from the worker
+					status = "idle"
+
+					resp, err := judgeClient.Heartbeat(ctx, cfg.JudgehostID, status, currentJobID, completedJobs)
+					if err != nil {
+						log.Printf("Heartbeat failed: %v", err)
+					} else {
+						log.Printf("Heartbeat acknowledged: pending=%d, assigned=%v", resp.PendingTasks, resp.AssignedTaskIDs)
+						// Clear completed jobs after successful heartbeat
+						completedJobs = make([]string, 0)
+					}
+				}
+			}
+		}()
+	}
+
+	// Wait for shutdown signal
+	<-sigChan
+	log.Println("Shutting down judge daemon...")
+
+	// Graceful shutdown
+	cancel()
+
+	// Deregister judgehost (only for asynq mode)
+	if cfg.QueueMode != "legacy" {
+		if err := judgeClient.Deregister(ctx, cfg.JudgehostID); err != nil {
+			log.Printf("Failed to deregister judgehost: %v", err)
+		}
+	}
+
+	log.Println("Judge daemon stopped")
+}
+
+// startAsynqWorker starts the asynq-based worker
+func startAsynqWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context, queueName string, judgeClient *JudgehostClient, completedJobsChan chan<- string) {
 	// Create asynq handler
 	handler := worker.NewAsynqHandler(cfg, rdb)
 
@@ -103,76 +190,34 @@ func main() {
 		},
 	)
 
-	// Handle graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Track completed jobs for heartbeat
-	completedJobs := make([]string, 0)
-	completedJobsChan := make(chan string, 100)
-
-	// Start heartbeat goroutine
-	go func() {
-		ticker := time.NewTicker(time.Duration(cfg.HeartbeatInterval) * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case jobID := <-completedJobsChan:
-				completedJobs = append(completedJobs, jobID)
-				// Keep only recent completed jobs (last 100)
-				if len(completedJobs) > 100 {
-					completedJobs = completedJobs[len(completedJobs)-100:]
-				}
-			case <-ticker.C:
-				// Send heartbeat
-				currentJob := handler.GetCurrentJob()
-				var currentJobID string
-				var status string
-				if currentJob != nil {
-					currentJobID = currentJob.SubmissionID
-					status = "busy"
-				} else {
-					status = "idle"
-				}
-
-				resp, err := judgeClient.Heartbeat(ctx, cfg.JudgehostID, status, currentJobID, completedJobs)
-				if err != nil {
-					log.Printf("Heartbeat failed: %v", err)
-				} else {
-					log.Printf("Heartbeat acknowledged: pending=%d, assigned=%v", resp.PendingTasks, resp.AssignedTaskIDs)
-					// Clear completed jobs after successful heartbeat
-					completedJobs = make([]string, 0)
-				}
-			}
-		}
-	}()
-
-	// Start server
 	log.Printf("Starting asynq server, listening on queue: %s", queueName)
 	if err := server.Start(handler); err != nil {
 		log.Fatalf("Failed to start asynq server: %v", err)
 	}
 
-	// Wait for shutdown signal
-	<-sigChan
-	log.Println("Shutting down judge daemon...")
+	// Handle shutdown in goroutine
+	go func() {
+		<-ctx.Done()
+		server.Stop()
+	}()
+}
 
-	// Graceful shutdown
-	server.Stop()
-	cancel()
+// startLegacyWorker starts the legacy Redis sorted set worker
+func startLegacyWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context) {
+	// Create legacy queue client
+	judgeQueue := queue.NewJudgeQueue(rdb, cfg.OrchestratorURL)
 
-	// Deregister judgehost
-	if err := judgeClient.Deregister(ctx, cfg.JudgehostID); err != nil {
-		log.Printf("Failed to deregister judgehost: %v", err)
-	}
+	// Create legacy worker
+	legacyWorker := worker.NewJudgeWorker(cfg.JudgehostID, cfg, judgeQueue, rdb)
 
-	log.Println("Judge daemon stopped")
+	log.Printf("Starting legacy worker (Redis sorted set queue)")
+
+	// Run worker in goroutine
+	go func() {
+		if err := legacyWorker.Run(ctx); err != nil {
+			log.Printf("Legacy worker error: %v", err)
+		}
+	}()
 }
 
 // Register registers the judgehost with Judge Service

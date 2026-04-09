@@ -24,7 +24,7 @@ func setupTestWithRedis(t *testing.T) (*SubmissionService, *miniredis.Miniredis,
 	})
 
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, rdb, nil)
+	service := NewSubmissionService(mockStore, rdb, nil, nil, false, false)
 
 	return service, mr, rdb
 }
@@ -43,7 +43,7 @@ func TestSubmissionService_Integration_CreateSubmissionWithContest(t *testing.T)
 
 func TestSubmissionService_Integration_GetSubmission(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	// Setup mock data
@@ -111,7 +111,7 @@ func TestSubmissionService_Integration_GetSubmissionWithRedisCache(t *testing.T)
 
 func TestSubmissionService_Integration_ListSubmissions(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	// Create multiple submissions
@@ -175,7 +175,7 @@ func TestSubmissionService_Integration_ListSubmissions(t *testing.T) {
 
 func TestSubmissionService_Integration_GetJudging(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	// Setup judging
@@ -207,7 +207,7 @@ func TestSubmissionService_Integration_GetJudging(t *testing.T) {
 
 func TestSubmissionService_Integration_GetJudgingRuns(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	// Setup judging and runs
@@ -274,7 +274,7 @@ func TestSubmissionService_Integration_InternalCreateJudging(t *testing.T) {
 
 func TestSubmissionService_Integration_InternalUpdateJudging(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	// Setup judging
@@ -302,7 +302,7 @@ func TestSubmissionService_Integration_InternalUpdateJudging(t *testing.T) {
 
 func TestSubmissionService_Integration_InternalUpdateJudging_CompilerError(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	mockStore.Judgings["jud-1"] = &store.Judging{
@@ -385,7 +385,7 @@ func TestSubmissionService_Integration_VerdictMapping(t *testing.T) {
 
 func TestSubmissionService_Integration_ErrorHandling(t *testing.T) {
 	mockStore := store.NewMockSubmissionStore()
-	service := NewSubmissionService(mockStore, nil, nil)
+	service := NewSubmissionService(mockStore, nil, nil, nil, false, false)
 	ctx := context.Background()
 
 	t.Run("GetNonExistentSubmission", func(t *testing.T) {

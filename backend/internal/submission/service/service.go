@@ -15,16 +15,22 @@ import (
 
 type SubmissionService struct {
 	pb.UnimplementedSubmissionServiceServer
-	store store.SubmissionStoreInterface
-	redis *redis.Client
-	queue *queue.AsynqClient
+	store        store.SubmissionStoreInterface
+	redis        *redis.Client
+	queue        *queue.AsynqClient
+	legacyQueue  *queue.LegacyQueue
+	useAsynq     bool
+	useLegacy    bool
 }
 
-func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client, asynqClient *queue.AsynqClient) *SubmissionService {
+func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client, asynqClient *queue.AsynqClient, legacyQueue *queue.LegacyQueue, useAsynq bool, useLegacy bool) *SubmissionService {
 	return &SubmissionService{
-		store: s,
-		redis: redis,
-		queue: asynqClient,
+		store:       s,
+		redis:       redis,
+		queue:       asynqClient,
+		legacyQueue: legacyQueue,
+		useAsynq:    useAsynq,
+		useLegacy:   useLegacy,
 	}
 }
 
@@ -42,7 +48,7 @@ func (s *SubmissionService) CreateSubmission(ctx context.Context, req *pb.Create
 	sourceKey := "submission:" + id + ":source"
 	s.redis.Set(ctx, sourceKey, req.SourceCode, 24*time.Hour)
 
-	// Push to judge queue
+	// Push to judge queue(s) - dual-write during migration
 	payload := &queue.JudgeJobPayload{
 		SubmissionID: id,
 		ProblemID:    req.ProblemId,
@@ -50,7 +56,7 @@ func (s *SubmissionService) CreateSubmission(ctx context.Context, req *pb.Create
 		Priority:     0,
 	}
 
-	if _, err := s.queue.EnqueueJudgeTask(payload); err != nil {
+	if err := s.enqueueJudgeJob(ctx, payload); err != nil {
 		return nil, err
 	}
 
@@ -58,6 +64,50 @@ func (s *SubmissionService) CreateSubmission(ctx context.Context, req *pb.Create
 		Id:     id,
 		Status: pb.SubmissionStatus_SUBMISSION_STATUS_QUEUED,
 	}, nil
+}
+
+// enqueueJudgeJob handles dual-write to both asynq and legacy queue during migration
+func (s *SubmissionService) enqueueJudgeJob(ctx context.Context, payload *queue.JudgeJobPayload) error {
+	var asynqErr, legacyErr error
+
+	// Enqueue to asynq queue (primary)
+	if s.useAsynq && s.queue != nil {
+		if _, err := s.queue.EnqueueJudgeTask(payload); err != nil {
+			asynqErr = err
+		}
+	}
+
+	// Enqueue to legacy queue (for migration)
+	if s.useLegacy && s.legacyQueue != nil {
+		if err := s.legacyQueue.EnqueueJudgeJob(ctx, payload); err != nil {
+			legacyErr = err
+		}
+	}
+
+	// Return error if all enabled queues failed
+	if s.useAsynq && s.useLegacy {
+		if asynqErr != nil && legacyErr != nil {
+			return fmt.Errorf("both queues failed: asynq=%v, legacy=%v", asynqErr, legacyErr)
+		}
+		// If only one failed, log but don't error (at least one succeeded)
+		if asynqErr != nil {
+			// Log the error but don't fail - legacy queue succeeded
+		}
+		if legacyErr != nil {
+			// Log the error but don't fail - asynq queue succeeded
+		}
+		return nil
+	}
+
+	// Single queue mode
+	if s.useAsynq && asynqErr != nil {
+		return asynqErr
+	}
+	if s.useLegacy && legacyErr != nil {
+		return legacyErr
+	}
+
+	return nil
 }
 
 func (s *SubmissionService) GetSubmission(ctx context.Context, req *pb.GetSubmissionRequest) (*pb.GetSubmissionResponse, error) {
@@ -450,7 +500,7 @@ func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.Rejud
 	judgingKey := "judging:judging-" + req.SubmissionId + ":meta"
 	_ = s.redis.Del(ctx, judgingKey)
 
-	// Push to judge queue again
+	// Push to judge queue(s) - dual-write during migration
 	payload := &queue.JudgeJobPayload{
 		SubmissionID: req.SubmissionId,
 		ProblemID:    sub.ProblemID,
@@ -458,7 +508,7 @@ func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.Rejud
 		Priority:     10, // Higher priority for rejudges
 	}
 
-	if _, err := s.queue.EnqueueJudgeTask(payload); err != nil {
+	if err := s.enqueueJudgeJob(ctx, payload); err != nil {
 		return nil, fmt.Errorf("failed to queue rejudge: %w", err)
 	}
 

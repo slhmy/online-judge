@@ -40,9 +40,19 @@ func main() {
 	asynqClient := queue.NewAsynqClient(cfg.RedisURL)
 	defer asynqClient.Close()
 
-	// Create service
+	// Legacy queue (for migration dual-write)
+	legacyQueue := queue.NewLegacyQueue(rdb)
+
+	// Create service with queue configuration
 	submissionStore := store.NewSubmissionStore(dbpool)
-	submissionService := service.NewSubmissionService(submissionStore, rdb, asynqClient)
+	submissionService := service.NewSubmissionService(
+		submissionStore,
+		rdb,
+		asynqClient,
+		legacyQueue,
+		cfg.UseAsynqQueue,
+		cfg.UseLegacyQueue,
+	)
 
 	// gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
@@ -54,7 +64,7 @@ func main() {
 	pb.RegisterSubmissionServiceServer(s, submissionService)
 	reflection.Register(s)
 
-	log.Printf("Submission Service listening on port %s", cfg.GRPCPort)
+	log.Printf("Submission Service listening on port %s (asynq=%v, legacy=%v)", cfg.GRPCPort, cfg.UseAsynqQueue, cfg.UseLegacyQueue)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
