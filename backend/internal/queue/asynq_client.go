@@ -34,6 +34,11 @@ func NewAsynqClient(redisAddr string) *AsynqClient {
 
 // EnqueueJudgeTask enqueues a judge task with given options
 func (c *AsynqClient) EnqueueJudgeTask(payload *JudgeJobPayload) (*asynq.TaskInfo, error) {
+	return c.EnqueueJudgeTaskToQueue(payload, "default")
+}
+
+// EnqueueJudgeTaskToQueue enqueues a judge task to a specific queue
+func (c *AsynqClient) EnqueueJudgeTaskToQueue(payload *JudgeJobPayload, queueName string) (*asynq.TaskInfo, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -41,12 +46,13 @@ func (c *AsynqClient) EnqueueJudgeTask(payload *JudgeJobPayload) (*asynq.TaskInf
 
 	task := asynq.NewTask(TaskTypeJudge, data)
 
-	info, err := c.client.Enqueue(
-		task,
+	opts := []asynq.Option{
 		asynq.MaxRetry(3),
 		asynq.Timeout(10*time.Minute),
-		asynq.Queue("default"),
-	)
+		asynq.Queue(queueName),
+	}
+
+	info, err := c.client.Enqueue(task, opts...)
 	if err != nil {
 		return nil, err
 	}
