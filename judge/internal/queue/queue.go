@@ -12,6 +12,17 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Task type constant (matches backend)
+const TaskTypeJudge = "task:type_judge"
+
+// JudgeJobPayload is the payload for asynq judge tasks
+type JudgeJobPayload struct {
+	SubmissionID string `json:"submission_id"`
+	ProblemID    string `json:"problem_id"`
+	Language     string `json:"language"`
+	Priority     int    `json:"priority"`
+}
+
 // JudgeJob represents a judging job from the queue
 type JudgeJob struct {
 	SubmissionID string    `json:"submission_id"`
