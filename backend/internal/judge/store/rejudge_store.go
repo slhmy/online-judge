@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -172,7 +173,7 @@ func (s *RejudgeStore) ListRejudges(ctx context.Context, contestID, problemID, s
 	if contestID != "" {
 		parsedContestID, err := uuid.Parse(contestID)
 		if err == nil {
-			query += " AND contest_id = $" + string(rune('0'+argIdx))
+			query += fmt.Sprintf(" AND contest_id = $%d", argIdx)
 			args = append(args, parsedContestID)
 			argIdx++
 		}
@@ -180,20 +181,20 @@ func (s *RejudgeStore) ListRejudges(ctx context.Context, contestID, problemID, s
 	if problemID != "" {
 		parsedProblemID, err := uuid.Parse(problemID)
 		if err == nil {
-			query += " AND problem_id = $" + string(rune('0'+argIdx))
+			query += fmt.Sprintf(" AND problem_id = $%d", argIdx)
 			args = append(args, parsedProblemID)
 			argIdx++
 		}
 	}
 	if status != "" {
-		query += " AND status = $" + string(rune('0'+argIdx))
+		query += fmt.Sprintf(" AND status = $%d", argIdx)
 		args = append(args, status)
 		argIdx++
 	}
 	if userID != "" {
 		parsedUserID, err := uuid.Parse(userID)
 		if err == nil {
-			query += " AND user_id = $" + string(rune('0'+argIdx))
+			query += fmt.Sprintf(" AND user_id = $%d", argIdx)
 			args = append(args, parsedUserID)
 			argIdx++
 		}
@@ -209,7 +210,7 @@ func (s *RejudgeStore) ListRejudges(ctx context.Context, contestID, problemID, s
 
 	// Add pagination
 	offset := (page - 1) * pageSize
-	query += " ORDER BY created_at DESC LIMIT $" + string(rune('0'+argIdx)) + " OFFSET $" + string(rune('0'+argIdx+1))
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, pageSize, offset)
 
 	rows, err := s.db.Query(ctx, query, args...)
@@ -337,7 +338,7 @@ func (s *RejudgeStore) GetSubmissionsForRejudge(ctx context.Context, contestID, 
 		if err != nil {
 			return nil, err
 		}
-		query += " AND s.contest_id = $" + string(rune('0'+argIdx))
+		query += fmt.Sprintf(" AND s.contest_id = $%d", argIdx)
 		args = append(args, parsedContestID)
 		argIdx++
 	}
@@ -346,12 +347,12 @@ func (s *RejudgeStore) GetSubmissionsForRejudge(ctx context.Context, contestID, 
 		if err != nil {
 			return nil, err
 		}
-		query += " AND s.problem_id = $" + string(rune('0'+argIdx))
+		query += fmt.Sprintf(" AND s.problem_id = $%d", argIdx)
 		args = append(args, parsedProblemID)
 		argIdx++
 	}
 	if fromVerdict != "" {
-		query += " AND j.verdict = $" + string(rune('0'+argIdx))
+		query += fmt.Sprintf(" AND j.verdict = $%d", argIdx)
 		args = append(args, fromVerdict)
 	}
 
@@ -419,12 +420,12 @@ func (s *RejudgeStore) GetRejudgeSubmissions(ctx context.Context, rejudgeID stri
 	argIdx := 2
 
 	if onlyChanged {
-		query += " AND verdict_changed = $" + string(rune('0'+argIdx))
+		query += fmt.Sprintf(" AND verdict_changed = $%d", argIdx)
 		args = append(args, true)
 		argIdx++
 	}
 	if status != "" {
-		query += " AND status = $" + string(rune('0'+argIdx))
+		query += fmt.Sprintf(" AND status = $%d", argIdx)
 		args = append(args, status)
 		argIdx++
 	}
@@ -439,7 +440,7 @@ func (s *RejudgeStore) GetRejudgeSubmissions(ctx context.Context, rejudgeID stri
 
 	// Add pagination
 	offset := (page - 1) * pageSize
-	query += " ORDER BY submission_id LIMIT $" + string(rune('0'+argIdx)) + " OFFSET $" + string(rune('0'+argIdx+1))
+	query += fmt.Sprintf(" ORDER BY submission_id LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, pageSize, offset)
 
 	rows, err := s.db.Query(ctx, query, args...)

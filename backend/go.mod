@@ -13,7 +13,6 @@ require (
 	github.com/redis/go-redis/v9 v9.3.1
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.11.1
-	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
 )
