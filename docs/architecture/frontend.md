@@ -235,15 +235,23 @@ func NewProblemHandler(client pbProblem.ProblemServiceClient, cache *cache.Servi
 
 func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
     id := chi.URLParam(r, "id")
+    if id == "" {
+        http.Error(w, "missing problem id", http.StatusBadRequest)
+        return
+    }
     resp, err := h.client.GetProblem(r.Context(), &pbProblem.GetProblemRequest{Id: id})
     if err != nil {
         http.Error(w, "problem not found", http.StatusNotFound)
         return
     }
     m := protojson.MarshalOptions{UseProtoNames: true}
-    b, _ := m.Marshal(resp)
+    b, err := m.Marshal(resp)
+    if err != nil {
+        http.Error(w, "internal server error", http.StatusInternalServerError)
+        return
+    }
     w.Header().Set("Content-Type", "application/json")
-    w.Write(b)
+    _, _ = w.Write(b)
 }
 ```
 

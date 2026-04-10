@@ -249,9 +249,15 @@ import (
 )
 
 func main() {
-    cfg, _ := config.Load()
+    cfg, err := config.Load()
+    if err != nil {
+        log.Fatalf("Failed to load config: %v", err)
+    }
 
-    dbpool, _ := pgxpool.New(context.Background(), cfg.DatabaseURL)
+    dbpool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+    if err != nil {
+        log.Fatalf("Failed to connect to database: %v", err)
+    }
     rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisURL})
     asynqClient := queue.NewAsynqClient(cfg.RedisURL)
 
@@ -264,9 +270,14 @@ func main() {
     pbJudge.RegisterJudgeServiceServer(s, judgeService.NewJudgeService(...))
     reflection.Register(s)
 
-    lis, _ := net.Listen("tcp", ":"+cfg.GRPCPort)
+    lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
+    if err != nil {
+        log.Fatalf("Failed to listen: %v", err)
+    }
     log.Printf("Server listening on port %s (all services unified)", cfg.GRPCPort)
-    s.Serve(lis)
+    if err := s.Serve(lis); err != nil {
+        log.Fatalf("Failed to serve: %v", err)
+    }
 }
 ```
 
