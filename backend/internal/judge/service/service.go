@@ -70,10 +70,7 @@ func (s *JudgeService) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 
 	// If judgehost was idle and has capacity, potentially assign new tasks
 	var assignedTasks []string
-	if req.Status == pb.JudgehostStatus_JUDGEHOST_STATUS_IDLE && req.ActiveJobs < 5 {
-		// This would be handled by the task assignment logic
-		// For now, just acknowledge
-	}
+	// TODO: If judgehost was idle and has capacity, assign new tasks via task assignment logic
 
 	return &pb.HeartbeatResponse{
 		Acknowledged:     true,
@@ -109,7 +106,7 @@ func (s *JudgeService) AssignTask(ctx context.Context, req *pb.AssignTaskRequest
 		assigned = true
 
 		// Update judgehost status
-		s.store.IncrementActiveJobs(ctx, judgehostID)
+		_ = s.store.IncrementActiveJobs(ctx, judgehostID)
 	}
 
 	// Enqueue to Asynq

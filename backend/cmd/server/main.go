@@ -52,7 +52,7 @@ func main() {
 
 	// Asynq client (for submission and judge task queues)
 	asynqClient := queue.NewAsynqClient(cfg.RedisURL)
-	defer asynqClient.Close()
+	defer func() { _ = asynqClient.Close() }()
 
 	// Legacy queue (for migration dual-write)
 	legacyQueue := queue.NewLegacyQueue(rdb)
