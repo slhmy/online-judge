@@ -10,7 +10,6 @@ require (
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/lestrrat-go/jwx v1.2.25
 	github.com/minio/minio-go/v7 v7.0.66
-	github.com/online-judge/gen v0.0.0
 	github.com/redis/go-redis/v9 v9.3.1
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.11.1
@@ -68,7 +67,6 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
