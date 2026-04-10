@@ -19,15 +19,9 @@ A modernized online judge platform for competitive programming, built with micro
 └─────────────────────────────┬───────────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
-│                    Backend Microservices (Go + gRPC)             │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                │
-│  │   Problem   │ │ Submission  │ │   Contest   │                │
-│  │   Service   │ │   Service   │ │   Service   │                │
-│  └─────────────┘ └─────────────┘ └─────────────┘                │
-│  ┌─────────────┐ ┌─────────────┐                                 │
-│  │Notification │ │    User     │                                 │
-│  │   Service   │ │   Service   │                                 │
-│  └─────────────┘ └─────────────┘                                 │
+│              Backend - Unified gRPC Server (Go)                  │
+│  All domain services run in a single process on port 8002:       │
+│  Problem · Submission · Contest · User · Notification · Judge    │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
@@ -55,20 +49,21 @@ A modernized online judge platform for competitive programming, built with micro
 
 ```
 .
-├── backend/           # Go microservices with gRPC
-│   ├── cmd/           # Service entrypoints
+├── proto/             # Protobuf definitions (all services)
+├── gen/               # Generated Go code (buf generate proto)
+├── backend/           # Unified Go gRPC server
+│   ├── cmd/server/    # Server entrypoint (all services in one process)
+│   ├── cmd/seed/      # Database seed tool
 │   ├── internal/      # Service implementations
-│   ├── proto/         # Protobuf definitions
-│   ├── gen/           # Generated code
 │   └── migrations/    # Database migrations
 ├── frontend/          # Next.js frontend
 │   ├── src/app/       # App Router pages
 │   ├── src/components/
 │   └── src/lib/
-├── bff/               # Go Backend for Frontend
+├── bff/               # Go Backend for Frontend (chi HTTP → gRPC)
 │   ├── cmd/
 │   └── internal/
-├── judge/             # Judging system
+├── judge/             # Judging daemon
 │   ├── cmd/
 │   └── internal/
 ├── configs/           # Configuration files
@@ -106,11 +101,7 @@ make run
 
 # Or run services individually for development:
 make run-bff        # BFF on port 8080
-make run-problem    # Problem service on port 8002
-make run-submission # Submission service on port 8003
-make run-contest    # Contest service on port 8004
-make run-notification # Notification service on port 8005
-make run-user       # User service (default port 8002)
+make run-backend    # Unified backend gRPC server on port 8002
 make run-judge      # Judge daemon
 make run-frontend   # Frontend on port 3000
 
@@ -136,13 +127,9 @@ make infra-down
 | Service | Port | Description |
 |---------|------|-------------|
 | Frontend | 3000 | Next.js web application |
-| BFF | 8080 | Go BFF layer |
+| BFF | 8080 | Go BFF layer (chi HTTP router) |
 | Identra (gRPC) | 50051 | Authentication service |
-| Problem Service | 8002 | gRPC - Problem management |
-| Submission Service | 8003 | gRPC - Submissions |
-| Contest Service | 8004 | gRPC - Contests |
-| Notification Service | 8005 | gRPC - WebSocket, notifications |
-| User Service | configurable | gRPC - User management |
+| Backend (gRPC) | 8002 | Unified server: Problem, Submission, Contest, User, Notification, Judge |
 | Judge Daemon | - | Judge workers |
 | PostgreSQL | 5432 | Database |
 | Redis | 6379 | Cache & message queue |
@@ -182,9 +169,9 @@ make test-coverage
 make test-integration
 
 # Run tests for specific service
-make test-problem-service
-make test-submission-service
-make test-contest-service
+make test-problem
+make test-submission
+make test-contest
 ```
 
 ## Database Management

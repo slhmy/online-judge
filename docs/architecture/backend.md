@@ -1,139 +1,113 @@
-# Backend Microservices Architecture
+# Backend Architecture
 
 ## Overview
 
-This document outlines the backend architecture for the Online Judge platform, designed with scalability, maintainability, and high availability in mind.
+This document outlines the backend architecture for the Online Judge platform.
 
 ## Architecture Pattern
 
-**Microservices Architecture** with gRPC-first design and event-driven communication.
+**Unified gRPC Server** – all domain services (Problem, Submission, Contest, User, Notification, Judge) run in a single Go process and are registered on one gRPC server on port 8002. The BFF connects to all services through the same address.
 
 ## Technology Stack
 
 | Component | Technology | Justification |
 |-----------|------------|---------------|
 | Language | Go 1.21+ | High performance, strong concurrency, excellent for gRPC |
-| API Protocol | gRPC + gRPC-Gateway | gRPC for inter-service, REST for frontend compatibility |
+| API Protocol | gRPC | Strongly-typed service contracts; BFF translates to REST for the frontend |
 | Protobuf Management | Buf | Modern protobuf tooling, linting, managed mode |
 | Database | PostgreSQL 16 | ACID compliance, relational integrity, mature ecosystem |
-| Cache/Queue | Redis 7 | High-speed caching, session management, pub/sub, judge queue |
+| Cache/Queue | Redis 7 + Asynq | High-speed caching, session management, pub/sub, judge task queue |
 | Authentication | Identra | Out-of-the-box auth service with JWT/JWKS, OAuth, Email, Password |
-| Container Orchestration | Kubernetes | Scalability, self-healing |
 
 ## Project Structure
 
 ```
-backend/
-├── buf.yaml                      # Buf workspace configuration
-├── buf.gen.yaml                  # Buf generation config
-├── proto/
-│   ├── buf.lock
-│   ├── proto/
-│   │   ├── user/
-│   │   │   └── v1/
-│   │   │       └── user.proto
-│   │   ├── problem/
-│   │   │   └── v1/
-│   │   │       └── problem.proto
-│   │   ├── submission/
-│   │   │   └── v1/
-│   │   │       └── submission.proto
-│   │   ├── contest/
-│   │   │   └── v1/
-│   │   │       └── contest.proto
-│   │   └── notification/
-│   │   │   └── v1/
-│   │   │       └── notification.proto
-│   │   └── common/
-│   │       └── v1/
-│   │           └── common.proto    # Shared types
-├── cmd/
-│   ├── user-service/
-│   │   └── main.go
-│   ├── problem-service/
-│   │   └── main.go
-│   ├── submission-service/
-│   │   └── main.go
-│   ├── contest-service/
-│   │   └── main.go
-│   ├── notification-service/
-│   │   └── main.go
-│   └── gateway/
-│   │   └── main.go                # gRPC-Gateway entry point
-├── internal/
-│   ├── user/
-│   │   ├── service/
-│   │   ├── store/
-│   │   └── auth/
-│   ├── problem/
-│   │   ├── service/
-│   │   └── store/
-│   ├── submission/
-│   │   ├── service/
-│   │   └── store/
-│   │   └── queue/
-│   ├── contest/
-│   │   ├── service/
-│   │   └── store/
-│   ├── notification/
-│   │   ├── service/
-│   │   └── websocket/
-│   ├── common/
-│   │   ├── config/
-│   │   ├── logger/
-│   │   ├── middleware/
-│   │   └── redis/
-│   └── pkg/
-│       ├── db/                    # PostgreSQL connection
-│       ├── cache/                 # Redis client (cache + queue + pub/sub)
-├── gen/                           # Generated code (buf)
-│   ├── go/
-│   └── grpc-gateway/
-├── go.mod
-├── go.sum
-├── Makefile
-└── docker-compose.yaml
+.                                     # repository root
+├── proto/                            # Protobuf definitions (all services)
+│   ├── buf.yaml
+│   ├── common/v1/common.proto
+│   ├── user/v1/user.proto
+│   ├── problem/v1/problem.proto
+│   ├── submission/v1/submission.proto
+│   ├── contest/v1/contest.proto
+│   ├── notification/v1/notification.proto
+│   ├── judge/v1/judge.proto
+│   └── sandbox/v1/sandbox.proto
+├── gen/                              # Generated Go code (buf generate proto)
+│   └── go/
+│       ├── common/v1/
+│       ├── user/v1/
+│       ├── problem/v1/
+│       ├── submission/v1/
+│       ├── contest/v1/
+│       ├── notification/v1/
+│       └── judge/v1/
+├── buf.gen.yaml                      # Buf generation config (project root)
+└── backend/
+    ├── cmd/
+    │   ├── server/
+    │   │   └── main.go               # Unified gRPC server entry point
+    │   └── seed/
+    │       └── main.go               # Database seed tool
+    ├── internal/
+    │   ├── problem/
+    │   │   ├── service/
+    │   │   └── store/
+    │   ├── submission/
+    │   │   ├── service/
+    │   │   └── store/
+    │   ├── contest/
+    │   │   ├── service/
+    │   │   └── store/
+    │   ├── notification/
+    │   │   └── service/
+    │   ├── user/
+    │   │   ├── service/
+    │   │   └── store/
+    │   ├── judge/
+    │   │   ├── service/
+    │   │   └── store/
+    │   ├── queue/                    # Asynq + legacy Redis queue
+    │   └── pkg/
+    │       ├── config/               # Viper-based config loader
+    │       ├── middleware/
+    │       └── storage/              # Object storage (S3/MinIO/local)
+    ├── migrations/                   # SQL migration files
+    ├── go.mod
+    └── go.sum
 ```
 
 ## Buf Configuration
 
-### buf.yaml (Workspace)
+### buf.yaml (project root `proto/buf.yaml`)
 ```yaml
-version: v1
-breaking:
-  use:
-    - FILE
+version: v2
 lint:
   use:
     - DEFAULT
-  except:
-    - PACKAGE_VERSION_SUFFIX
+breaking:
+  use:
+    - FILE
 ```
 
-### buf.gen.yaml
+### buf.gen.yaml (project root)
 ```yaml
-version: v1
+version: v2
 plugins:
-  - plugin: go
+  - remote: buf.build/protocolbuffers/go
     out: gen/go
     opt:
       - paths=source_relative
-  - plugin: go-grpc
+  - remote: buf.build/grpc/go
     out: gen/go
     opt:
       - paths=source_relative
-  - plugin: grpc-gateway
-    out: gen/grpc-gateway
-    opt:
-      - paths=source_relative
-      - generate_unbound_methods=true
-  - plugin: openapiv2
-    out: gen/openapiv2
-    opt:
-      - json_names_for_fields=false
 ```
 
 ## Service Definitions (Protobuf)
+
+> Proto files live at `proto/<service>/v1/<service>.proto`.  
+> Generated Go code goes to `gen/go/<service>/v1/` (module `github.com/online-judge/gen`).
 
 ### Common Types
 ```protobuf
@@ -142,7 +116,7 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "github.com/online-judge/backend/gen/go/common/v1;commonv1";
+option go_package = "github.com/online-judge/gen/go/common/v1;commonv1";
 
 message Pagination {
   int32 page = 1;
@@ -168,107 +142,17 @@ syntax = "proto3";
 
 package user.v1;
 
-option go_package = "github.com/online-judge/backend/gen/go/user/v1;userv1";
+option go_package = "github.com/online-judge/gen/go/user/v1;userv1";
 
-import "google/api/annotations.proto";
 import "common/v1/common.proto";
 
 service UserService {
-  rpc Register(RegisterRequest) returns (RegisterResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/auth/register"
-      body: "*"
-    };
-  }
-  
-  rpc Login(LoginRequest) returns (LoginResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/auth/login"
-      body: "*"
-    };
-  }
-  
-  rpc Logout(LogoutRequest) returns (LogoutResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/auth/logout"
-      body: "*"
-    };
-  }
-  
-  rpc GetMe(GetMeRequest) returns (GetMeResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/users/me"
-    };
-  }
-  
-  rpc UpdateMe(UpdateMeRequest) returns (UpdateMeResponse) {
-    option (google.api.http) = {
-      put: "/api/v1/users/me"
-      body: "*"
-    };
-  }
-  
-  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/users/{id}"
-    };
-  }
-}
-
-message RegisterRequest {
-  string username = 1;
-  string email = 2;
-  string password = 3;
-}
-
-message RegisterResponse {
-  string id = 1;
-  string username = 2;
-  string email = 3;
-}
-
-message LoginRequest {
-  string username = 1;
-  string password = 2;
-}
-
-message LoginResponse {
-  string token = 1;
-  common.v1.UserRef user = 2;
-}
-
-message LogoutRequest {}
-message LogoutResponse {}
-
-message GetMeRequest {}
-message GetMeResponse {
-  string id = 1;
-  string username = 2;
-  string email = 3;
-  string role = 4;
-  int32 rating = 5;
-}
-
-message UpdateMeRequest {
-  optional string email = 1;
-  optional string password = 2;
-}
-
-message UpdateMeResponse {
-  string id = 1;
-  string username = 2;
-  string email = 3;
-}
-
-message GetUserRequest {
-  string id = 1;
-}
-
-message GetUserResponse {
-  string id = 1;
-  string username = 2;
-  int32 rating = 3;
-  string created_at = 4;
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc GetUserStats(GetUserStatsRequest) returns (GetUserStatsResponse);
+  rpc GetUserSubmissions(GetUserSubmissionsRequest) returns (GetUserSubmissionsResponse);
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
+  rpc SyncUser(SyncUserRequest) returns (SyncUserResponse);
 }
 ```
 
@@ -279,149 +163,20 @@ syntax = "proto3";
 
 package problem.v1;
 
-option go_package = "github.com/online-judge/backend/gen/go/problem/v1;problemv1";
+option go_package = "github.com/online-judge/gen/go/problem/v1;problemv1";
 
-import "google/api/annotations.proto";
-import "google/protobuf/empty.proto";
 import "common/v1/common.proto";
 
 service ProblemService {
-  rpc ListProblems(ListProblemsRequest) returns (ListProblemsResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/problems"
-    };
-  }
-  
-  rpc GetProblem(GetProblemRequest) returns (GetProblemResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/problems/{id}"
-    };
-  }
-  
-  rpc CreateProblem(CreateProblemRequest) returns (CreateProblemResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/problems"
-      body: "*"
-    };
-  }
-  
-  rpc UpdateProblem(UpdateProblemRequest) returns (UpdateProblemResponse) {
-    option (google.api.http) = {
-      put: "/api/v1/problems/{id}"
-      body: "*"
-    };
-  }
-  
-  rpc DeleteProblem(DeleteProblemRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/api/v1/problems/{id}"
-    };
-  }
-  
-  rpc GetTestCases(GetTestCasesRequest) returns (GetTestCasesResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/problems/{problem_id}/testcases"
-    };
-  }
-  
-  rpc CreateTestCase(CreateTestCaseRequest) returns (CreateTestCaseResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/problems/{problem_id}/testcases"
-      body: "*"
-    };
-  }
-}
-
-message ListProblemsRequest {
-  common.v1.Pagination pagination = 1;
-  optional string difficulty = 2;
-  optional string search = 3;
-}
-
-message ListProblemsResponse {
-  repeated ProblemSummary problems = 1;
-  common.v1.PaginatedResponse pagination = 2;
-}
-
-message ProblemSummary {
-  string id = 1;
-  string title = 2;
-  string slug = 3;
-  string difficulty = 4;
-  int32 acceptance_rate = 5;
-}
-
-message GetProblemRequest {
-  string id = 1;
-}
-
-message GetProblemResponse {
-  string id = 1;
-  string title = 2;
-  string slug = 3;
-  string description = 4;
-  string difficulty = 5;
-  int32 time_limit = 6;   // milliseconds
-  int32 memory_limit = 7; // kilobytes
-  repeated TestCase sample_test_cases = 8;
-  common.v1.UserRef author = 9;
-}
-
-message TestCase {
-  string id = 1;
-  string input = 2;
-  string expected_output = 3;
-  bool is_sample = 4;
-}
-
-message CreateProblemRequest {
-  string title = 1;
-  string slug = 2;
-  string description = 3;
-  string difficulty = 4;
-  int32 time_limit = 5;
-  int32 memory_limit = 6;
-}
-
-message CreateProblemResponse {
-  string id = 1;
-}
-
-message UpdateProblemRequest {
-  string id = 1;
-  optional string title = 2;
-  optional string description = 3;
-  optional string difficulty = 4;
-  optional int32 time_limit = 5;
-  optional int32 memory_limit = 6;
-  optional bool is_published = 7;
-}
-
-message UpdateProblemResponse {
-  string id = 1;
-}
-
-message DeleteProblemRequest {
-  string id = 1;
-}
-
-message GetTestCasesRequest {
-  string problem_id = 1;
-}
-
-message GetTestCasesResponse {
-  repeated TestCase test_cases = 1;
-}
-
-message CreateTestCaseRequest {
-  string problem_id = 1;
-  string input = 2;
-  string expected_output = 3;
-  bool is_sample = 4;
-}
-
-message CreateTestCaseResponse {
-  string id = 1;
+  rpc ListProblems(ListProblemsRequest) returns (ListProblemsResponse);
+  rpc GetProblem(GetProblemRequest) returns (GetProblemResponse);
+  rpc CreateProblem(CreateProblemRequest) returns (CreateProblemResponse);
+  rpc UpdateProblem(UpdateProblemRequest) returns (UpdateProblemResponse);
+  rpc DeleteProblem(DeleteProblemRequest) returns (DeleteProblemResponse);
+  rpc GetProblemStatement(GetProblemStatementRequest) returns (GetProblemStatementResponse);
+  rpc SetProblemStatement(SetProblemStatementRequest) returns (SetProblemStatementResponse);
+  rpc ListLanguages(ListLanguagesRequest) returns (ListLanguagesResponse);
+  rpc GetTestCases(GetTestCasesRequest) returns (GetTestCasesResponse);
 }
 ```
 
@@ -432,36 +187,17 @@ syntax = "proto3";
 
 package submission.v1;
 
-option go_package = "github.com/online-judge/backend/gen/go/submission/v1;submissionv1";
+option go_package = "github.com/online-judge/gen/go/submission/v1;submissionv1";
 
-import "google/api/annotations.proto";
 import "common/v1/common.proto";
 
 service SubmissionService {
-  rpc CreateSubmission(CreateSubmissionRequest) returns (CreateSubmissionResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/submissions"
-      body: "*"
-    };
-  }
-  
-  rpc GetSubmission(GetSubmissionRequest) returns (GetSubmissionResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/submissions/{id}"
-    };
-  }
-  
-  rpc ListSubmissions(ListSubmissionsRequest) returns (ListSubmissionsResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/submissions"
-    };
-  }
-  
-  rpc GetResult(GetResultRequest) returns (GetResultResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/submissions/{submission_id}/result"
-    };
-  }
+  rpc CreateSubmission(CreateSubmissionRequest) returns (CreateSubmissionResponse);
+  rpc GetSubmission(GetSubmissionRequest) returns (GetSubmissionResponse);
+  rpc ListSubmissions(ListSubmissionsRequest) returns (ListSubmissionsResponse);
+  rpc GetJudging(GetJudgingRequest) returns (GetJudgingResponse);
+  rpc GetRuns(GetRunsRequest) returns (GetRunsResponse);
+  rpc UpdateJudgingResult(UpdateJudgingResultRequest) returns (UpdateJudgingResultResponse);
 }
 
 enum Verdict {
@@ -475,184 +211,62 @@ enum Verdict {
   VERDICT_PE = 7;   // Presentation Error
   VERDICT_SE = 8;   // System Error
 }
-
-message CreateSubmissionRequest {
-  string problem_id = 1;
-  string language = 2;
-  string source_code = 3;
-}
-
-message CreateSubmissionResponse {
-  string id = 1;
-  string status = 2;  // "pending", "queued"
-}
-
-message GetSubmissionRequest {
-  string id = 1;
-}
-
-message GetSubmissionResponse {
-  string id = 1;
-  string problem_id = 2;
-  common.v1.UserRef user = 3;
-  string language = 4;
-  string status = 5;
-  string created_at = 6;
-}
-
-message ListSubmissionsRequest {
-  common.v1.Pagination pagination = 1;
-  optional string user_id = 2;
-  optional string problem_id = 3;
-  optional string status = 4;
-  optional Verdict verdict = 5;
-}
-
-message ListSubmissionsResponse {
-  repeated SubmissionSummary submissions = 1;
-  common.v1.PaginatedResponse pagination = 2;
-}
-
-message SubmissionSummary {
-  string id = 1;
-  common.v1.UserRef user = 2;
-  string problem_id = 3;
-  string problem_title = 4;
-  string language = 5;
-  Verdict verdict = 6;
-  int32 time = 7;    // milliseconds
-  int32 memory = 8;  // kilobytes
-  string created_at = 9;
-}
-
-message GetResultRequest {
-  string submission_id = 1;
-}
-
-message GetResultResponse {
-  string submission_id = 1;
-  Verdict verdict = 2;
-  int32 time = 3;
-  int32 memory = 4;
-  repeated TestResult test_results = 5;
-  optional string compile_error = 6;
-}
-
-message TestResult {
-  string test_case_id = 1;
-  Verdict verdict = 2;
-  int32 time = 3;
-  int32 memory = 4;
-  bool passed = 5;
-}
 ```
 
-## Service Configuration
+## Server Bootstrap
 
-### Go Service Bootstrap
+All domain services are wired together and registered on a single gRPC server in `backend/cmd/server/main.go`:
+
 ```go
-// cmd/user-service/main.go
+// backend/cmd/server/main.go
 package main
 
 import (
-    "context"
     "log"
     "net"
-    
-    "github.com/online-judge/backend/internal/user/service"
-    "github.com/online-judge/backend/internal/user/store"
-    "github.com/online-judge/backend/internal/common/config"
-    "github.com/online-judge/backend/internal/pkg/db"
-    "github.com/online-judge/backend/internal/pkg/cache"
-    userv1 "github.com/online-judge/backend/gen/go/user/v1"
-    
+
+    "github.com/jackc/pgx/v5/pgxpool"
+    "github.com/redis/go-redis/v9"
     "google.golang.org/grpc"
+    "google.golang.org/grpc/reflection"
+
+    pbContest      "github.com/online-judge/gen/go/contest/v1"
+    pbJudge        "github.com/online-judge/gen/go/judge/v1"
+    pbNotification "github.com/online-judge/gen/go/notification/v1"
+    pbProblem      "github.com/online-judge/gen/go/problem/v1"
+    pbSubmission   "github.com/online-judge/gen/go/submission/v1"
+    pbUser         "github.com/online-judge/gen/go/user/v1"
+
+    contestService      "github.com/online-judge/backend/internal/contest/service"
+    judgeService        "github.com/online-judge/backend/internal/judge/service"
+    notificationService "github.com/online-judge/backend/internal/notification/service"
+    "github.com/online-judge/backend/internal/pkg/config"
+    problemService      "github.com/online-judge/backend/internal/problem/service"
+    "github.com/online-judge/backend/internal/queue"
+    submissionService   "github.com/online-judge/backend/internal/submission/service"
+    userService         "github.com/online-judge/backend/internal/user/service"
+    // ...stores omitted for brevity
 )
 
 func main() {
-    cfg := config.Load()
-    
-    // PostgreSQL connection
-    pgDB := db.NewPostgres(cfg.DatabaseURL)
-    userStore := store.NewUserStore(pgDB)
-    
-    // Redis connection
-    redisClient := cache.NewRedis(cfg.RedisURL)
-    
-    // gRPC server
-    srv := grpc.NewServer(
-        grpc.UnaryInterceptor(authInterceptor),
-    )
-    
-    userService := service.NewUserService(userStore, redisClient)
-    userv1.RegisterUserServiceServer(srv, userService)
-    
-    lis, err := net.Listen("tcp", ":" + cfg.GRPCPort)
-    if err != nil {
-        log.Fatalf("failed to listen: %v", err)
-    }
-    
-    log.Printf("User Service listening on %s", cfg.GRPCPort)
-    if err := srv.Serve(lis); err != nil {
-        log.Fatalf("failed to serve: %v", err)
-    }
-}
-```
+    cfg, _ := config.Load()
 
-### gRPC-Gateway Setup
-```go
-// cmd/gateway/main.go
-package main
+    dbpool, _ := pgxpool.New(context.Background(), cfg.DatabaseURL)
+    rdb := redis.NewClient(&redis.Options{Addr: cfg.RedisURL})
+    asynqClient := queue.NewAsynqClient(cfg.RedisURL)
 
-import (
-    "context"
-    "log"
-    "net/http"
-    
-    "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
-    
-    userv1 "github.com/online-judge/backend/gen/go/user/v1"
-    problemv1 "github.com/online-judge/backend/gen/go/problem/v1"
-    submissionv1 "github.com/online-judge/backend/gen/go/submission/v1"
-    contestv1 "github.com/online-judge/backend/gen/go/contest/v1"
-)
+    s := grpc.NewServer()
+    pbProblem.RegisterProblemServiceServer(s, problemService.NewProblemService(...))
+    pbSubmission.RegisterSubmissionServiceServer(s, submissionService.NewSubmissionService(...))
+    pbContest.RegisterContestServiceServer(s, contestService.NewContestService(...))
+    pbUser.RegisterUserServiceServer(s, userService.NewUserService(...))
+    pbNotification.RegisterNotificationServiceServer(s, notificationService.NewNotificationService(rdb))
+    pbJudge.RegisterJudgeServiceServer(s, judgeService.NewJudgeService(...))
+    reflection.Register(s)
 
-func main() {
-    ctx := context.Background()
-    ctx, cancel := context.WithCancel(ctx)
-    defer cancel()
-    
-    mux := runtime.NewServeMux(
-        runtime.WithMetadata(extractMetadata),
-    )
-    
-    opts := []grpc.DialOption{
-        grpc.WithTransportCredentials(insecure.NewCredentials()),
-    }
-    
-    // Register gRPC-Gateway handlers
-    if err := userv1.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "user-service:8001", opts); err != nil {
-        log.Fatal(err)
-    }
-    if err := problemv1.RegisterProblemServiceHandlerFromEndpoint(ctx, mux, "problem-service:8002", opts); err != nil {
-        log.Fatal(err)
-    }
-    if err := submissionv1.RegisterSubmissionServiceHandlerFromEndpoint(ctx, mux, "submission-service:8003", opts); err != nil {
-        log.Fatal(err)
-    }
-    if err := contestv1.RegisterContestServiceHandlerFromEndpoint(ctx, mux, "contest-service:8004", opts); err != nil {
-        log.Fatal(err)
-    }
-    
-    // HTTP server with CORS and auth middleware
-    http.Handle("/", withCORS(withAuth(mux)))
-    
-    log.Println("gRPC-Gateway listening on :8080")
-    if err := http.ListenAndServe(":8080", nil); err != nil {
-        log.Fatal(err)
-    }
+    lis, _ := net.Listen("tcp", ":"+cfg.GRPCPort)
+    log.Printf("Server listening on port %s (all services unified)", cfg.GRPCPort)
+    s.Serve(lis)
 }
 ```
 
