@@ -107,7 +107,7 @@ func main() {
 
 	reflection.Register(s)
 
-	log.Printf("Center service listening on port %s (all services unified)", cfg.GRPCPort)
+	log.Printf("Server listening on port %s (all services unified)", cfg.GRPCPort)
 	log.Printf("  - Problem, Submission, Contest, User, Notification, Judge")
 	log.Printf("  - Queue config: asynq=%v, legacy=%v", cfg.UseAsynqQueue, cfg.UseLegacyQueue)
 	if err := s.Serve(lis); err != nil {

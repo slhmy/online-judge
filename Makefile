@@ -53,8 +53,8 @@ proto-format:
 # ============================================
 
 build-backend:
-	@echo "Building backend center service..."
-	cd backend && go build -o bin/center ./cmd/center
+	@echo "Building backend server..."
+	cd backend && go build -o bin/server ./cmd/server
 
 build-bff:
 	@echo "Building BFF..."
@@ -80,8 +80,8 @@ run-frontend:
 run-bff:
 	cd bff && go run ./cmd/bff
 
-run-center:
-	cd backend && go run ./cmd/center
+run-backend:
+	cd backend && go run ./cmd/server
 
 run-judge:
 	cd judge && go run ./cmd/judgedaemon

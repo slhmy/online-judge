@@ -80,12 +80,12 @@ services:
   # Application Services (uncomment when ready)
   # ============================================
 
-  # center:
+  # backend:
   #   build:
   #     context: ./backend
   #     dockerfile: Dockerfile
   #     args:
-  #       SERVICE: center
+  #       SERVICE: server
   #   ports:
   #     - "8002:8002"
   #   environment:
@@ -106,16 +106,16 @@ services:
   #   ports:
   #     - "8080:8080"
   #   environment:
-  #     - PROBLEM_SERVICE_ADDR=center:8002
-  #     - SUBMISSION_SERVICE_ADDR=center:8002
-  #     - CONTEST_SERVICE_ADDR=center:8002
-  #     - NOTIFICATION_SERVICE_ADDR=center:8002
-  #     - USER_SERVICE_ADDR=center:8002
+  #     - PROBLEM_SERVICE_ADDR=backend:8002
+  #     - SUBMISSION_SERVICE_ADDR=backend:8002
+  #     - CONTEST_SERVICE_ADDR=backend:8002
+  #     - NOTIFICATION_SERVICE_ADDR=backend:8002
+  #     - USER_SERVICE_ADDR=backend:8002
   #     - IDENTRA_GRPC_HOST=identra-grpc:50051
   #     - IDENTRA_HTTP_HOST=identra-gateway:8080
   #     - REDIS_URL=redis://redis:6379
   #   depends_on:
-  #     - center
+  #     - backend
   #     - identra-grpc
 
   # frontend:
