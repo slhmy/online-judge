@@ -285,7 +285,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Check if this account is temporarily locked due to too many failed attempts
 	if locked, retryAfter := h.isLoginLocked(ctx, req.Email); locked {
 		w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
-		writeAuthErrorSimple(w, AuthErrorCodeTooManyAttempts, fmt.Sprintf("登录尝试次数过多，请 %d 秒后再试", retryAfter))
+		writeAuthErrorSimple(w, AuthErrorCodeTooManyAttempts, fmt.Sprintf("Too many failed login attempts. Please try again in %d seconds.", retryAfter))
 		return
 	}
 
