@@ -15,20 +15,20 @@ This document outlines the frontend architecture for the Online Judge platform, 
 │  - React Server Components                                       │
 │  - Client-side hydration                                         │
 └─────────────────────────────┬───────────────────────────────────┘
-                              │ HTTP/WebSocket
+                              │ HTTP/SSE
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
 │                         Go BFF Layer                             │
 │  - API aggregation from backend services                         │
-│  - Authentication proxy                                          │
-│  - WebSocket connection manager                                  │
+│  - Authentication proxy (Identra gRPC)                           │
+│  - Server-Sent Events (SSE) for real-time updates                │
 │  - Response transformation                                       │
 └─────────────────────────────┬───────────────────────────────────┘
                               │ gRPC
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
-│                    Backend Microservices                         │
-│  (User, Problem, Submission, Contest, Notification)              │
+│              Backend - Unified gRPC Server (port 8002)           │
+│  (Problem, Submission, Contest, User, Notification, Judge)       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,10 +49,10 @@ This document outlines the frontend architecture for the Online Judge platform, 
 | Category | Technology | Justification |
 |----------|------------|---------------|
 | Language | Go 1.21+ | High performance, concurrent request handling |
-| HTTP Framework | Gin or Fiber | Fast routing, middleware support |
-| gRPC Client | grpc-go | Connect to backend microservices |
-| WebSocket | gorilla/websocket | Real-time communication |
-| Cache | Redis | Session storage, response caching |
+| HTTP Framework | Chi | Lightweight, idiomatic HTTP router |
+| gRPC Client | grpc-go | Connect to unified backend server |
+| Real-time | Server-Sent Events (SSE) | Real-time submission updates pushed from Redis |
+| Cache | Redis | Response caching (problems, contests, scoreboards) |
 
 ## Project Structure
 
@@ -127,46 +127,32 @@ frontend/
 ```
 bff/
 ├── cmd/
-│   └── main.go                    # Entry point
+│   └── bff/
+│       └── main.go                    # Entry point (chi router setup)
 ├── internal/
 │   ├── handler/
-│   │   ├── auth.go                # Auth endpoints
-│   │   ├── problem.go             # Problem endpoints
-│   │   ├── submission.go          # Submission endpoints
-│   │   ├── contest.go             # Contest endpoints
-│   │   └── user.go                # User endpoints
-│   ├── grpc/
-│   │   ├── user_client.go         # User service client
-│   │   ├── problem_client.go      # Problem service client
-│   │   ├── submission_client.go   # Submission service client
-│   │   ├── contest_client.go      # Contest service client
-│   │   └── notification_client.go # Notification service client
-│   ├── websocket/
-│   │   ├── manager.go             # WebSocket connection manager
-│   │   ├── hub.go                 # Message hub
-│   │   └── client.go              # Client connection
+│   │   ├── auth.go                    # Auth endpoints (Identra proxy)
+│   │   ├── problem.go                 # Problem endpoints
+│   │   ├── submission.go              # Submission endpoints
+│   │   ├── contest.go                 # Contest endpoints
+│   │   ├── user.go                    # User endpoints
+│   │   ├── admin.go                   # Admin endpoints (rejudge, etc.)
+│   │   ├── sse.go                     # Server-Sent Events handler
+│   │   ├── internal.go                # Internal API for judge daemon
+│   │   └── testrun.go                 # Sample test case execution
 │   ├── middleware/
-│   │   ├── auth.go                # JWT validation
-│   │   ├── cors.go                # CORS handling
-│   │   └── ratelimit.go           # Rate limiting
-│   ├── aggregator/
-│   │   ├── problem.go             # Aggregate problem + test cases
-│   │   ├── contest.go             # Aggregate contest + rankings
-│   │   └── dashboard.go           # Aggregate user dashboard
-│   ├── transformer/
-│   │   ├── response.go            # Transform gRPC to HTTP response
-│   │   └── request.go             # Transform HTTP to gRPC request
-│   └── config/
-│   │   └── config.go
-├── pkg/
+│   │   ├── auth.go                    # JWT validation (Identra JWKS)
+│   │   └── ratelimit.go               # Per-user and per-IP rate limiting
 │   ├── cache/
-│   │   └── redis.go               # Redis client
-│   └── session/
-│   │   └── session.go             # Session management
-├── gen/                           # Generated gRPC stubs
+│   │   └── service.go                 # Redis-backed cache (problems, contests)
+│   ├── sse/
+│   │   └── hub.go                     # SSE hub (Redis pub/sub → HTTP SSE)
+│   ├── identra/                       # Identra gRPC client helpers
+│   ├── sandbox/                       # Sandbox (test run) execution
+│   └── config/
+│       └── config.go                  # Viper-based config loader
 ├── go.mod
 ├── go.sum
-├── Makefile
 └── Dockerfile
 ```
 
@@ -174,166 +160,111 @@ bff/
 
 ### REST Endpoints (Go BFF)
 ```
-POST   /api/v1/auth/register           → User Service.Register
-POST   /api/v1/auth/login              → User Service.Login + Session
-POST   /api/v1/auth/logout             → User Service.Logout + Session Clear
-GET    /api/v1/auth/me                 → User Service.GetMe (cached)
+# Auth (Identra proxy)
+POST   /api/v1/auth/register
+POST   /api/v1/auth/login
+POST   /api/v1/auth/logout
+GET    /api/v1/auth/me
+GET    /api/v1/auth/github                  → OAuth redirect
+GET    /api/v1/auth/github/callback         → OAuth callback
 
-GET    /api/v1/problems                → Problem Service.ListProblems
-GET    /api/v1/problems/:id            → Problem Service.GetProblem + TestCases (aggregated)
-POST   /api/v1/problems                → Problem Service.CreateProblem (admin)
+# Problems
+GET    /api/v1/problems                     → ProblemService.ListProblems
+GET    /api/v1/problems/:id                 → ProblemService.GetProblem
+GET    /api/v1/problems/:id/statement       → ProblemService.GetProblemStatement
+POST   /api/v1/problems           (auth)    → ProblemService.CreateProblem
+PUT    /api/v1/problems/:id       (auth)    → ProblemService.UpdateProblem
+DELETE /api/v1/problems/:id       (auth)    → ProblemService.DeleteProblem
+PUT    /api/v1/problems/:id/statement (auth)→ ProblemService.SetProblemStatement
+GET    /api/v1/languages                    → ProblemService.ListLanguages
 
-POST   /api/v1/submissions             → Submission Service.Create + Queue
-GET    /api/v1/submissions/:id         → Submission Service.GetSubmission
-GET    /api/v1/submissions             → Submission Service.ListSubmissions (filtered)
-GET    /api/v1/submissions/:id/result  → Submission Service.GetResult
+# Submissions
+POST   /api/v1/submissions  (rate-limited)  → SubmissionService.CreateSubmission
+GET    /api/v1/submissions                  → SubmissionService.ListSubmissions
+GET    /api/v1/submissions/:id              → SubmissionService.GetSubmission
+GET    /api/v1/submissions/:id/judging      → SubmissionService.GetJudging
+GET    /api/v1/submissions/:id/runs         → SubmissionService.GetRuns
+POST   /api/v1/submissions/:id/rejudge (auth) → JudgeService.Rejudge
 
-GET    /api/v1/contests                → Contest Service.ListContests
-GET    /api/v1/contests/:id            → Contest Service.GetContest + Problems (aggregated)
-GET    /api/v1/contests/:id/rankings   → Contest Service.GetRankings (cached in Redis)
-POST   /api/v1/contests/:id/register   → Contest Service.Register
+# Contests
+GET    /api/v1/contests                     → ContestService.ListContests
+GET    /api/v1/contests/:id                 → ContestService.GetContest
+GET    /api/v1/contests/:id/problems        → ContestService.GetContestProblems
+GET    /api/v1/contests/:id/scoreboard      → ContestService.GetScoreboard (cached)
+POST   /api/v1/contests/:id/register        → ContestService.RegisterForContest
 
-WS     /ws                             → WebSocket for real-time updates
+# Users
+GET    /api/v1/users/:id/profile            → UserService.GetUserProfile
+GET    /api/v1/users/:id/stats              → UserService.GetUserStats
+GET    /api/v1/users/:id/submissions        → UserService.GetUserSubmissions
+PUT    /api/v1/users/:id/profile  (auth)    → UserService.UpdateUserProfile
+
+# Test runs (sample test case execution without submission)
+POST   /api/v1/testrun
+
+# Real-time updates
+GET    /sse/submissions/:id                 → Server-Sent Events stream
+
+# Internal API (judge daemon)
+POST   /internal/judging/:id/result         → update judging result
+GET    /internal/submissions/:id            → fetch submission for judging
 ```
 
 ### BFF Handler Implementation
 ```go
-// internal/handler/problem.go
+// bff/internal/handler/problem.go
 package handler
 
 import (
     "net/http"
-    
-    "github.com/gin-gonic/gin"
-    "github.com/online-judge/bff/internal/grpc"
-    "github.com/online-judge/bff/internal/aggregator"
-    "github.com/online-judge/bff/internal/transformer"
+
+    "github.com/go-chi/chi/v5"
+    pbProblem "github.com/online-judge/gen/go/problem/v1"
+    "github.com/online-judge/bff/internal/cache"
+    "google.golang.org/protobuf/encoding/protojson"
 )
 
 type ProblemHandler struct {
-    problemClient *grpc.ProblemClient
-    aggregator    *aggregator.ProblemAggregator
+    client pbProblem.ProblemServiceClient
+    cache  *cache.Service
 }
 
-func (h *ProblemHandler) GetProblem(c *gin.Context) {
-    problemID := c.Param("id")
-    
-    // Fetch problem details from gRPC service
-    problem, err := h.problemClient.GetProblem(c.Request.Context(), problemID)
-    if err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
+func NewProblemHandler(client pbProblem.ProblemServiceClient, cache *cache.Service) *ProblemHandler {
+    return &ProblemHandler{client: client, cache: cache}
+}
+
+func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
+    id := chi.URLParam(r, "id")
+    if id == "" {
+        http.Error(w, "missing problem id", http.StatusBadRequest)
         return
     }
-    
-    // Aggregate with test cases (sample only for non-admin)
-    sampleCases, err := h.aggregator.GetSampleTestCases(c.Request.Context(), problemID)
+    resp, err := h.client.GetProblem(r.Context(), &pbProblem.GetProblemRequest{Id: id})
     if err != nil {
-        sampleCases = nil
+        http.Error(w, "problem not found", http.StatusNotFound)
+        return
     }
-    
-    // Transform to frontend-friendly response
-    response := transformer.ToProblemResponse(problem, sampleCases)
-    c.JSON(http.StatusOK, response)
+    m := protojson.MarshalOptions{UseProtoNames: true}
+    b, err := m.Marshal(resp)
+    if err != nil {
+        http.Error(w, "internal server error", http.StatusInternalServerError)
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    _, _ = w.Write(b)
 }
 ```
 
-### gRPC Aggregation
-```go
-// internal/aggregator/contest.go
-package aggregator
+## SSE (Server-Sent Events) - BFF
 
-import (
-    "context"
-    
-    contestv1 "github.com/online-judge/backend/gen/go/contest/v1"
-    problemv1 "github.com/online-judge/backend/gen/go/problem/v1"
-)
+Real-time submission updates are delivered via SSE. The BFF SSE hub subscribes to Redis pub/sub channels published by the judge daemon and streams events to connected clients.
 
-type ContestAggregator struct {
-    contestClient  contestv1.ContestServiceClient
-    problemClient  problemv1.ProblemServiceClient
-}
-
-func (a *ContestAggregator) GetContestDetail(ctx context.Context, contestID string) (*ContestDetail, error) {
-    // Fetch contest info
-    contest, err := a.contestClient.GetContest(ctx, &contestv1.GetContestRequest{Id: contestID})
-    if err != nil {
-        return nil, err
-    }
-    
-    // Fetch contest problems
-    problemsResp, err := a.contestClient.GetContestProblems(ctx, &contestv1.GetContestProblemsRequest{ContestId: contestID})
-    if err != nil {
-        return nil, err
-    }
-    
-    // Fetch rankings (cached)
-    rankings, err := a.contestClient.GetRankings(ctx, &contestv1.GetRankingsRequest{ContestId: contestID})
-    
-    // Combine into single response
-    return &ContestDetail{
-        Contest:   contest,
-        Problems:  problemsResp.Problems,
-        Rankings:  rankings.Entries,
-    }, nil
-}
 ```
-
-## WebSocket Manager (BFF)
-
-```go
-// internal/websocket/manager.go
-package websocket
-
-import (
-    "sync"
-    
-    "github.com/gorilla/websocket"
-)
-
-type Manager struct {
-    clients    map[string]*Client // userID -> Client
-    hubs       map[string]*Hub    // submissionID/contestID -> Hub
-    register   chan *Client
-    unregister chan *Client
-    mu         sync.RWMutex
-}
-
-func (m *Manager) Run() {
-    for {
-        select {
-        case client := <-m.register:
-            m.mu.Lock()
-            m.clients[client.userID] = client
-            m.mu.Unlock()
-            
-        case client := <-m.unregister:
-            m.mu.Lock()
-            delete(m.clients, client.userID)
-            m.mu.Unlock()
-            client.conn.Close()
-        }
-    }
-}
-
-// Subscribe to submission updates
-func (m *Manager) SubscribeSubmission(userID string, submissionID string) {
-    m.mu.Lock()
-    if client, ok := m.clients[userID]; ok {
-        hub := m.getOrCreateHub(submissionID)
-        hub.subscribe(client)
-    }
-    m.mu.Unlock()
-}
-
-// Broadcast judging progress
-func (m *Manager) BroadcastSubmissionProgress(submissionID string, progress *JudgeProgress) {
-    m.mu.RLock()
-    if hub, ok := m.hubs[submissionID]; ok {
-        hub.broadcast(progress)
-    }
-    m.mu.RUnlock()
-}
+Client → GET /sse/submissions/:id
+              ↓ (long-lived HTTP response)
+BFF SSE Hub ← Redis SUBSCRIBE judge:submission:<id>
+              ↓ event: data: {"verdict":"AC","time":42}
+Client receives server-sent events
 ```
 
 ## Next.js Frontend Implementation
@@ -444,66 +375,34 @@ class BFFClient {
 export const bffClient = new BFFClient(BFF_URL);
 ```
 
-### WebSocket Hook (Client Component)
+### SSE Hook (Client Component)
 ```typescript
-// src/hooks/useWebSocket.ts
-import { useEffect, useRef } from 'react';
-import { useAuthStore } from '@/stores/authStore';
+// src/hooks/useSubmissionSSE.ts
+import { useEffect } from 'react';
 
-interface SubmissionProgress {
-  submissionId: string;
-  status: 'pending' | 'judging' | 'completed' | 'error';
-  progress: number;
-  verdict?: string;
-  time?: number;
-  memory?: number;
-}
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || '';
 
-export function useWebSocket() {
-  const wsRef = useRef<WebSocket | null>(null);
-  const { token } = useAuthStore();
-
+export function useSubmissionSSE(
+  submissionId: string,
+  onUpdate: (data: { verdict?: string; status: string }) => void
+) {
   useEffect(() => {
-    if (!token) return;
+    if (!submissionId) return;
 
-    const wsUrl = `${BFF_WS_URL}/ws?token=${token}`;
-    wsRef.current = new WebSocket(wsUrl);
+    const es = new EventSource(`${BFF_URL}/sse/submissions/${submissionId}`);
 
-    wsRef.current.onopen = () => {
-      console.log('WebSocket connected');
-    };
-
-    wsRef.current.onerror = (err) => {
-      console.error('WebSocket error:', err);
-    };
-
-    return () => {
-      wsRef.current?.close();
-    };
-  }, [token]);
-
-  const subscribeToSubmission = (
-    submissionId: string,
-    onUpdate: (progress: SubmissionProgress) => void
-  ) => {
-    if (!wsRef.current) return;
-
-    // Send subscription message
-    wsRef.current.send(JSON.stringify({
-      type: 'subscribe',
-      channel: `submission:${submissionId}`,
-    }));
-
-    // Handle incoming messages
-    wsRef.current.onmessage = (event) => {
+    es.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.channel === `submission:${submissionId}`) {
-        onUpdate(data.payload);
+      onUpdate(data);
+      if (data.status === 'completed' || data.status === 'error') {
+        es.close();
       }
     };
-  };
 
-  return { subscribeToSubmission };
+    es.onerror = () => es.close();
+
+    return () => es.close();
+  }, [submissionId, onUpdate]);
 }
 ```
 
@@ -514,10 +413,8 @@ export function useWebSocket() {
 
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { useWebSocket } from '@/hooks/useWebSocket';
-import { useAuthStore } from '@/stores/authStore';
+import { useSubmissionSSE } from '@/hooks/useSubmissionSSE';
 import { bffClient } from '@/lib/bff-client';
-import { SubmissionStatus } from '@/components/submission/SubmissionStatus';
 
 interface CodeEditorProps {
   problemId: string;
@@ -531,15 +428,12 @@ export function CodeEditor({ problemId, language, timeLimit, memoryLimit }: Code
   const [currentLang, setCurrentLang] = useState(language);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { subscribeToSubmission } = useWebSocket();
-  const { token } = useAuthStore();
+
+  useSubmissionSSE(submissionId ?? '', (data) => {
+    if (data.status === 'completed') setIsSubmitting(false);
+  });
 
   const handleSubmit = async () => {
-    if (!token) {
-      alert('Please login to submit');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const submission = await bffClient.createSubmission({
@@ -547,58 +441,25 @@ export function CodeEditor({ problemId, language, timeLimit, memoryLimit }: Code
         language: currentLang,
         sourceCode: code,
       });
-      
       setSubmissionId(submission.id);
-      
-      // Subscribe to real-time updates
-      subscribeToSubmission(submission.id, (progress) => {
-        if (progress.status === 'completed') {
-          setIsSubmitting(false);
-        }
-      });
-    } catch (err) {
+    } catch {
       setIsSubmitting(false);
-      alert('Submission failed');
     }
   };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-2 border-b">
-        <LanguageSelector 
-          value={currentLang}
-          onChange={setCurrentLang}
-        />
-        <div className="flex gap-2">
-          <span className="text-sm text-muted-foreground">
-            Time: {timeLimit}ms | Memory: {memoryLimit}KB
-          </span>
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="btn btn-primary"
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit'}
-          </button>
-        </div>
-      </div>
-      
       <Editor
         height="400px"
         language={currentLang}
         theme="vs-dark"
         value={code}
         onChange={setCode}
-        options={{
-          fontSize: 14,
-          minimap: { enabled: false },
-          automaticLayout: true,
-        }}
+        options={{ fontSize: 14, minimap: { enabled: false }, automaticLayout: true }}
       />
-      
-      {submissionId && (
-        <SubmissionStatus submissionId={submissionId} />
-      )}
+      <button onClick={handleSubmit} disabled={isSubmitting} className="btn btn-primary">
+        {isSubmitting ? 'Submitting...' : 'Submit'}
+      </button>
     </div>
   );
 }
