@@ -80,58 +80,24 @@ services:
   # Application Services (uncomment when ready)
   # ============================================
 
-  # problem-service:
+  # backend:
   #   build:
   #     context: ./backend
-  #     dockerfile: Dockerfile.problem
+  #     dockerfile: Dockerfile
+  #     args:
+  #       SERVICE: server
   #   ports:
   #     - "8002:8002"
   #   environment:
+  #     - GRPC_PORT=8002
   #     - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-  #     - REDIS_URL=redis://redis:6379
-  #     - IDENTRA_JWKS_URL=http://identra-gateway:8080/.well-known/jwks.json
+  #     - REDIS_URL=redis:6379
+  #     - IDENTRA_JWKS_URL=http://identra-grpc:50051/.well-known/jwks.json
   #   depends_on:
   #     postgres:
   #       condition: service_healthy
   #     redis:
   #       condition: service_started
-
-  # submission-service:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile.submission
-  #   ports:
-  #     - "8003:8003"
-  #   environment:
-  #     - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-  #     - REDIS_URL=redis://redis:6379
-  #   depends_on:
-  #     - postgres
-  #     - redis
-
-  # contest-service:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile.contest
-  #   ports:
-  #     - "8004:8004"
-  #   environment:
-  #     - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-  #     - REDIS_URL=redis://redis:6379
-  #   depends_on:
-  #     - postgres
-  #     - redis
-
-  # notification-service:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile.notification
-  #   ports:
-  #     - "8005:8005"
-  #   environment:
-  #     - REDIS_URL=redis://redis:6379
-  #   depends_on:
-  #     - redis
 
   # bff:
   #   build:
@@ -140,17 +106,16 @@ services:
   #   ports:
   #     - "8080:8080"
   #   environment:
-  #     - PROBLEM_SERVICE_ADDR=problem-service:8002
-  #     - SUBMISSION_SERVICE_ADDR=submission-service:8003
-  #     - CONTEST_SERVICE_ADDR=contest-service:8004
-  #     - NOTIFICATION_SERVICE_ADDR=notification-service:8005
+  #     - PROBLEM_SERVICE_ADDR=backend:8002
+  #     - SUBMISSION_SERVICE_ADDR=backend:8002
+  #     - CONTEST_SERVICE_ADDR=backend:8002
+  #     - NOTIFICATION_SERVICE_ADDR=backend:8002
+  #     - USER_SERVICE_ADDR=backend:8002
   #     - IDENTRA_GRPC_HOST=identra-grpc:50051
-#     - IDENTRA_HTTP_HOST=identra-gateway:8080
+  #     - IDENTRA_HTTP_HOST=identra-gateway:8080
   #     - REDIS_URL=redis://redis:6379
   #   depends_on:
-  #     - problem-service
-  #     - submission-service
-  #     - contest-service
+  #     - backend
   #     - identra-grpc
 
   # frontend:

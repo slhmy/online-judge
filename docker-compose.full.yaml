@@ -77,16 +77,16 @@ services:
         condition: service_completed_successfully
 
   # ============================================
-  # Backend Services
+  # Backend Server (all gRPC services unified)
   # ============================================
 
-  problem-service:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        SERVICE: problem-service
-    container_name: oj-problem-service
+        SERVICE: server
+    container_name: oj-backend
     ports:
       - "8002:8002"
     environment:
@@ -101,55 +101,6 @@ services:
         condition: service_started
       identra-grpc:
         condition: service_started
-
-  submission-service:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        SERVICE: submission-service
-    container_name: oj-submission-service
-    ports:
-      - "8003:8003"
-    environment:
-      - GRPC_PORT=8003
-      - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-      - REDIS_URL=redis:6379
-    depends_on:
-      - postgres
-      - redis
-
-  contest-service:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        SERVICE: contest-service
-    container_name: oj-contest-service
-    ports:
-      - "8004:8004"
-    environment:
-      - GRPC_PORT=8004
-      - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-      - REDIS_URL=redis:6379
-    depends_on:
-      - postgres
-      - redis
-
-  notification-service:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        SERVICE: notification-service
-    container_name: oj-notification-service
-    ports:
-      - "8005:8005"
-    environment:
-      - GRPC_PORT=8005
-      - REDIS_URL=redis:6379
-    depends_on:
-      - redis
 
   # ============================================
   # BFF Layer
@@ -166,16 +117,15 @@ services:
       - HTTP_PORT=8080
       - REDIS_URL=redis:6379
       - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-      - PROBLEM_SERVICE_ADDR=problem-service:8002
-      - SUBMISSION_SERVICE_ADDR=submission-service:8003
-      - CONTEST_SERVICE_ADDR=contest-service:8004
-      - NOTIFICATION_SERVICE_ADDR=notification-service:8005
+      - PROBLEM_SERVICE_ADDR=backend:8002
+      - SUBMISSION_SERVICE_ADDR=backend:8002
+      - CONTEST_SERVICE_ADDR=backend:8002
+      - NOTIFICATION_SERVICE_ADDR=backend:8002
+      - USER_SERVICE_ADDR=backend:8002
       - IDENTRA_GRPC_HOST=identra-grpc:50051
       - ADMIN_EMAIL=admin@example.com
     depends_on:
-      - problem-service
-      - submission-service
-      - contest-service
+      - backend
       - identra-grpc
 
   # ============================================

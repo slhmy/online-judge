@@ -7,6 +7,11 @@
 bin/
 dist/
 
+# Go compiled binaries (extensionless outputs from go build)
+bff/bff
+backend/server
+judge/judgedaemon
+
 # Go
 *.test
 *.out

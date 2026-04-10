@@ -89,13 +89,7 @@ func (s *SubmissionService) enqueueJudgeJob(ctx context.Context, payload *queue.
 		if asynqErr != nil && legacyErr != nil {
 			return fmt.Errorf("both queues failed: asynq=%v, legacy=%v", asynqErr, legacyErr)
 		}
-		// If only one failed, log but don't error (at least one succeeded)
-		if asynqErr != nil {
-			// Log the error but don't fail - legacy queue succeeded
-		}
-		if legacyErr != nil {
-			// Log the error but don't fail - asynq queue succeeded
-		}
+		// At least one queue succeeded — don't fail
 		return nil
 	}
 

@@ -53,12 +53,8 @@ proto-format:
 # ============================================
 
 build-backend:
-	@echo "Building backend services..."
-	cd backend && go build -o bin/problem-service ./cmd/problem-service
-	cd backend && go build -o bin/submission-service ./cmd/submission-service
-	cd backend && go build -o bin/contest-service ./cmd/contest-service
-	cd backend && go build -o bin/notification-service ./cmd/notification-service
-	cd backend && go build -o bin/user-service ./cmd/user-service
+	@echo "Building backend server..."
+	cd backend && go build -o bin/server ./cmd/server
 
 build-bff:
 	@echo "Building BFF..."
@@ -84,20 +80,8 @@ run-frontend:
 run-bff:
 	cd bff && go run ./cmd/bff
 
-run-problem:
-	cd backend && go run ./cmd/problem-service
-
-run-submission:
-	cd backend && go run ./cmd/submission-service
-
-run-contest:
-	cd backend && go run ./cmd/contest-service
-
-run-notification:
-	cd backend && go run ./cmd/notification-service
-
-run-user:
-	cd backend && go run ./cmd/user-service
+run-backend:
+	cd backend && go run ./cmd/server
 
 run-judge:
 	cd judge && go run ./cmd/judgedaemon
@@ -219,19 +203,19 @@ test-coverage-summary:
 	cd judge && go test ./... -coverprofile=coverage.out -covermode=atomic 2>/dev/null && go tool cover -func=coverage.out | tail -1
 
 # Run specific package tests
-test-problem-service:
+test-problem:
 	cd backend && go test ./internal/problem/... -v -race
 
-test-submission-service:
+test-submission:
 	cd backend && go test ./internal/submission/... -v -race
 
-test-contest-service:
+test-contest:
 	cd backend && go test ./internal/contest/... -v -race
 
-test-notification-service:
+test-notification:
 	cd backend && go test ./internal/notification/... -v -race
 
-test-user-service:
+test-user:
 	cd backend && go test ./internal/user/... -v -race
 
 test-bff-handlers:

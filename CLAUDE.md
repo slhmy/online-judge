@@ -27,7 +27,7 @@ git push --no-verify
 
 ## Project Structure
 
-- `backend/` - Go microservices (problem, submission, contest, notification, user)
+- `backend/` - Go gRPC server (problem, submission, contest, notification, user, judge - all unified)
 - `bff/` - Backend-for-Frontend layer
 - `judge/` - Judging daemon and workers
 - `frontend/` - Next.js frontend
