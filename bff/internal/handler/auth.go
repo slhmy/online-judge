@@ -15,12 +15,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
-	_ "github.com/jackc/pgx/v5/stdlib"
 
-	pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/online-judge/bff/internal/identra"
+	pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 )
 
 // AuthErrorCode represents structured error codes for auth operations
@@ -37,6 +37,12 @@ const (
 	AuthErrorCodeTokenInvalid       AuthErrorCode = "TOKEN_INVALID"
 	AuthErrorCodeDatabaseError      AuthErrorCode = "DATABASE_ERROR"
 	AuthErrorCodeInternalError      AuthErrorCode = "INTERNAL_ERROR"
+	AuthErrorCodeTooManyAttempts    AuthErrorCode = "TOO_MANY_ATTEMPTS"
+)
+
+const (
+	loginMaxFailedAttempts = 5
+	loginLockoutDuration   = 15 * time.Minute
 )
 
 // AuthErrorResponse represents a structured error response
@@ -58,6 +64,7 @@ var authErrorHTTPStatus = map[AuthErrorCode]int{
 	AuthErrorCodeTokenInvalid:       http.StatusUnauthorized,
 	AuthErrorCodeDatabaseError:      http.StatusInternalServerError,
 	AuthErrorCodeInternalError:      http.StatusInternalServerError,
+	AuthErrorCodeTooManyAttempts:    http.StatusTooManyRequests,
 }
 
 // writeAuthError writes a structured auth error response
@@ -77,8 +84,15 @@ func writeAuthErrorSimple(w http.ResponseWriter, errorCode AuthErrorCode, messag
 	writeAuthError(w, errorCode, message, "")
 }
 
+// identraClientInterface abstracts the identra gRPC client for testability.
+type identraClientInterface interface {
+	LoginByPassword(ctx context.Context, email, password string) (*pb.LoginByPasswordResponse, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*pb.RefreshTokenResponse, error)
+	GetCurrentUser(ctx context.Context, accessToken string) (*pb.GetCurrentUserLoginInfoResponse, error)
+}
+
 type AuthHandler struct {
-	identraClient      *identra.Client
+	identraClient      identraClientInterface
 	db                 *sql.DB
 	identraDB          *sql.DB
 	adminEmail         string
@@ -266,18 +280,31 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Login via identra
 	ctx := context.Background()
+
+	// Check if this account is temporarily locked due to too many failed attempts
+	if locked, retryAfter := h.isLoginLocked(ctx, req.Email); locked {
+		w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+		writeAuthErrorSimple(w, AuthErrorCodeTooManyAttempts, fmt.Sprintf("登录尝试次数过多，请 %d 秒后再试", retryAfter))
+		return
+	}
+
+	// Login via identra
 	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
 	if err != nil {
+		h.recordFailedLogin(ctx, req.Email)
 		writeAuthError(w, AuthErrorCodeInvalidCredentials, "邮箱或密码错误", "email")
 		return
 	}
 
 	if resp.Token == nil || resp.Token.AccessToken == nil {
+		h.recordFailedLogin(ctx, req.Email)
 		writeAuthError(w, AuthErrorCodeInvalidCredentials, "登录失败", "")
 		return
 	}
+
+	// Login succeeded — clear any recorded failures
+	h.clearFailedLogin(ctx, req.Email)
 
 	// Get user ID from identra database
 	var userID string
@@ -330,6 +357,60 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			"role":     role,
 		},
 	})
+}
+
+// loginAttemptsKey returns the Redis key used to track failed login attempts for an email.
+func loginAttemptsKey(email string) string {
+	return fmt.Sprintf("login:attempts:%s", email)
+}
+
+// isLoginLocked checks whether the given email is temporarily locked due to too many
+// failed login attempts. It returns (true, retryAfterSeconds) when locked.
+func (h *AuthHandler) isLoginLocked(ctx context.Context, email string) (bool, int) {
+	if h.redis == nil {
+		return false, 0
+	}
+
+	key := loginAttemptsKey(email)
+	val, err := h.redis.Get(ctx, key).Int()
+	if err != nil {
+		// Key not found or Redis error — allow the request
+		return false, 0
+	}
+
+	if val >= loginMaxFailedAttempts {
+		ttl, err := h.redis.TTL(ctx, key).Result()
+		if err != nil || ttl <= 0 {
+			return true, int(loginLockoutDuration.Seconds())
+		}
+		return true, int(ttl.Seconds())
+	}
+
+	return false, 0
+}
+
+// recordFailedLogin increments the failed-attempt counter for an email.
+// Each failed attempt refreshes the lockout window so that a persistent attacker
+// must wait the full lockout duration from the last failure.
+func (h *AuthHandler) recordFailedLogin(ctx context.Context, email string) {
+	if h.redis == nil {
+		return
+	}
+
+	key := loginAttemptsKey(email)
+	pipe := h.redis.Pipeline()
+	pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, loginLockoutDuration)
+	_, _ = pipe.Exec(ctx)
+}
+
+// clearFailedLogin removes the failed-attempt counter after a successful login.
+func (h *AuthHandler) clearFailedLogin(ctx context.Context, email string) {
+	if h.redis == nil {
+		return
+	}
+
+	h.redis.Del(ctx, loginAttemptsKey(email))
 }
 
 // OAuthURL returns the OAuth authorization URL
