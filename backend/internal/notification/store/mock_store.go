@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/online-judge/backend/gen/go/notification/v1"
+	pb "github.com/online-judge/gen/go/notification/v1"
 )
 
 // NotificationStoreInterface defines the interface for NotificationStore

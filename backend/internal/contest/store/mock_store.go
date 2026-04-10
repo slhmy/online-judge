@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	pb "github.com/online-judge/backend/gen/go/contest/v1"
+	pb "github.com/online-judge/gen/go/contest/v1"
 )
 
 // ContestStoreInterface defines the interface for ContestStore

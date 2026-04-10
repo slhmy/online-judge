@@ -10,12 +10,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pbContest "github.com/online-judge/backend/gen/go/contest/v1"
-	pbJudge "github.com/online-judge/backend/gen/go/judge/v1"
-	pbNotification "github.com/online-judge/backend/gen/go/notification/v1"
-	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
-	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
-	pbUser "github.com/online-judge/backend/gen/go/user/v1"
+	pbContest "github.com/online-judge/gen/go/contest/v1"
+	pbJudge "github.com/online-judge/gen/go/judge/v1"
+	pbNotification "github.com/online-judge/gen/go/notification/v1"
+	pbProblem "github.com/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/online-judge/gen/go/submission/v1"
+	pbUser "github.com/online-judge/gen/go/user/v1"
 	contestService "github.com/online-judge/backend/internal/contest/service"
 	contestStore "github.com/online-judge/backend/internal/contest/store"
 	judgeService "github.com/online-judge/backend/internal/judge/service"
@@ -85,9 +85,10 @@ func main() {
 	// Notification service (Redis-only, no PostgreSQL)
 	nService := notificationService.NewNotificationService(rdb)
 
-	// Judge service
+	// Judge service (includes rejudge functionality)
 	jStore := judgeStore.NewJudgehostStore(dbpool, rdb)
-	jService := judgeService.NewJudgeService(jStore, asynqClient)
+	rjStore := judgeStore.NewRejudgeStore(dbpool)
+	jService := judgeService.NewJudgeService(jStore, asynqClient, rjStore, sStore, cStore, rdb)
 
 	// --- Start unified gRPC server ---
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)

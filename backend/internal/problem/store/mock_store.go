@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	pb "github.com/online-judge/backend/gen/go/problem/v1"
+	pb "github.com/online-judge/gen/go/problem/v1"
 )
 
 // ProblemStoreInterface defines the interface for ProblemStore

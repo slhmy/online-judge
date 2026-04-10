@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
-	pb "github.com/online-judge/backend/gen/go/submission/v1"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/submission/v1"
 )
 
 // MockSubmissionServiceClient is a mock implementation of SubmissionServiceClient

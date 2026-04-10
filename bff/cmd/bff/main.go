@@ -16,10 +16,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pbContest "github.com/online-judge/backend/gen/go/contest/v1"
-	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
-	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
-	pbUser "github.com/online-judge/backend/gen/go/user/v1"
+	pbContest "github.com/online-judge/gen/go/contest/v1"
+	pbJudge "github.com/online-judge/gen/go/judge/v1"
+	pbProblem "github.com/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/online-judge/gen/go/submission/v1"
+	pbUser "github.com/online-judge/gen/go/user/v1"
 	"github.com/online-judge/bff/internal/cache"
 	"github.com/online-judge/bff/internal/config"
 	"github.com/online-judge/bff/internal/handler"
@@ -87,11 +88,19 @@ func main() {
 	}
 	defer func() { _ = userConn.Close() }()
 
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
+	judgeConn, err := grpc.Dial(cfg.JudgeServiceAddr, opts...)
+	if err != nil {
+		log.Fatalf("Failed to connect to judge service: %v", err)
+	}
+	defer func() { _ = judgeConn.Close() }()
+
 	// Create gRPC clients
 	problemClient := pbProblem.NewProblemServiceClient(problemConn)
 	submissionClient := pbSubmission.NewSubmissionServiceClient(submissionConn)
 	contestClient := pbContest.NewContestServiceClient(contestConn)
 	userClient := pbUser.NewUserServiceClient(userConn)
+	judgeClient := pbJudge.NewJudgeServiceClient(judgeConn)
 
 	// Create SSE hub (manages real-time updates via Server-Sent Events)
 	sseHub := sse.NewHub(rdb)
@@ -126,7 +135,7 @@ func main() {
 		cfg.OAuthRedirectURL,
 		rdb,
 	)
-	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL, nil) // TODO: wire up rejudge service client
+	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL, judgeClient)
 	sseHandler := handler.NewSSEHandler(sseHub)
 	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb, cacheService, cfg.DatabaseURL)
 	testRunHandler := handler.NewTestRunHandler(problemClient)

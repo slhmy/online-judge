@@ -30,8 +30,8 @@ jobs:
           go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 
       - name: Generate protobuf
-        working-directory: backend
-        run: buf generate
+        # Generate from project root
+        run: buf generate proto
 
       - name: Download dependencies
         working-directory: backend
@@ -64,8 +64,8 @@ jobs:
           go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 
       - name: Generate protobuf
-        working-directory: backend
-        run: buf generate
+        # Generate from project root
+        run: buf generate proto
 
       - name: Download dependencies
         working-directory: bff
@@ -121,8 +121,8 @@ jobs:
           go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 
       - name: Generate protobuf
-        working-directory: backend
-        run: buf generate
+        # Generate from project root
+        run: buf generate proto
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
@@ -166,8 +166,8 @@ jobs:
           go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 
       - name: Generate protobuf
-        working-directory: backend
-        run: buf generate
+        # Generate from project root
+        run: buf generate proto
 
       - name: Build Backend
         working-directory: backend

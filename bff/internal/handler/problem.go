@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
-	pb "github.com/online-judge/backend/gen/go/problem/v1"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/problem/v1"
 	"github.com/online-judge/bff/internal/cache"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
