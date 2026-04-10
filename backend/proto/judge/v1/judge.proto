@@ -5,8 +5,10 @@ package judge.v1;
 option go_package = "github.com/online-judge/backend/gen/go/judge/v1;judgev1";
 
 import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "common/v1/common.proto";
 
-// Judge Service - Judgehost registration, heartbeat, and task assignment
+// Judge Service - Judgehost registration, heartbeat, task assignment, and rejudging
 service JudgeService {
   // Register a judgehost and get assigned queue name
   rpc RegisterJudgehost(RegisterJudgehostRequest) returns (RegisterJudgehostResponse) {
@@ -50,6 +52,64 @@ service JudgeService {
   rpc DeregisterJudgehost(DeregisterJudgehostRequest) returns (DeregisterJudgehostResponse) {
     option (google.api.http) = {
       delete: "/internal/judge/judgehosts/{judgehost_id}"
+    };
+  }
+
+  // Create a rejudge request (admin only)
+  rpc CreateRejudge(CreateRejudgeRequest) returns (CreateRejudgeResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/rejudges"
+      body: "*"
+    };
+  }
+
+  // Get rejudge status and details
+  rpc GetRejudge(GetRejudgeRequest) returns (GetRejudgeResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/admin/rejudges/{id}"
+    };
+  }
+
+  // List rejudges with pagination and filters
+  rpc ListRejudges(ListRejudgesRequest) returns (ListRejudgesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/admin/rejudges"
+    };
+  }
+
+  // Cancel a pending rejudge
+  rpc CancelRejudge(CancelRejudgeRequest) returns (CancelRejudgeResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/admin/rejudges/{id}"
+    };
+  }
+
+  // Apply rejudge results (make new verdicts official)
+  rpc ApplyRejudge(ApplyRejudgeRequest) returns (ApplyRejudgeResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/rejudges/{id}/apply"
+    };
+  }
+
+  // Revert rejudge results (restore original verdicts)
+  rpc RevertRejudge(RevertRejudgeRequest) returns (RevertRejudgeResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/rejudges/{id}/revert"
+    };
+  }
+
+  // Get affected submissions for a rejudge
+  rpc GetRejudgeSubmissions(GetRejudgeSubmissionsRequest) returns (GetRejudgeSubmissionsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/admin/rejudges/{rejudge_id}/submissions"
+    };
+  }
+
+  // Internal: Update rejudging submission status (for judge daemon)
+  rpc InternalUpdateRejudgeSubmission(InternalUpdateRejudgeSubmissionRequest) returns (InternalUpdateRejudgeSubmissionResponse) {
+    option (google.api.http) = {
+      post: "/internal/rejudges/{rejudge_id}/submissions"
+      body: "*"
     };
   }
 }
@@ -157,4 +217,157 @@ message DeregisterJudgehostResponse {
   string judgehost_id = 1;
   bool success = 2;
   int32 reassigned_tasks = 3;              // Number of tasks reassigned to other hosts
+}
+
+// ============= Rejudge types =============
+
+// Rejudge status
+enum RejudgeStatus {
+  REJUDGE_STATUS_UNSPECIFIED = 0;
+  REJUDGE_STATUS_PENDING = 1;     // Created, waiting to start
+  REJUDGE_STATUS_JUDGING = 2;     // Judging in progress
+  REJUDGE_STATUS_JUDGED = 3;      // All submissions judged, ready to apply
+  REJUDGE_STATUS_APPLIED = 4;     // Results applied
+  REJUDGE_STATUS_REVERTED = 5;    // Results reverted
+  REJUDGE_STATUS_CANCELLED = 6;   // Cancelled before completion
+}
+
+// RejudgeSubmission status
+enum RejudgeSubmissionStatus {
+  REJUDGE_SUBMISSION_STATUS_UNSPECIFIED = 0;
+  REJUDGE_SUBMISSION_STATUS_PENDING = 1;
+  REJUDGE_SUBMISSION_STATUS_JUDGING = 2;
+  REJUDGE_SUBMISSION_STATUS_DONE = 3;
+}
+
+// Rejudge record
+message Rejudge {
+  string id = 1;
+  string user_id = 2;             // admin who created it
+  string contest_id = 3;          // optional
+  string problem_id = 4;          // optional filter
+
+  RejudgeStatus status = 5;
+  string reason = 6;
+
+  int32 affected_count = 7;
+  int32 judged_count = 8;         // submissions already judged
+  int32 pending_count = 9;        // submissions still pending
+
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp started_at = 11;
+  google.protobuf.Timestamp finished_at = 12;
+  google.protobuf.Timestamp applied_at = 13;
+  google.protobuf.Timestamp reverted_at = 14;
+}
+
+// RejudgeSubmission - individual submission in a rejudge
+message RejudgeSubmission {
+  string submission_id = 1;
+  string original_judging_id = 2;
+  string new_judging_id = 3;
+
+  string original_verdict = 4;
+  string new_verdict = 5;
+  bool verdict_changed = 6;
+
+  RejudgeSubmissionStatus status = 7;
+}
+
+// Rejudge Request/Response messages
+message CreateRejudgeRequest {
+  // Either specify specific submissions or use filters
+  repeated string submission_ids = 1;
+
+  // Filters (used if submission_ids is empty)
+  string contest_id = 2;          // rejudge all submissions in contest
+  string problem_id = 3;          // rejudge all submissions for problem
+  string from_verdict = 4;        // filter by original verdict
+
+  string reason = 5;              // why this rejudge is needed
+}
+
+message CreateRejudgeResponse {
+  string id = 1;
+  int32 affected_count = 2;       // number of submissions to rejudge
+  RejudgeStatus status = 3;
+}
+
+message GetRejudgeRequest {
+  string id = 1;
+}
+
+message GetRejudgeResponse {
+  Rejudge rejudge = 1;
+}
+
+message ListRejudgesRequest {
+  common.v1.Pagination pagination = 1;
+
+  // Filters
+  string contest_id = 2;
+  string problem_id = 3;
+  RejudgeStatus status = 4;
+  string user_id = 5;
+}
+
+message ListRejudgesResponse {
+  repeated Rejudge rejudges = 1;
+  common.v1.PaginatedResponse pagination = 2;
+}
+
+message CancelRejudgeRequest {
+  string id = 1;
+}
+
+message CancelRejudgeResponse {
+  string id = 1;
+  RejudgeStatus status = 2;      // should be CANCELLED
+}
+
+message ApplyRejudgeRequest {
+  string id = 1;
+}
+
+message ApplyRejudgeResponse {
+  string id = 1;
+  int32 verdicts_changed = 2;    // number of submissions with changed verdicts
+  RejudgeStatus status = 3;      // should be APPLIED
+}
+
+message RevertRejudgeRequest {
+  string id = 1;
+}
+
+message RevertRejudgeResponse {
+  string id = 1;
+  int32 verdicts_restored = 2;   // number of submissions restored
+  RejudgeStatus status = 3;      // should be REVERTED
+}
+
+message GetRejudgeSubmissionsRequest {
+  string rejudge_id = 1;
+
+  // Filters
+  bool only_changed = 2;          // only show submissions with verdict changes
+  RejudgeSubmissionStatus status = 3;
+
+  common.v1.Pagination pagination = 4;
+}
+
+message GetRejudgeSubmissionsResponse {
+  repeated RejudgeSubmission submissions = 1;
+  common.v1.PaginatedResponse pagination = 2;
+}
+
+// Internal API messages
+message InternalUpdateRejudgeSubmissionRequest {
+  string rejudge_id = 1;
+  string submission_id = 2;
+  string new_judging_id = 3;
+  string new_verdict = 4;
+}
+
+message InternalUpdateRejudgeSubmissionResponse {
+  string status = 1;              // "updated"
 }

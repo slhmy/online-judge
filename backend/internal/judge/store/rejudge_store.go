@@ -696,7 +696,7 @@ func (s *RejudgeStore) CancelRejudge(ctx context.Context, rejudgeID string) erro
 	return tx.Commit(ctx)
 }
 
-// Store interface for mocking
+// RejudgeStoreInterface defines the interface for rejudge storage
 type RejudgeStoreInterface interface {
 	CreateRejudge(ctx context.Context, userID, contestID, problemID, fromVerdict, reason string, submissionIDs []string) (string, int32, error)
 	GetRejudge(ctx context.Context, rejudgeID string) (*Rejudge, error)

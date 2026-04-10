@@ -85,9 +85,10 @@ func main() {
 	// Notification service (Redis-only, no PostgreSQL)
 	nService := notificationService.NewNotificationService(rdb)
 
-	// Judge service
+	// Judge service (includes rejudge functionality)
 	jStore := judgeStore.NewJudgehostStore(dbpool, rdb)
-	jService := judgeService.NewJudgeService(jStore, asynqClient)
+	rjStore := judgeStore.NewRejudgeStore(dbpool)
+	jService := judgeService.NewJudgeService(jStore, asynqClient, rjStore, sStore, cStore, rdb)
 
 	// --- Start unified gRPC server ---
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
