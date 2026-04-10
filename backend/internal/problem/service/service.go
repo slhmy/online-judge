@@ -6,8 +6,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
-	pb "github.com/online-judge/backend/gen/go/problem/v1"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/problem/v1"
 	"github.com/online-judge/backend/internal/problem/store"
 )
 

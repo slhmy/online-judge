@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
-	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
+	pbProblem "github.com/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/online-judge/gen/go/submission/v1"
 	"github.com/online-judge/bff/internal/cache"
 )
 

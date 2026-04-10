@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	pb "github.com/online-judge/backend/gen/go/contest/v1"
+	pb "github.com/online-judge/gen/go/contest/v1"
 )
 
 type ContestStore struct {

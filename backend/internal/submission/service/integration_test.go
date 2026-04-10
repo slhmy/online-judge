@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
-	pb "github.com/online-judge/backend/gen/go/submission/v1"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/submission/v1"
 	"github.com/online-judge/backend/internal/submission/store"
 )
 

@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
-	pb "github.com/online-judge/backend/gen/go/user/v1"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/user/v1"
 	"github.com/online-judge/backend/internal/user/store"
 )
 

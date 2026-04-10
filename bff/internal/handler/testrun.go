@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
+	pbProblem "github.com/online-judge/gen/go/problem/v1"
 	"github.com/online-judge/bff/internal/sandbox"
 )
 

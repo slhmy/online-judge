@@ -10,8 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	commonv1 "github.com/online-judge/backend/gen/go/common/v1"
-	pb "github.com/online-judge/backend/gen/go/judge/v1"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/judge/v1"
 	conteststore "github.com/online-judge/backend/internal/contest/store"
 	"github.com/online-judge/backend/internal/judge/store"
 	"github.com/online-judge/backend/internal/pkg/middleware"

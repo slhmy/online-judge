@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 
-	pb "github.com/online-judge/backend/gen/go/notification/v1"
+	pb "github.com/online-judge/gen/go/notification/v1"
 	"github.com/online-judge/backend/internal/pkg/middleware"
 )
 

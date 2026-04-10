@@ -40,13 +40,13 @@ run:
 
 proto:
 	@echo "Generating protobuf code..."
-	cd backend && buf generate
+	buf generate proto
 
 proto-lint:
-	cd backend && buf lint
+	buf lint proto
 
 proto-format:
-	cd backend && buf format -w
+	buf format -w proto
 
 # ============================================
 # Build

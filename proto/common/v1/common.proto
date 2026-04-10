@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "github.com/online-judge/backend/gen/go/common/v1;commonv1";
+option go_package = "github.com/online-judge/gen/go/common/v1;commonv1";
 
 // Pagination parameters
 message Pagination {

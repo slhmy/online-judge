@@ -21,6 +21,7 @@ type Config struct {
 	ContestServiceAddr      string `mapstructure:"contest_service_addr"`
 	NotificationServiceAddr string `mapstructure:"notification_service_addr"`
 	UserServiceAddr         string `mapstructure:"user_service_addr"`
+	JudgeServiceAddr        string `mapstructure:"judge_service_addr"`
 
 	// Auth
 	IdentraGRPCHost string `mapstructure:"identra_grpc_host"`
@@ -61,6 +62,7 @@ func Load() (*Config, error) {
 	v.SetDefault("contest_service_addr", "localhost:8002")
 	v.SetDefault("notification_service_addr", "localhost:8002")
 	v.SetDefault("user_service_addr", "localhost:8002")
+	v.SetDefault("judge_service_addr", "localhost:8002")
 	v.SetDefault("identra_grpc_host", "localhost:50051")
 	v.SetDefault("identra_http_host", "localhost:8081")
 	v.SetDefault("admin_email", "")

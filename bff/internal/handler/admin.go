@@ -14,136 +14,31 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	commonv1 "github.com/online-judge/gen/go/common/v1"
+	pb "github.com/online-judge/gen/go/judge/v1"
 	"github.com/online-judge/bff/internal/middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type AdminHandler struct {
 	db             *sql.DB
-	rejudgeService RejudgeServiceClient
+	rejudgeService RejudgeClient
 }
 
-// RejudgeServiceClient is the interface for the rejudge gRPC service
-type RejudgeServiceClient interface {
-	CreateRejudge(ctx context.Context, req *CreateRejudgeRequest) (*CreateRejudgeResponse, error)
-	GetRejudge(ctx context.Context, req *GetRejudgeRequest) (*GetRejudgeResponse, error)
-	ListRejudges(ctx context.Context, req *ListRejudgesRequest) (*ListRejudgesResponse, error)
-	CancelRejudge(ctx context.Context, req *CancelRejudgeRequest) (*CancelRejudgeResponse, error)
-	ApplyRejudge(ctx context.Context, req *ApplyRejudgeRequest) (*ApplyRejudgeResponse, error)
-	RevertRejudge(ctx context.Context, req *RevertRejudgeRequest) (*RevertRejudgeResponse, error)
-	GetRejudgeSubmissions(ctx context.Context, req *GetRejudgeSubmissionsRequest) (*GetRejudgeSubmissionsResponse, error)
+// RejudgeClient is the subset of the generated JudgeServiceClient used for rejudge operations.
+// The generated pb.JudgeServiceClient satisfies this interface.
+type RejudgeClient interface {
+	CreateRejudge(ctx context.Context, in *pb.CreateRejudgeRequest, opts ...grpc.CallOption) (*pb.CreateRejudgeResponse, error)
+	GetRejudge(ctx context.Context, in *pb.GetRejudgeRequest, opts ...grpc.CallOption) (*pb.GetRejudgeResponse, error)
+	ListRejudges(ctx context.Context, in *pb.ListRejudgesRequest, opts ...grpc.CallOption) (*pb.ListRejudgesResponse, error)
+	CancelRejudge(ctx context.Context, in *pb.CancelRejudgeRequest, opts ...grpc.CallOption) (*pb.CancelRejudgeResponse, error)
+	ApplyRejudge(ctx context.Context, in *pb.ApplyRejudgeRequest, opts ...grpc.CallOption) (*pb.ApplyRejudgeResponse, error)
+	RevertRejudge(ctx context.Context, in *pb.RevertRejudgeRequest, opts ...grpc.CallOption) (*pb.RevertRejudgeResponse, error)
+	GetRejudgeSubmissions(ctx context.Context, in *pb.GetRejudgeSubmissionsRequest, opts ...grpc.CallOption) (*pb.GetRejudgeSubmissionsResponse, error)
 }
 
-// Request/Response types for rejudge operations
-type CreateRejudgeRequest struct {
-	SubmissionIDs []string `json:"submission_ids"`
-	ContestID     string   `json:"contest_id"`
-	ProblemID     string   `json:"problem_id"`
-	FromVerdict   string   `json:"from_verdict"`
-	Reason        string   `json:"reason"`
-}
-
-type CreateRejudgeResponse struct {
-	ID            string `json:"id"`
-	AffectedCount int32  `json:"affected_count"`
-	Status        string `json:"status"`
-}
-
-type GetRejudgeRequest struct {
-	ID string `json:"id"`
-}
-
-type GetRejudgeResponse struct {
-	Rejudge *Rejudge `json:"rejudge"`
-}
-
-type Rejudge struct {
-	ID            string `json:"id"`
-	UserID        string `json:"user_id"`
-	ContestID     string `json:"contest_id"`
-	ProblemID     string `json:"problem_id"`
-	Status        string `json:"status"`
-	Reason        string `json:"reason"`
-	AffectedCount int32  `json:"affected_count"`
-	JudgedCount   int32  `json:"judged_count"`
-	PendingCount  int32  `json:"pending_count"`
-	CreatedAt     string `json:"created_at"`
-	StartedAt     string `json:"started_at"`
-	FinishedAt    string `json:"finished_at"`
-	AppliedAt     string `json:"applied_at"`
-	RevertedAt    string `json:"reverted_at"`
-}
-
-type ListRejudgesRequest struct {
-	Page      int32  `json:"page"`
-	PageSize  int32  `json:"page_size"`
-	ContestID string `json:"contest_id"`
-	ProblemID string `json:"problem_id"`
-	Status    string `json:"status"`
-	UserID    string `json:"user_id"`
-}
-
-type ListRejudgesResponse struct {
-	Rejudges []*Rejudge `json:"rejudges"`
-	Total    int32      `json:"total"`
-	Page     int32      `json:"page"`
-	PageSize int32      `json:"page_size"`
-}
-
-type CancelRejudgeRequest struct {
-	ID string `json:"id"`
-}
-
-type CancelRejudgeResponse struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
-}
-
-type ApplyRejudgeRequest struct {
-	ID string `json:"id"`
-}
-
-type ApplyRejudgeResponse struct {
-	ID              string `json:"id"`
-	VerdictsChanged int32  `json:"verdicts_changed"`
-	Status          string `json:"status"`
-}
-
-type RevertRejudgeRequest struct {
-	ID string `json:"id"`
-}
-
-type RevertRejudgeResponse struct {
-	ID               string `json:"id"`
-	VerdictsRestored int32  `json:"verdicts_restored"`
-	Status           string `json:"status"`
-}
-
-type GetRejudgeSubmissionsRequest struct {
-	RejudgeID   string `json:"rejudge_id"`
-	OnlyChanged bool   `json:"only_changed"`
-	Status      string `json:"status"`
-	Page        int32  `json:"page"`
-	PageSize    int32  `json:"page_size"`
-}
-
-type GetRejudgeSubmissionsResponse struct {
-	Submissions []*RejudgeSubmission `json:"submissions"`
-	Total       int32                `json:"total"`
-	Page        int32                `json:"page"`
-	PageSize    int32                `json:"page_size"`
-}
-
-type RejudgeSubmission struct {
-	SubmissionID      string `json:"submission_id"`
-	OriginalJudgingID string `json:"original_judging_id"`
-	NewJudgingID      string `json:"new_judging_id"`
-	OriginalVerdict   string `json:"original_verdict"`
-	NewVerdict        string `json:"new_verdict"`
-	VerdictChanged    bool   `json:"verdict_changed"`
-	Status            string `json:"status"`
-}
-
-func NewAdminHandler(databaseURL string, rejudgeService RejudgeServiceClient) *AdminHandler {
+func NewAdminHandler(databaseURL string, rejudgeService RejudgeClient) *AdminHandler {
 	db, err := sql.Open("pgx", databaseURL)
 	if err != nil {
 		panic(err)
@@ -228,54 +123,82 @@ func (h *AdminHandler) UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
+// protoJSON is the shared protojson marshaler for writing gRPC responses as JSON.
+var protoJSON = protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: true}
+
 // CreateRejudge creates a new rejudging operation
 func (h *AdminHandler) CreateRejudge(w http.ResponseWriter, r *http.Request) {
-	var req CreateRejudgeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var body struct {
+		SubmissionIDs []string `json:"submission_ids"`
+		ContestID     string   `json:"contest_id"`
+		ProblemID     string   `json:"problem_id"`
+		FromVerdict   string   `json:"from_verdict"`
+		Reason        string   `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error": "invalid request"}`, http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.rejudgeService.CreateRejudge(r.Context(), &req)
+	resp, err := h.rejudgeService.CreateRejudge(r.Context(), &pb.CreateRejudgeRequest{
+		SubmissionIds: body.SubmissionIDs,
+		ContestId:     body.ContestID,
+		ProblemId:     body.ProblemID,
+		FromVerdict:   body.FromVerdict,
+		Reason:        body.Reason,
+	})
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // GetRejudge retrieves a rejudging operation
 func (h *AdminHandler) GetRejudge(w http.ResponseWriter, r *http.Request) {
 	rejudgeID := chi.URLParam(r, "id")
 
-	resp, err := h.rejudgeService.GetRejudge(r.Context(), &GetRejudgeRequest{ID: rejudgeID})
+	resp, err := h.rejudgeService.GetRejudge(r.Context(), &pb.GetRejudgeRequest{Id: rejudgeID})
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusNotFound)
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // ListRejudges lists rejudging operations
 func (h *AdminHandler) ListRejudges(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
-	req := &ListRejudgesRequest{
-		ContestID: query.Get("contest_id"),
-		ProblemID: query.Get("problem_id"),
-		Status:    query.Get("status"),
-		UserID:    query.Get("user_id"),
+	req := &pb.ListRejudgesRequest{
+		ContestId: query.Get("contest_id"),
+		ProblemId: query.Get("problem_id"),
+		UserId:    query.Get("user_id"),
 	}
 
+	if statusStr := query.Get("status"); statusStr != "" {
+		if v, ok := pb.RejudgeStatus_value[statusStr]; ok {
+			req.Status = pb.RejudgeStatus(v)
+		}
+	}
+
+	pagination := &commonv1.Pagination{}
 	if page := query.Get("page"); page != "" {
-		_ = json.NewDecoder(strings.NewReader(page)).Decode(&req.Page)
+		if v, err := strconv.ParseInt(page, 10, 32); err == nil {
+			pagination.Page = int32(v)
+		}
 	}
 	if pageSize := query.Get("page_size"); pageSize != "" {
-		_ = json.NewDecoder(strings.NewReader(pageSize)).Decode(&req.PageSize)
+		if v, err := strconv.ParseInt(pageSize, 10, 32); err == nil {
+			pagination.PageSize = int32(v)
+		}
 	}
+	req.Pagination = pagination
 
 	resp, err := h.rejudgeService.ListRejudges(r.Context(), req)
 	if err != nil {
@@ -283,46 +206,50 @@ func (h *AdminHandler) ListRejudges(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // CancelRejudge cancels a pending rejudging operation
 func (h *AdminHandler) CancelRejudge(w http.ResponseWriter, r *http.Request) {
 	rejudgeID := chi.URLParam(r, "id")
 
-	resp, err := h.rejudgeService.CancelRejudge(r.Context(), &CancelRejudgeRequest{ID: rejudgeID})
+	resp, err := h.rejudgeService.CancelRejudge(r.Context(), &pb.CancelRejudgeRequest{Id: rejudgeID})
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // ApplyRejudge applies the rejudge results
 func (h *AdminHandler) ApplyRejudge(w http.ResponseWriter, r *http.Request) {
 	rejudgeID := chi.URLParam(r, "id")
 
-	resp, err := h.rejudgeService.ApplyRejudge(r.Context(), &ApplyRejudgeRequest{ID: rejudgeID})
+	resp, err := h.rejudgeService.ApplyRejudge(r.Context(), &pb.ApplyRejudgeRequest{Id: rejudgeID})
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // RevertRejudge reverts the rejudge results
 func (h *AdminHandler) RevertRejudge(w http.ResponseWriter, r *http.Request) {
 	rejudgeID := chi.URLParam(r, "id")
 
-	resp, err := h.rejudgeService.RevertRejudge(r.Context(), &RevertRejudgeRequest{ID: rejudgeID})
+	resp, err := h.rejudgeService.RevertRejudge(r.Context(), &pb.RevertRejudgeRequest{Id: rejudgeID})
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // GetRejudgeSubmissions retrieves submissions for a rejudging operation
@@ -330,18 +257,29 @@ func (h *AdminHandler) GetRejudgeSubmissions(w http.ResponseWriter, r *http.Requ
 	rejudgeID := chi.URLParam(r, "rejudge_id")
 	query := r.URL.Query()
 
-	req := &GetRejudgeSubmissionsRequest{
-		RejudgeID:   rejudgeID,
+	req := &pb.GetRejudgeSubmissionsRequest{
+		RejudgeId:   rejudgeID,
 		OnlyChanged: query.Get("only_changed") == "true",
-		Status:      query.Get("status"),
 	}
 
+	if statusStr := query.Get("status"); statusStr != "" {
+		if v, ok := pb.RejudgeSubmissionStatus_value[statusStr]; ok {
+			req.Status = pb.RejudgeSubmissionStatus(v)
+		}
+	}
+
+	pagination := &commonv1.Pagination{}
 	if page := query.Get("page"); page != "" {
-		_ = json.NewDecoder(strings.NewReader(page)).Decode(&req.Page)
+		if v, err := strconv.ParseInt(page, 10, 32); err == nil {
+			pagination.Page = int32(v)
+		}
 	}
 	if pageSize := query.Get("page_size"); pageSize != "" {
-		_ = json.NewDecoder(strings.NewReader(pageSize)).Decode(&req.PageSize)
+		if v, err := strconv.ParseInt(pageSize, 10, 32); err == nil {
+			pagination.PageSize = int32(v)
+		}
 	}
+	req.Pagination = pagination
 
 	resp, err := h.rejudgeService.GetRejudgeSubmissions(r.Context(), req)
 	if err != nil {
@@ -349,7 +287,8 @@ func (h *AdminHandler) GetRejudgeSubmissions(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	data, _ := protoJSON.Marshal(resp)
+	_, _ = w.Write(data)
 }
 
 // ListTestCases returns all test cases for a problem

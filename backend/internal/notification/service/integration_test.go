@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	pb "github.com/online-judge/backend/gen/go/notification/v1"
+	pb "github.com/online-judge/gen/go/notification/v1"
 	"github.com/online-judge/backend/internal/notification/store"
 	"github.com/online-judge/backend/internal/pkg/middleware"
 )
