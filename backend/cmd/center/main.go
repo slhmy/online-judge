@@ -1,0 +1,116 @@
+package main
+
+import (
+	"context"
+	"log"
+	"net"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
+	pbContest "github.com/online-judge/backend/gen/go/contest/v1"
+	pbJudge "github.com/online-judge/backend/gen/go/judge/v1"
+	pbNotification "github.com/online-judge/backend/gen/go/notification/v1"
+	pbProblem "github.com/online-judge/backend/gen/go/problem/v1"
+	pbSubmission "github.com/online-judge/backend/gen/go/submission/v1"
+	pbUser "github.com/online-judge/backend/gen/go/user/v1"
+	contestService "github.com/online-judge/backend/internal/contest/service"
+	contestStore "github.com/online-judge/backend/internal/contest/store"
+	judgeService "github.com/online-judge/backend/internal/judge/service"
+	judgeStore "github.com/online-judge/backend/internal/judge/store"
+	notificationService "github.com/online-judge/backend/internal/notification/service"
+	"github.com/online-judge/backend/internal/pkg/config"
+	problemService "github.com/online-judge/backend/internal/problem/service"
+	problemStore "github.com/online-judge/backend/internal/problem/store"
+	"github.com/online-judge/backend/internal/queue"
+	submissionService "github.com/online-judge/backend/internal/submission/service"
+	submissionStore "github.com/online-judge/backend/internal/submission/store"
+	userService "github.com/online-judge/backend/internal/user/service"
+	userStore "github.com/online-judge/backend/internal/user/store"
+)
+
+func main() {
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// PostgreSQL connection (shared by most services)
+	dbpool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+	defer dbpool.Close()
+
+	// Redis connection (shared by most services)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisURL,
+	})
+
+	// Asynq client (for submission and judge task queues)
+	asynqClient := queue.NewAsynqClient(cfg.RedisURL)
+	defer asynqClient.Close()
+
+	// Legacy queue (for migration dual-write)
+	legacyQueue := queue.NewLegacyQueue(rdb)
+
+	// --- Initialize all services ---
+
+	// Problem service
+	pStore := problemStore.NewProblemStore(dbpool)
+	pService := problemService.NewProblemService(pStore, rdb)
+
+	// Submission service
+	sStore := submissionStore.NewSubmissionStore(dbpool)
+	sService := submissionService.NewSubmissionService(
+		sStore,
+		rdb,
+		asynqClient,
+		legacyQueue,
+		cfg.UseAsynqQueue,
+		cfg.UseLegacyQueue,
+	)
+
+	// Contest service
+	cStore := contestStore.NewContestStore(dbpool)
+	cService := contestService.NewContestService(cStore, rdb)
+
+	// User service
+	uStore := userStore.NewUserStore(dbpool)
+	uService := userService.NewUserService(uStore)
+
+	// Notification service (Redis-only, no PostgreSQL)
+	nService := notificationService.NewNotificationService(rdb)
+
+	// Judge service
+	jStore := judgeStore.NewJudgehostStore(dbpool, rdb)
+	jService := judgeService.NewJudgeService(jStore, asynqClient)
+
+	// --- Start unified gRPC server ---
+	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+
+	s := grpc.NewServer()
+
+	// Register all services on the same gRPC server
+	pbProblem.RegisterProblemServiceServer(s, pService)
+	pbSubmission.RegisterSubmissionServiceServer(s, sService)
+	pbContest.RegisterContestServiceServer(s, cService)
+	pbUser.RegisterUserServiceServer(s, uService)
+	pbNotification.RegisterNotificationServiceServer(s, nService)
+	pbJudge.RegisterJudgeServiceServer(s, jService)
+
+	reflection.Register(s)
+
+	log.Printf("Center service listening on port %s (all services unified)", cfg.GRPCPort)
+	log.Printf("  - Problem, Submission, Contest, User, Notification, Judge")
+	log.Printf("  - Queue config: asynq=%v, legacy=%v", cfg.UseAsynqQueue, cfg.UseLegacyQueue)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
+}

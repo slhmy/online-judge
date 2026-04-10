@@ -53,12 +53,8 @@ proto-format:
 # ============================================
 
 build-backend:
-	@echo "Building backend services..."
-	cd backend && go build -o bin/problem-service ./cmd/problem-service
-	cd backend && go build -o bin/submission-service ./cmd/submission-service
-	cd backend && go build -o bin/contest-service ./cmd/contest-service
-	cd backend && go build -o bin/notification-service ./cmd/notification-service
-	cd backend && go build -o bin/user-service ./cmd/user-service
+	@echo "Building backend center service..."
+	cd backend && go build -o bin/center ./cmd/center
 
 build-bff:
 	@echo "Building BFF..."
@@ -84,20 +80,8 @@ run-frontend:
 run-bff:
 	cd bff && go run ./cmd/bff
 
-run-problem:
-	cd backend && go run ./cmd/problem-service
-
-run-submission:
-	cd backend && go run ./cmd/submission-service
-
-run-contest:
-	cd backend && go run ./cmd/contest-service
-
-run-notification:
-	cd backend && go run ./cmd/notification-service
-
-run-user:
-	cd backend && go run ./cmd/user-service
+run-center:
+	cd backend && go run ./cmd/center
 
 run-judge:
 	cd judge && go run ./cmd/judgedaemon
