@@ -65,12 +65,24 @@ function getContestStatus(contest: Contest) {
   const end = new Date(contest.end_time)
 
   if (now < start) {
-    return { label: 'Upcoming', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', isUpcoming: true }
+    return {
+      label: 'Upcoming',
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/50',
+      isUpcoming: true,
+    }
   }
   if (now > end) {
-    return { label: 'Ended', color: 'bg-gray-500/20 text-gray-400 border-gray-500/50', isEnded: true }
+    return {
+      label: 'Ended',
+      color: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-500/50',
+      isEnded: true,
+    }
   }
-  return { label: 'Running', color: 'bg-green-500/20 text-green-400 border-green-500/50', isRunning: true }
+  return {
+    label: 'Running',
+    color: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/50',
+    isRunning: true,
+  }
 }
 
 export default function ContestDetailPage() {
@@ -106,8 +118,8 @@ export default function ContestDetailPage() {
   if (contestError) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-100">Contest</h1>
-        <div className="text-center py-10 text-red-400">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contest</h1>
+        <div className="text-center py-10 text-red-600 dark:text-red-400">
           Error loading contest: {contestError.message}
         </div>
       </div>
@@ -117,8 +129,8 @@ export default function ContestDetailPage() {
   if (contestLoading) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-100">Contest</h1>
-        <div className="text-center py-10 text-gray-400">Loading contest...</div>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contest</h1>
+        <div className="text-center py-10 text-gray-500 dark:text-gray-400">Loading contest...</div>
       </div>
     )
   }
@@ -126,8 +138,8 @@ export default function ContestDetailPage() {
   if (!contest) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-100">Contest</h1>
-        <div className="text-center py-10 text-gray-500">Contest not found</div>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contest</h1>
+        <div className="text-center py-10 text-gray-500 dark:text-gray-400">Contest not found</div>
       </div>
     )
   }
@@ -156,21 +168,21 @@ export default function ContestDetailPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <Link href="/contests" className="text-blue-400 hover:underline">
+          <Link href="/contests" className="text-blue-600 dark:text-blue-400 hover:underline">
             Contests
           </Link>
-          <span className="text-gray-500">/</span>
-          <span className="text-gray-300">{contest.short_name}</span>
+          <span className="text-gray-500 dark:text-gray-400">/</span>
+          <span className="text-gray-700 dark:text-gray-300">{contest.short_name}</span>
         </div>
       </div>
 
       {/* Contest Info Card */}
-      <div className="bg-gray-800 rounded-lg shadow mb-6 border border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-700">
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-100 mb-1">{contest.name}</h1>
-              <p className="text-gray-400">{contest.short_name}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">{contest.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{contest.short_name}</p>
             </div>
             <div className="flex items-center gap-3">
               {status && (
@@ -179,7 +191,7 @@ export default function ContestDetailPage() {
                 </span>
               )}
               {!contest.public && (
-                <span className="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded">Private</span>
+                <span className="text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Private</span>
               )}
             </div>
           </div>
@@ -187,29 +199,29 @@ export default function ContestDetailPage() {
           {/* Time info and countdown */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="text-gray-500 text-xs uppercase tracking-wide">Start</label>
-              <div className="text-gray-200">{formatDateTime(contest.start_time)}</div>
+              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">Start</label>
+              <div className="text-gray-800 dark:text-gray-200">{formatDateTime(contest.start_time)}</div>
             </div>
             <div>
-              <label className="text-gray-500 text-xs uppercase tracking-wide">End</label>
-              <div className="text-gray-200">{formatDateTime(contest.end_time)}</div>
+              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">End</label>
+              <div className="text-gray-800 dark:text-gray-200">{formatDateTime(contest.end_time)}</div>
             </div>
             <div>
-              <label className="text-gray-500 text-xs uppercase tracking-wide">Duration</label>
-              <div className="text-gray-200">{formatDuration(contest.start_time, contest.end_time)}</div>
+              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">Duration</label>
+              <div className="text-gray-800 dark:text-gray-200">{formatDuration(contest.start_time, contest.end_time)}</div>
             </div>
             <div>
-              <label className="text-gray-500 text-xs uppercase tracking-wide">
+              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
                 {status?.isRunning ? 'Remaining' : status?.isUpcoming ? 'Starts in' : 'Ended'}
               </label>
-              <div className="text-gray-200">
+              <div className="text-gray-800 dark:text-gray-200">
                 {status?.isRunning && (
                   <CountdownTimer targetTime={contest.end_time} showDays={true} />
                 )}
                 {status?.isUpcoming && (
                   <CountdownTimer targetTime={contest.start_time} showDays={true} />
                 )}
-                {status?.isEnded && <span className="text-gray-500">-</span>}
+                {status?.isEnded && <span className="text-gray-500 dark:text-gray-400">-</span>}
               </div>
             </div>
           </div>
@@ -224,7 +236,7 @@ export default function ContestDetailPage() {
             </button>
           )}
           {isRegistered && (
-            <div className="mt-4 px-4 py-2 bg-green-600/20 text-green-400 rounded-md inline-block">
+            <div className="mt-4 px-4 py-2 bg-green-100 text-green-800 dark:bg-green-600/20 dark:text-green-300 rounded-md inline-block">
               ✓ You are registered
             </div>
           )}
@@ -232,13 +244,13 @@ export default function ContestDetailPage() {
       </div>
 
       {/* Problems Section */}
-      <div className="bg-gray-800 rounded-lg shadow mb-6 border border-gray-700">
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-100">Problems</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Problems</h2>
         </div>
         <div className="p-4">
           {problems.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">No problems available</div>
+            <div className="text-center py-6 text-gray-500 dark:text-gray-400">No problems available</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {problems
@@ -249,8 +261,8 @@ export default function ContestDetailPage() {
                     href={`/problems/${problem.problem_id}?contest=${contestId}`}
                     className={`block p-4 rounded-lg border transition-all hover:shadow-md ${
                       problem.allow_submit
-                        ? 'bg-gray-750 border-gray-600 hover:border-blue-500 hover:bg-gray-700'
-                        : 'bg-gray-700 border-gray-700 opacity-50 cursor-not-allowed'
+                        ? 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-500 hover:bg-gray-100 dark:hover:bg-gray-600'
+                        : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -260,11 +272,11 @@ export default function ContestDetailPage() {
                           style={{ backgroundColor: problem.color }}
                         />
                       )}
-                      <span className="text-lg font-bold text-gray-100">
+                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
                         {problem.short_name}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       {problem.points} points
                     </div>
                     {!problem.allow_submit && (
@@ -278,11 +290,11 @@ export default function ContestDetailPage() {
       </div>
 
       {/* Scoreboard Section */}
-      <div className="bg-gray-800 rounded-lg shadow border border-gray-700">
-        <div className="p-4 border-b border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-100">Scoreboard</h2>
-            <span className="text-xs text-gray-500">Auto-updates every 5s</span>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Scoreboard</h2>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Auto-updates every 5s</span>
           </div>
         </div>
         <div className="p-4">

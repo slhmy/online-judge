@@ -220,7 +220,7 @@ export default function ProblemDetailPage() {
           <span>Memory Limit: {(problem.memory_limit / 1024).toFixed(0)} MB</span>
         </div>
 
-        <div className="prose prose-invert max-w-none">
+        <div className="prose max-w-none text-gray-800 dark:text-gray-200 dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
           {problemStatement ? (
             problemStatement.format === 'html' ? (
               <div dangerouslySetInnerHTML={{ __html: problemStatement.content }} />

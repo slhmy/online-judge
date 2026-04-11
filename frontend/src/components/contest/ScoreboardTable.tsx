@@ -143,7 +143,7 @@ export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTab
             <tr
               key={entry.team_id}
               className={cn(
-                idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750',
+                idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/60',
                 'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
               )}
             >
