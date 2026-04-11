@@ -20,19 +20,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProblemService_ListProblems_FullMethodName         = "/problem.v1.ProblemService/ListProblems"
-	ProblemService_GetProblem_FullMethodName           = "/problem.v1.ProblemService/GetProblem"
-	ProblemService_CreateProblem_FullMethodName        = "/problem.v1.ProblemService/CreateProblem"
-	ProblemService_UpdateProblem_FullMethodName        = "/problem.v1.ProblemService/UpdateProblem"
-	ProblemService_DeleteProblem_FullMethodName        = "/problem.v1.ProblemService/DeleteProblem"
-	ProblemService_ListTestCases_FullMethodName        = "/problem.v1.ProblemService/ListTestCases"
-	ProblemService_CreateTestCase_FullMethodName       = "/problem.v1.ProblemService/CreateTestCase"
-	ProblemService_UpdateTestCase_FullMethodName       = "/problem.v1.ProblemService/UpdateTestCase"
-	ProblemService_DeleteTestCase_FullMethodName       = "/problem.v1.ProblemService/DeleteTestCase"
-	ProblemService_BatchUploadTestCases_FullMethodName = "/problem.v1.ProblemService/BatchUploadTestCases"
-	ProblemService_ListLanguages_FullMethodName        = "/problem.v1.ProblemService/ListLanguages"
-	ProblemService_GetProblemStatement_FullMethodName  = "/problem.v1.ProblemService/GetProblemStatement"
-	ProblemService_SetProblemStatement_FullMethodName  = "/problem.v1.ProblemService/SetProblemStatement"
+	ProblemService_ListProblems_FullMethodName               = "/problem.v1.ProblemService/ListProblems"
+	ProblemService_GetProblem_FullMethodName                 = "/problem.v1.ProblemService/GetProblem"
+	ProblemService_CreateProblem_FullMethodName              = "/problem.v1.ProblemService/CreateProblem"
+	ProblemService_UpdateProblem_FullMethodName              = "/problem.v1.ProblemService/UpdateProblem"
+	ProblemService_DeleteProblem_FullMethodName              = "/problem.v1.ProblemService/DeleteProblem"
+	ProblemService_ListTestCases_FullMethodName              = "/problem.v1.ProblemService/ListTestCases"
+	ProblemService_CreateTestCase_FullMethodName             = "/problem.v1.ProblemService/CreateTestCase"
+	ProblemService_UpdateTestCase_FullMethodName             = "/problem.v1.ProblemService/UpdateTestCase"
+	ProblemService_DeleteTestCase_FullMethodName             = "/problem.v1.ProblemService/DeleteTestCase"
+	ProblemService_BatchUploadTestCases_FullMethodName       = "/problem.v1.ProblemService/BatchUploadTestCases"
+	ProblemService_ToggleTestCaseSample_FullMethodName       = "/problem.v1.ProblemService/ToggleTestCaseSample"
+	ProblemService_ListLanguages_FullMethodName              = "/problem.v1.ProblemService/ListLanguages"
+	ProblemService_GetProblemStatement_FullMethodName        = "/problem.v1.ProblemService/GetProblemStatement"
+	ProblemService_SetProblemStatement_FullMethodName        = "/problem.v1.ProblemService/SetProblemStatement"
+	ProblemService_InternalGetTestCaseContent_FullMethodName = "/problem.v1.ProblemService/InternalGetTestCaseContent"
+	ProblemService_InternalGetExecutable_FullMethodName      = "/problem.v1.ProblemService/InternalGetExecutable"
 )
 
 // ProblemServiceClient is the client API for ProblemService service.
@@ -61,12 +64,18 @@ type ProblemServiceClient interface {
 	DeleteTestCase(ctx context.Context, in *DeleteTestCaseRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Batch upload testcases (admin)
 	BatchUploadTestCases(ctx context.Context, in *BatchUploadTestCasesRequest, opts ...grpc.CallOption) (*BatchUploadTestCasesResponse, error)
+	// Toggle testcase sample flag (admin)
+	ToggleTestCaseSample(ctx context.Context, in *ToggleTestCaseSampleRequest, opts ...grpc.CallOption) (*ToggleTestCaseSampleResponse, error)
 	// List languages
 	ListLanguages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListLanguagesResponse, error)
 	// Get problem statement content
 	GetProblemStatement(ctx context.Context, in *GetProblemStatementRequest, opts ...grpc.CallOption) (*GetProblemStatementResponse, error)
 	// Set problem statement content (admin)
 	SetProblemStatement(ctx context.Context, in *SetProblemStatementRequest, opts ...grpc.CallOption) (*SetProblemStatementResponse, error)
+	// Internal: Get test case content (input/output) for judge daemon
+	InternalGetTestCaseContent(ctx context.Context, in *InternalGetTestCaseContentRequest, opts ...grpc.CallOption) (*InternalGetTestCaseContentResponse, error)
+	// Internal: Get executable binary (validator/interactor) for judge daemon
+	InternalGetExecutable(ctx context.Context, in *InternalGetExecutableRequest, opts ...grpc.CallOption) (*InternalGetExecutableResponse, error)
 }
 
 type problemServiceClient struct {
@@ -177,6 +186,16 @@ func (c *problemServiceClient) BatchUploadTestCases(ctx context.Context, in *Bat
 	return out, nil
 }
 
+func (c *problemServiceClient) ToggleTestCaseSample(ctx context.Context, in *ToggleTestCaseSampleRequest, opts ...grpc.CallOption) (*ToggleTestCaseSampleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ToggleTestCaseSampleResponse)
+	err := c.cc.Invoke(ctx, ProblemService_ToggleTestCaseSample_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *problemServiceClient) ListLanguages(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListLanguagesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListLanguagesResponse)
@@ -201,6 +220,26 @@ func (c *problemServiceClient) SetProblemStatement(ctx context.Context, in *SetP
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetProblemStatementResponse)
 	err := c.cc.Invoke(ctx, ProblemService_SetProblemStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *problemServiceClient) InternalGetTestCaseContent(ctx context.Context, in *InternalGetTestCaseContentRequest, opts ...grpc.CallOption) (*InternalGetTestCaseContentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InternalGetTestCaseContentResponse)
+	err := c.cc.Invoke(ctx, ProblemService_InternalGetTestCaseContent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *problemServiceClient) InternalGetExecutable(ctx context.Context, in *InternalGetExecutableRequest, opts ...grpc.CallOption) (*InternalGetExecutableResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InternalGetExecutableResponse)
+	err := c.cc.Invoke(ctx, ProblemService_InternalGetExecutable_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -233,12 +272,18 @@ type ProblemServiceServer interface {
 	DeleteTestCase(context.Context, *DeleteTestCaseRequest) (*emptypb.Empty, error)
 	// Batch upload testcases (admin)
 	BatchUploadTestCases(context.Context, *BatchUploadTestCasesRequest) (*BatchUploadTestCasesResponse, error)
+	// Toggle testcase sample flag (admin)
+	ToggleTestCaseSample(context.Context, *ToggleTestCaseSampleRequest) (*ToggleTestCaseSampleResponse, error)
 	// List languages
 	ListLanguages(context.Context, *emptypb.Empty) (*ListLanguagesResponse, error)
 	// Get problem statement content
 	GetProblemStatement(context.Context, *GetProblemStatementRequest) (*GetProblemStatementResponse, error)
 	// Set problem statement content (admin)
 	SetProblemStatement(context.Context, *SetProblemStatementRequest) (*SetProblemStatementResponse, error)
+	// Internal: Get test case content (input/output) for judge daemon
+	InternalGetTestCaseContent(context.Context, *InternalGetTestCaseContentRequest) (*InternalGetTestCaseContentResponse, error)
+	// Internal: Get executable binary (validator/interactor) for judge daemon
+	InternalGetExecutable(context.Context, *InternalGetExecutableRequest) (*InternalGetExecutableResponse, error)
 	mustEmbedUnimplementedProblemServiceServer()
 }
 
@@ -279,6 +324,9 @@ func (UnimplementedProblemServiceServer) DeleteTestCase(context.Context, *Delete
 func (UnimplementedProblemServiceServer) BatchUploadTestCases(context.Context, *BatchUploadTestCasesRequest) (*BatchUploadTestCasesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchUploadTestCases not implemented")
 }
+func (UnimplementedProblemServiceServer) ToggleTestCaseSample(context.Context, *ToggleTestCaseSampleRequest) (*ToggleTestCaseSampleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ToggleTestCaseSample not implemented")
+}
 func (UnimplementedProblemServiceServer) ListLanguages(context.Context, *emptypb.Empty) (*ListLanguagesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListLanguages not implemented")
 }
@@ -287,6 +335,12 @@ func (UnimplementedProblemServiceServer) GetProblemStatement(context.Context, *G
 }
 func (UnimplementedProblemServiceServer) SetProblemStatement(context.Context, *SetProblemStatementRequest) (*SetProblemStatementResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetProblemStatement not implemented")
+}
+func (UnimplementedProblemServiceServer) InternalGetTestCaseContent(context.Context, *InternalGetTestCaseContentRequest) (*InternalGetTestCaseContentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InternalGetTestCaseContent not implemented")
+}
+func (UnimplementedProblemServiceServer) InternalGetExecutable(context.Context, *InternalGetExecutableRequest) (*InternalGetExecutableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InternalGetExecutable not implemented")
 }
 func (UnimplementedProblemServiceServer) mustEmbedUnimplementedProblemServiceServer() {}
 func (UnimplementedProblemServiceServer) testEmbeddedByValue()                        {}
@@ -489,6 +543,24 @@ func _ProblemService_BatchUploadTestCases_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProblemService_ToggleTestCaseSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ToggleTestCaseSampleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProblemServiceServer).ToggleTestCaseSample(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProblemService_ToggleTestCaseSample_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProblemServiceServer).ToggleTestCaseSample(ctx, req.(*ToggleTestCaseSampleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProblemService_ListLanguages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -543,6 +615,42 @@ func _ProblemService_SetProblemStatement_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProblemService_InternalGetTestCaseContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InternalGetTestCaseContentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProblemServiceServer).InternalGetTestCaseContent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProblemService_InternalGetTestCaseContent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProblemServiceServer).InternalGetTestCaseContent(ctx, req.(*InternalGetTestCaseContentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProblemService_InternalGetExecutable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InternalGetExecutableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProblemServiceServer).InternalGetExecutable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProblemService_InternalGetExecutable_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProblemServiceServer).InternalGetExecutable(ctx, req.(*InternalGetExecutableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProblemService_ServiceDesc is the grpc.ServiceDesc for ProblemService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -591,6 +699,10 @@ var ProblemService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProblemService_BatchUploadTestCases_Handler,
 		},
 		{
+			MethodName: "ToggleTestCaseSample",
+			Handler:    _ProblemService_ToggleTestCaseSample_Handler,
+		},
+		{
 			MethodName: "ListLanguages",
 			Handler:    _ProblemService_ListLanguages_Handler,
 		},
@@ -601,6 +713,14 @@ var ProblemService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetProblemStatement",
 			Handler:    _ProblemService_SetProblemStatement_Handler,
+		},
+		{
+			MethodName: "InternalGetTestCaseContent",
+			Handler:    _ProblemService_InternalGetTestCaseContent_Handler,
+		},
+		{
+			MethodName: "InternalGetExecutable",
+			Handler:    _ProblemService_InternalGetExecutable_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -19,6 +19,8 @@ type ProblemStoreInterface interface {
 	CreateTestCase(ctx context.Context, req *pb.CreateTestCaseRequest) (string, string, string, error)
 	UpdateTestCase(ctx context.Context, id string, req *pb.UpdateTestCaseRequest) (*pb.TestCase, error)
 	DeleteTestCase(ctx context.Context, id string) error
+	ToggleTestCaseSample(ctx context.Context, id string) (*pb.TestCase, error)
+	GetTestCaseByID(ctx context.Context, id string) (*pb.TestCase, error)
 	BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error)
 	ListLanguages(ctx context.Context) ([]*pb.Language, error)
 	GetProblemStatement(ctx context.Context, problemID string, language string) (*pb.ProblemStatement, error)
@@ -222,6 +224,29 @@ func (m *MockProblemStore) DeleteTestCase(ctx context.Context, id string) error 
 		}
 	}
 	return errors.New("test case not found")
+}
+
+func (m *MockProblemStore) ToggleTestCaseSample(ctx context.Context, id string) (*pb.TestCase, error) {
+	for _, tcs := range m.TestCases {
+		for _, tc := range tcs {
+			if tc.Id == id {
+				tc.IsSample = !tc.IsSample
+				return tc, nil
+			}
+		}
+	}
+	return nil, errors.New("test case not found")
+}
+
+func (m *MockProblemStore) GetTestCaseByID(ctx context.Context, id string) (*pb.TestCase, error) {
+	for _, tcs := range m.TestCases {
+		for _, tc := range tcs {
+			if tc.Id == id {
+				return tc, nil
+			}
+		}
+	}
+	return nil, errors.New("test case not found")
 }
 
 func (m *MockProblemStore) BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error) {

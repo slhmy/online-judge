@@ -191,6 +191,48 @@ func (s *ProblemStore) Delete(ctx context.Context, id string) error {
 	return err
 }
 
+func (s *ProblemStore) GetTestCaseByID(ctx context.Context, id string) (*pb.TestCase, error) {
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		SELECT id, problem_id, rank, is_sample, input_path, output_path, description, is_interactive, input_content, output_content
+		FROM test_cases WHERE id = $1
+	`
+
+	var tc pb.TestCase
+	var tcID, tcProblemID pgtype.UUID
+	var description, inputContent, outputContent pgtype.Text
+	err = s.db.QueryRow(ctx, query, parsedID).Scan(
+		&tcID, &tcProblemID, &tc.Rank, &tc.IsSample,
+		&tc.InputPath, &tc.OutputPath, &description, &tc.IsInteractive,
+		&inputContent, &outputContent,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if tcID.Valid {
+		tc.Id = uuid.UUID(tcID.Bytes).String()
+	}
+	if tcProblemID.Valid {
+		tc.ProblemId = uuid.UUID(tcProblemID.Bytes).String()
+	}
+	if description.Valid {
+		tc.Description = description.String
+	}
+	if inputContent.Valid {
+		tc.InputContent = inputContent.String
+	}
+	if outputContent.Valid {
+		tc.OutputContent = outputContent.String
+	}
+
+	return &tc, nil
+}
+
 func (s *ProblemStore) ListTestCases(ctx context.Context, problemID string, samplesOnly bool) ([]*pb.TestCase, error) {
 	parsedID, err := uuid.Parse(problemID)
 	if err != nil {
@@ -392,6 +434,50 @@ func (s *ProblemStore) DeleteTestCase(ctx context.Context, id string) error {
 
 	_, err = s.db.Exec(ctx, "DELETE FROM test_cases WHERE id = $1", parsedID)
 	return err
+}
+
+func (s *ProblemStore) ToggleTestCaseSample(ctx context.Context, id string) (*pb.TestCase, error) {
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		UPDATE test_cases
+		SET is_sample = NOT is_sample, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, problem_id, rank, is_sample, input_path, output_path, description, is_interactive, input_content, output_content
+	`
+
+	var tc pb.TestCase
+	var tcID, tcProblemID pgtype.UUID
+	var description, inputContent, outputContent pgtype.Text
+	err = s.db.QueryRow(ctx, query, parsedID).Scan(
+		&tcID, &tcProblemID, &tc.Rank, &tc.IsSample,
+		&tc.InputPath, &tc.OutputPath, &description, &tc.IsInteractive,
+		&inputContent, &outputContent,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if tcID.Valid {
+		tc.Id = uuid.UUID(tcID.Bytes).String()
+	}
+	if tcProblemID.Valid {
+		tc.ProblemId = uuid.UUID(tcProblemID.Bytes).String()
+	}
+	if description.Valid {
+		tc.Description = description.String
+	}
+	if inputContent.Valid {
+		tc.InputContent = inputContent.String
+	}
+	if outputContent.Valid {
+		tc.OutputContent = outputContent.String
+	}
+
+	return &tc, nil
 }
 
 func (s *ProblemStore) BatchCreateTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) ([]*pb.TestCase, error) {

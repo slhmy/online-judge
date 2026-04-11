@@ -3,8 +3,6 @@ package validator
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -46,15 +44,14 @@ func DefaultSpecialValidatorConfig() SpecialValidatorConfig {
 // SpecialValidator implements custom validator execution
 // Supports DOMjudge-style validators with exit codes 42=correct, 43=wrong-answer
 type SpecialValidator struct {
-	config     SpecialValidatorConfig
-	cache      *ValidatorCache
-	httpClient HTTPClient
-	baseURL    string
+	config           SpecialValidatorConfig
+	cache            *ValidatorCache
+	validatorFetcher ValidatorFetcher
 }
 
-// HTTPClient interface for fetching validator binaries
-type HTTPClient interface {
-	Get(ctx context.Context, url string) ([]byte, error)
+// ValidatorFetcher interface for fetching validator binaries
+type ValidatorFetcher interface {
+	FetchExecutable(ctx context.Context, executableID string) ([]byte, string, error)
 }
 
 // ValidatorBinary represents a cached validator binary
@@ -66,11 +63,10 @@ type ValidatorBinary struct {
 }
 
 // NewSpecialValidator creates a new special validator
-func NewSpecialValidator(config SpecialValidatorConfig, httpClient HTTPClient, baseURL string) *SpecialValidator {
+func NewSpecialValidator(config SpecialValidatorConfig, fetcher ValidatorFetcher) *SpecialValidator {
 	v := &SpecialValidator{
-		config:     config,
-		httpClient: httpClient,
-		baseURL:    baseURL,
+		config:           config,
+		validatorFetcher: fetcher,
 	}
 
 	if config.EnableCache {
@@ -214,65 +210,13 @@ func (v *SpecialValidator) getValidator(ctx context.Context, validatorID string)
 	}, nil
 }
 
-// fetchValidator downloads validator binary from the backend API
+// fetchValidator downloads validator binary via gRPC
 func (v *SpecialValidator) fetchValidator(ctx context.Context, validatorID string) ([]byte, string, error) {
-	if v.httpClient == nil {
-		return nil, "", fmt.Errorf("no HTTP client configured")
+	if v.validatorFetcher == nil {
+		return nil, "", fmt.Errorf("no validator fetcher configured")
 	}
 
-	url := fmt.Sprintf("%s/internal/executables/%s", v.baseURL, validatorID)
-	data, err := v.httpClient.Get(ctx, url)
-	if err != nil {
-		return nil, "", fmt.Errorf("HTTP request failed: %w", err)
-	}
-
-	// Try to parse as JSON response first
-	var jsonResp struct {
-		Executable struct {
-			ID             string `json:"id"`
-			ExternalID     string `json:"external_id"`
-			Type           string `json:"type"`
-			ExecutablePath string `json:"executable_path"`
-			MD5Sum         string `json:"md5sum"`
-			BinaryData     string `json:"binary_data"`
-		} `json:"executable"`
-	}
-
-	if err := json.Unmarshal(data, &jsonResp); err == nil && jsonResp.Executable.ID != "" {
-		// Successfully parsed JSON response
-		md5sum := jsonResp.Executable.MD5Sum
-
-		// If binary_data is provided as base64, decode it
-		if jsonResp.Executable.BinaryData != "" {
-			decoded, err := base64.StdEncoding.DecodeString(jsonResp.Executable.BinaryData)
-			if err != nil {
-				// Try without padding (some implementations don't use padding)
-				decoded, err = base64.RawStdEncoding.DecodeString(jsonResp.Executable.BinaryData)
-				if err != nil {
-					return nil, md5sum, fmt.Errorf("failed to decode base64 binary data: %w", err)
-				}
-			}
-			return decoded, md5sum, nil
-		}
-
-		// If executable_path contains base64 encoded data, try to decode
-		if jsonResp.Executable.ExecutablePath != "" {
-			decoded, err := base64.StdEncoding.DecodeString(jsonResp.Executable.ExecutablePath)
-			if err == nil {
-				return decoded, md5sum, nil
-			}
-			// Not base64, might be a storage path - return placeholder
-			log.Printf("Executable %s has storage path %s, binary needs to be fetched separately",
-				validatorID, jsonResp.Executable.ExecutablePath)
-		}
-
-		// No binary data available in JSON, need to fetch separately
-		return nil, md5sum, fmt.Errorf("executable binary not available in response")
-	}
-
-	// If not JSON, treat as raw binary data
-	// This handles cases where the endpoint returns raw binary directly
-	return data, "", nil
+	return v.validatorFetcher.FetchExecutable(ctx, validatorID)
 }
 
 // ValidatorCache manages cached validator binaries
@@ -361,11 +305,4 @@ func (c *ValidatorCache) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.binary)
-}
-
-// HTTPClientFunc is a simple implementation of HTTPClient using a function
-type HTTPClientFunc func(ctx context.Context, url string) ([]byte, error)
-
-func (f HTTPClientFunc) Get(ctx context.Context, url string) ([]byte, error) {
-	return f(ctx, url)
 }

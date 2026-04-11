@@ -68,7 +68,8 @@ func main() {
 
 	// Problem service
 	pStore := problemStore.NewProblemStore(dbpool)
-	pService := problemService.NewProblemService(pStore, rdb)
+	execStore := problemStore.NewExecutableStore(dbpool)
+	pService := problemService.NewProblemService(pStore, execStore, rdb)
 
 	// Submission service
 	sStore := submissionStore.NewSubmissionStore(dbpool)

@@ -75,6 +75,13 @@ service SubmissionService {
       body: "*"
     };
   }
+
+  // Internal: Get source code for a submission (for judge daemon)
+  rpc InternalGetSourceCode(InternalGetSourceCodeRequest) returns (InternalGetSourceCodeResponse) {
+    option (google.api.http) = {
+      get: "/internal/submissions/{submission_id}/source"
+    };
+  }
 }
 
 // DOMjudge-style verdicts
@@ -270,4 +277,13 @@ message InternalCreateJudgingRunRequest {
 message InternalCreateJudgingRunResponse {
   string run_id = 1;
   string status = 2;
+}
+
+message InternalGetSourceCodeRequest {
+  string submission_id = 1;
+}
+
+message InternalGetSourceCodeResponse {
+  string submission_id = 1;
+  string source_code = 2;
 }

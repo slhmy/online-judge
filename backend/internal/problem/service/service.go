@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -13,14 +14,16 @@ import (
 
 type ProblemService struct {
 	pb.UnimplementedProblemServiceServer
-	store store.ProblemStoreInterface
-	cache *redis.Client
+	store     store.ProblemStoreInterface
+	execStore store.ExecutableStoreInterface
+	cache     *redis.Client
 }
 
-func NewProblemService(s store.ProblemStoreInterface, cache *redis.Client) *ProblemService {
+func NewProblemService(s store.ProblemStoreInterface, execStore store.ExecutableStoreInterface, cache *redis.Client) *ProblemService {
 	return &ProblemService{
-		store: s,
-		cache: cache,
+		store:     s,
+		execStore: execStore,
+		cache:     cache,
 	}
 }
 
@@ -125,6 +128,14 @@ func (s *ProblemService) DeleteTestCase(ctx context.Context, req *pb.DeleteTestC
 	return &emptypb.Empty{}, nil
 }
 
+func (s *ProblemService) ToggleTestCaseSample(ctx context.Context, req *pb.ToggleTestCaseSampleRequest) (*pb.ToggleTestCaseSampleResponse, error) {
+	tc, err := s.store.ToggleTestCaseSample(ctx, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ToggleTestCaseSampleResponse{TestCase: tc}, nil
+}
+
 func (s *ProblemService) BatchUploadTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) (*pb.BatchUploadTestCasesResponse, error) {
 	testCases, err := s.store.BatchCreateTestCases(ctx, req)
 	if err != nil {
@@ -159,4 +170,31 @@ func (s *ProblemService) SetProblemStatement(ctx context.Context, req *pb.SetPro
 	}
 
 	return &pb.SetProblemStatementResponse{Statement: statement}, nil
+}
+
+func (s *ProblemService) InternalGetTestCaseContent(ctx context.Context, req *pb.InternalGetTestCaseContentRequest) (*pb.InternalGetTestCaseContentResponse, error) {
+	tc, err := s.store.GetTestCaseByID(ctx, req.GetTestCaseId())
+	if err != nil {
+		return nil, fmt.Errorf("test case not found: %w", err)
+	}
+
+	return &pb.InternalGetTestCaseContentResponse{
+		TestCaseId: tc.Id,
+		Input:      tc.InputContent,
+		Output:     tc.OutputContent,
+	}, nil
+}
+
+func (s *ProblemService) InternalGetExecutable(ctx context.Context, req *pb.InternalGetExecutableRequest) (*pb.InternalGetExecutableResponse, error) {
+	exec, err := s.execStore.GetWithBinary(ctx, req.GetId())
+	if err != nil {
+		return nil, fmt.Errorf("executable not found: %w", err)
+	}
+
+	return &pb.InternalGetExecutableResponse{
+		Id:         exec.ID,
+		Type:       exec.Type,
+		Md5Sum:     exec.MD5Sum,
+		BinaryData: exec.BinaryData,
+	}, nil
 }

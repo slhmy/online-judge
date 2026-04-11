@@ -476,6 +476,19 @@ func (s *SubmissionService) InternalCreateJudgingRun(ctx context.Context, req *p
 	}, nil
 }
 
+// InternalGetSourceCode returns source code for a submission (for judge daemon)
+func (s *SubmissionService) InternalGetSourceCode(ctx context.Context, req *pb.InternalGetSourceCodeRequest) (*pb.InternalGetSourceCodeResponse, error) {
+	sub, err := s.store.GetByID(ctx, req.SubmissionId)
+	if err != nil {
+		return nil, fmt.Errorf("submission not found: %w", err)
+	}
+
+	return &pb.InternalGetSourceCodeResponse{
+		SubmissionId: sub.ID,
+		SourceCode:   sub.SourceCode,
+	}, nil
+}
+
 // RejudgeSubmission re-runs the judging for a submission
 func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.RejudgeSubmissionRequest) (*pb.RejudgeSubmissionResponse, error) {
 	// Get the submission

@@ -178,6 +178,14 @@ func main() {
 			r.Put("/problems/{id}", problemHandler.UpdateProblem)
 			r.Delete("/problems/{id}", problemHandler.DeleteProblem)
 			r.Put("/problems/{id}/statement", problemHandler.SetProblemStatement)
+
+			// Test case management
+			r.Get("/problems/{id}/testcases", problemHandler.ListTestCases)
+			r.Post("/problems/{id}/testcases", problemHandler.CreateTestCase)
+			r.Post("/problems/{id}/testcases/batch", problemHandler.BatchUploadTestCases)
+			r.Put("/testcases/{id}", problemHandler.UpdateTestCase)
+			r.Delete("/testcases/{id}", problemHandler.DeleteTestCase)
+			r.Put("/testcases/{id}/toggle-sample", problemHandler.ToggleTestCaseSample)
 		})
 
 		// Submissions (mixed - some public, some protected)

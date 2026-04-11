@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"encoding/base64"
 	"os"
 	"path/filepath"
 	"testing"
@@ -483,11 +482,12 @@ func TestSpecialValidatorConfig_Defaults(t *testing.T) {
 // MockHTTPClient for testing
 type MockHTTPClient struct {
 	response []byte
+	md5sum   string
 	err      error
 }
 
-func (m *MockHTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
-	return m.response, m.err
+func (m *MockHTTPClient) FetchExecutable(ctx context.Context, executableID string) ([]byte, string, error) {
+	return m.response, m.md5sum, m.err
 }
 
 func TestSpecialValidator_FetchValidator_RawBinary(t *testing.T) {
@@ -500,7 +500,7 @@ func TestSpecialValidator_FetchValidator_RawBinary(t *testing.T) {
 		EnableCache: false,
 	}
 
-	validator := NewSpecialValidator(config, mockClient, "http://localhost:8080")
+	validator := NewSpecialValidator(config, mockClient)
 
 	data, md5sum, err := validator.fetchValidator(context.Background(), "test-id")
 	require.NoError(t, err)
@@ -509,28 +509,15 @@ func TestSpecialValidator_FetchValidator_RawBinary(t *testing.T) {
 }
 
 func TestSpecialValidator_FetchValidator_JSONResponse(t *testing.T) {
-	// Test JSON response with base64 binary
+	// Test fetcher-provided binary and md5sum
 	validatorBinary := []byte("#!/bin/bash\nexit 42")
-	encodedBinary := base64.StdEncoding.EncodeToString(validatorBinary)
-
-	jsonResponse := `{
-		"executable": {
-			"id": "test-id",
-			"external_id": "validator-1",
-			"type": "compare",
-			"executable_path": "/path/to/validator",
-			"md5sum": "test-md5",
-			"binary_data": "` + encodedBinary + `"
-		}
-	}`
-
-	mockClient := &MockHTTPClient{response: []byte(jsonResponse)}
+	mockClient := &MockHTTPClient{response: validatorBinary, md5sum: "test-md5"}
 	config := SpecialValidatorConfig{
 		TimeLimit:   5 * time.Second,
 		EnableCache: false,
 	}
 
-	validator := NewSpecialValidator(config, mockClient, "http://localhost:8080")
+	validator := NewSpecialValidator(config, mockClient)
 
 	data, md5sum, err := validator.fetchValidator(context.Background(), "test-id")
 	require.NoError(t, err)
@@ -544,7 +531,7 @@ func TestSpecialValidator_FetchValidator_NoHTTPClient(t *testing.T) {
 		EnableCache: false,
 	}
 
-	validator := NewSpecialValidator(config, nil, "http://localhost:8080")
+	validator := NewSpecialValidator(config, nil)
 
 	_, _, err := validator.fetchValidator(context.Background(), "test-id")
 	assert.Error(t, err)

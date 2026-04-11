@@ -1684,6 +1684,102 @@ func (x *InternalCreateJudgingRunResponse) GetStatus() string {
 	return ""
 }
 
+type InternalGetSourceCodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId  string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InternalGetSourceCodeRequest) Reset() {
+	*x = InternalGetSourceCodeRequest{}
+	mi := &file_submission_v1_submission_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InternalGetSourceCodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InternalGetSourceCodeRequest) ProtoMessage() {}
+
+func (x *InternalGetSourceCodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_submission_v1_submission_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InternalGetSourceCodeRequest.ProtoReflect.Descriptor instead.
+func (*InternalGetSourceCodeRequest) Descriptor() ([]byte, []int) {
+	return file_submission_v1_submission_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *InternalGetSourceCodeRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+type InternalGetSourceCodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubmissionId  string                 `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	SourceCode    string                 `protobuf:"bytes,2,opt,name=source_code,json=sourceCode,proto3" json:"source_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InternalGetSourceCodeResponse) Reset() {
+	*x = InternalGetSourceCodeResponse{}
+	mi := &file_submission_v1_submission_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InternalGetSourceCodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InternalGetSourceCodeResponse) ProtoMessage() {}
+
+func (x *InternalGetSourceCodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_submission_v1_submission_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InternalGetSourceCodeResponse.ProtoReflect.Descriptor instead.
+func (*InternalGetSourceCodeResponse) Descriptor() ([]byte, []int) {
+	return file_submission_v1_submission_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *InternalGetSourceCodeResponse) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *InternalGetSourceCodeResponse) GetSourceCode() string {
+	if x != nil {
+		return x.SourceCode
+	}
+	return ""
+}
+
 var File_submission_v1_submission_proto protoreflect.FileDescriptor
 
 const file_submission_v1_submission_proto_rawDesc = "" +
@@ -1846,7 +1942,13 @@ const file_submission_v1_submission_proto_rawDesc = "" +
 	" \x01(\tR\voutputError\"Q\n" +
 	" InternalCreateJudgingRunResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status*\xe9\x01\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"C\n" +
+	"\x1cInternalGetSourceCodeRequest\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\"e\n" +
+	"\x1dInternalGetSourceCodeResponse\x12#\n" +
+	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12\x1f\n" +
+	"\vsource_code\x18\x02 \x01(\tR\n" +
+	"sourceCode*\xe9\x01\n" +
 	"\aVerdict\x12\x17\n" +
 	"\x13VERDICT_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fVERDICT_CORRECT\x10\x01\x12\x18\n" +
@@ -1863,8 +1965,7 @@ const file_submission_v1_submission_proto_rawDesc = "" +
 	"\x18SUBMISSION_STATUS_QUEUED\x10\x02\x12\x1d\n" +
 	"\x19SUBMISSION_STATUS_JUDGING\x10\x03\x12\x1f\n" +
 	"\x1bSUBMISSION_STATUS_COMPLETED\x10\x04\x12\x1b\n" +
-	"\x17SUBMISSION_STATUS_ERROR\x10\x052\xb3\n" +
-	"\n" +
+	"\x17SUBMISSION_STATUS_ERROR\x10\x052\xde\v\n" +
 	"\x11SubmissionService\x12\x83\x01\n" +
 	"\x10CreateSubmission\x12&.submission.v1.CreateSubmissionRequest\x1a'.submission.v1.CreateSubmissionResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/submissions\x12|\n" +
 	"\rGetSubmission\x12#.submission.v1.GetSubmissionRequest\x1a$.submission.v1.GetSubmissionResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v1/submissions/{id}\x12}\n" +
@@ -1875,7 +1976,8 @@ const file_submission_v1_submission_proto_rawDesc = "" +
 	"\x11RejudgeSubmission\x12'.submission.v1.RejudgeSubmissionRequest\x1a(.submission.v1.RejudgeSubmissionResponse\"3\x82\xd3\xe4\x93\x02-\"+/api/v1/submissions/{submission_id}/rejudge\x12\x91\x01\n" +
 	"\x15InternalCreateJudging\x12+.submission.v1.InternalCreateJudgingRequest\x1a,.submission.v1.InternalCreateJudgingResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/internal/judgings\x12\x9e\x01\n" +
 	"\x15InternalUpdateJudging\x12+.submission.v1.InternalUpdateJudgingRequest\x1a,.submission.v1.InternalUpdateJudgingResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/internal/judgings/{judging_id}\x12\xac\x01\n" +
-	"\x18InternalCreateJudgingRun\x12..submission.v1.InternalCreateJudgingRunRequest\x1a/.submission.v1.InternalCreateJudgingRunResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/internal/judgings/{judging_id}/runsBAZ?github.com/slhmy/online-judge/gen/go/submission/v1;submissionv1b\x06proto3"
+	"\x18InternalCreateJudgingRun\x12..submission.v1.InternalCreateJudgingRunRequest\x1a/.submission.v1.InternalCreateJudgingRunResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/internal/judgings/{judging_id}/runs\x12\xa8\x01\n" +
+	"\x15InternalGetSourceCode\x12+.submission.v1.InternalGetSourceCodeRequest\x1a,.submission.v1.InternalGetSourceCodeResponse\"4\x82\xd3\xe4\x93\x02.\x12,/internal/submissions/{submission_id}/sourceBAZ?github.com/slhmy/online-judge/gen/go/submission/v1;submissionv1b\x06proto3"
 
 var (
 	file_submission_v1_submission_proto_rawDescOnce sync.Once
@@ -1890,7 +1992,7 @@ func file_submission_v1_submission_proto_rawDescGZIP() []byte {
 }
 
 var file_submission_v1_submission_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_submission_v1_submission_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_submission_v1_submission_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_submission_v1_submission_proto_goTypes = []any{
 	(Verdict)(0),                             // 0: submission.v1.Verdict
 	(SubmissionStatus)(0),                    // 1: submission.v1.SubmissionStatus
@@ -1916,22 +2018,24 @@ var file_submission_v1_submission_proto_goTypes = []any{
 	(*InternalUpdateJudgingResponse)(nil),    // 21: submission.v1.InternalUpdateJudgingResponse
 	(*InternalCreateJudgingRunRequest)(nil),  // 22: submission.v1.InternalCreateJudgingRunRequest
 	(*InternalCreateJudgingRunResponse)(nil), // 23: submission.v1.InternalCreateJudgingRunResponse
-	(*v1.UserRef)(nil),                       // 24: common.v1.UserRef
-	(*v1.Pagination)(nil),                    // 25: common.v1.Pagination
-	(*v1.PaginatedResponse)(nil),             // 26: common.v1.PaginatedResponse
+	(*InternalGetSourceCodeRequest)(nil),     // 24: submission.v1.InternalGetSourceCodeRequest
+	(*InternalGetSourceCodeResponse)(nil),    // 25: submission.v1.InternalGetSourceCodeResponse
+	(*v1.UserRef)(nil),                       // 26: common.v1.UserRef
+	(*v1.Pagination)(nil),                    // 27: common.v1.Pagination
+	(*v1.PaginatedResponse)(nil),             // 28: common.v1.PaginatedResponse
 }
 var file_submission_v1_submission_proto_depIdxs = []int32{
-	24, // 0: submission.v1.SubmissionSummary.user:type_name -> common.v1.UserRef
+	26, // 0: submission.v1.SubmissionSummary.user:type_name -> common.v1.UserRef
 	0,  // 1: submission.v1.SubmissionSummary.verdict:type_name -> submission.v1.Verdict
 	0,  // 2: submission.v1.Judging.verdict:type_name -> submission.v1.Verdict
 	0,  // 3: submission.v1.JudgingRun.verdict:type_name -> submission.v1.Verdict
 	1,  // 4: submission.v1.CreateSubmissionResponse.status:type_name -> submission.v1.SubmissionStatus
 	2,  // 5: submission.v1.GetSubmissionResponse.submission:type_name -> submission.v1.Submission
 	4,  // 6: submission.v1.GetSubmissionResponse.latest_judging:type_name -> submission.v1.Judging
-	25, // 7: submission.v1.ListSubmissionsRequest.pagination:type_name -> common.v1.Pagination
+	27, // 7: submission.v1.ListSubmissionsRequest.pagination:type_name -> common.v1.Pagination
 	0,  // 8: submission.v1.ListSubmissionsRequest.verdict:type_name -> submission.v1.Verdict
 	3,  // 9: submission.v1.ListSubmissionsResponse.submissions:type_name -> submission.v1.SubmissionSummary
-	26, // 10: submission.v1.ListSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
+	28, // 10: submission.v1.ListSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
 	4,  // 11: submission.v1.GetJudgingResponse.judging:type_name -> submission.v1.Judging
 	5,  // 12: submission.v1.GetJudgingRunsResponse.runs:type_name -> submission.v1.JudgingRun
 	6,  // 13: submission.v1.SubmissionService.CreateSubmission:input_type -> submission.v1.CreateSubmissionRequest
@@ -1943,17 +2047,19 @@ var file_submission_v1_submission_proto_depIdxs = []int32{
 	18, // 19: submission.v1.SubmissionService.InternalCreateJudging:input_type -> submission.v1.InternalCreateJudgingRequest
 	20, // 20: submission.v1.SubmissionService.InternalUpdateJudging:input_type -> submission.v1.InternalUpdateJudgingRequest
 	22, // 21: submission.v1.SubmissionService.InternalCreateJudgingRun:input_type -> submission.v1.InternalCreateJudgingRunRequest
-	7,  // 22: submission.v1.SubmissionService.CreateSubmission:output_type -> submission.v1.CreateSubmissionResponse
-	9,  // 23: submission.v1.SubmissionService.GetSubmission:output_type -> submission.v1.GetSubmissionResponse
-	11, // 24: submission.v1.SubmissionService.ListSubmissions:output_type -> submission.v1.ListSubmissionsResponse
-	13, // 25: submission.v1.SubmissionService.GetJudging:output_type -> submission.v1.GetJudgingResponse
-	15, // 26: submission.v1.SubmissionService.GetJudgingRuns:output_type -> submission.v1.GetJudgingRunsResponse
-	17, // 27: submission.v1.SubmissionService.RejudgeSubmission:output_type -> submission.v1.RejudgeSubmissionResponse
-	19, // 28: submission.v1.SubmissionService.InternalCreateJudging:output_type -> submission.v1.InternalCreateJudgingResponse
-	21, // 29: submission.v1.SubmissionService.InternalUpdateJudging:output_type -> submission.v1.InternalUpdateJudgingResponse
-	23, // 30: submission.v1.SubmissionService.InternalCreateJudgingRun:output_type -> submission.v1.InternalCreateJudgingRunResponse
-	22, // [22:31] is the sub-list for method output_type
-	13, // [13:22] is the sub-list for method input_type
+	24, // 22: submission.v1.SubmissionService.InternalGetSourceCode:input_type -> submission.v1.InternalGetSourceCodeRequest
+	7,  // 23: submission.v1.SubmissionService.CreateSubmission:output_type -> submission.v1.CreateSubmissionResponse
+	9,  // 24: submission.v1.SubmissionService.GetSubmission:output_type -> submission.v1.GetSubmissionResponse
+	11, // 25: submission.v1.SubmissionService.ListSubmissions:output_type -> submission.v1.ListSubmissionsResponse
+	13, // 26: submission.v1.SubmissionService.GetJudging:output_type -> submission.v1.GetJudgingResponse
+	15, // 27: submission.v1.SubmissionService.GetJudgingRuns:output_type -> submission.v1.GetJudgingRunsResponse
+	17, // 28: submission.v1.SubmissionService.RejudgeSubmission:output_type -> submission.v1.RejudgeSubmissionResponse
+	19, // 29: submission.v1.SubmissionService.InternalCreateJudging:output_type -> submission.v1.InternalCreateJudgingResponse
+	21, // 30: submission.v1.SubmissionService.InternalUpdateJudging:output_type -> submission.v1.InternalUpdateJudgingResponse
+	23, // 31: submission.v1.SubmissionService.InternalCreateJudgingRun:output_type -> submission.v1.InternalCreateJudgingRunResponse
+	25, // 32: submission.v1.SubmissionService.InternalGetSourceCode:output_type -> submission.v1.InternalGetSourceCodeResponse
+	23, // [23:33] is the sub-list for method output_type
+	13, // [13:23] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name
 	13, // [13:13] is the sub-list for extension extendee
 	0,  // [0:13] is the sub-list for field type_name
@@ -1970,7 +2076,7 @@ func file_submission_v1_submission_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_submission_v1_submission_proto_rawDesc), len(file_submission_v1_submission_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

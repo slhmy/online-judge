@@ -100,6 +100,10 @@ func (m *MockSubmissionServiceClient) InternalCreateJudgingRun(ctx context.Conte
 	return &pb.InternalCreateJudgingRunResponse{RunId: "run-id", Status: "created"}, nil
 }
 
+func (m *MockSubmissionServiceClient) InternalGetSourceCode(ctx context.Context, req *pb.InternalGetSourceCodeRequest, opts ...grpc.CallOption) (*pb.InternalGetSourceCodeResponse, error) {
+	return &pb.InternalGetSourceCodeResponse{}, nil
+}
+
 func TestSubmissionHandler_Create(t *testing.T) {
 	tests := []struct {
 		name       string

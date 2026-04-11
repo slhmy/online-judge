@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,39 +10,20 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	pbJudge "github.com/slhmy/online-judge/gen/go/judge/v1"
+	pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/slhmy/online-judge/gen/go/submission/v1"
 	"github.com/slhmy/online-judge/judge/internal/config"
-	"github.com/slhmy/online-judge/judge/internal/queue"
 	"github.com/slhmy/online-judge/judge/internal/worker"
 )
 
-// JudgehostClient handles communication with Judge Service
+// JudgehostClient handles communication with Judge Service via gRPC
 type JudgehostClient struct {
-	judgeServiceURL string
-	httpClient      *http.Client
-}
-
-// RegisterResponse is the response from RegisterJudgehost API
-type RegisterResponse struct {
-	JudgehostID string `json:"judgehost_id"`
-	QueueName   string `json:"queue_name"`
-	Status      string `json:"status"`
-}
-
-// HeartbeatRequest is the request body for heartbeat API
-type HeartbeatRequest struct {
-	JudgehostID     string   `json:"judgehost_id"`
-	Status          string   `json:"status"`
-	CurrentJobID    string   `json:"current_job_id,omitempty"`
-	ActiveJobs      int      `json:"active_jobs"`
-	CompletedJobIDs []string `json:"completed_job_ids,omitempty"`
-}
-
-// HeartbeatResponse is the response from heartbeat API
-type HeartbeatResponse struct {
-	Acknowledged    bool     `json:"acknowledged"`
-	PendingTasks    int      `json:"pending_tasks"`
-	AssignedTaskIDs []string `json:"assigned_task_ids,omitempty"`
+	client pbJudge.JudgeServiceClient
+	conn   *grpc.ClientConn
 }
 
 func main() {
@@ -70,11 +47,20 @@ func main() {
 	}
 	log.Printf("Connected to Redis at %s", cfg.RedisURL)
 
-	// Create Judge Service client
-	judgeClient := &JudgehostClient{
-		judgeServiceURL: cfg.JudgeServiceURL,
-		httpClient:      &http.Client{Timeout: 30 * time.Second},
+	// Create Judge Service gRPC client
+	conn, err := grpc.NewClient(cfg.JudgeServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to connect to Judge Service: %v", err)
 	}
+	judgeClient := &JudgehostClient{
+		client: pbJudge.NewJudgeServiceClient(conn),
+		conn:   conn,
+	}
+	submissionClient := pbSubmission.NewSubmissionServiceClient(conn)
+	problemClient := pbProblem.NewProblemServiceClient(conn)
+	defer func() { _ = conn.Close() }()
 
 	// Register judgehost (only for asynq mode)
 	var queueName string
@@ -101,14 +87,14 @@ func main() {
 	switch cfg.QueueMode {
 	case "asynq":
 		// Asynq mode only
-		startAsynqWorker(cfg, rdb, ctx, queueName, judgeClient, completedJobsChan)
+		startAsynqWorker(cfg, rdb, ctx, queueName, judgeClient, completedJobsChan, submissionClient, problemClient)
 	case "legacy":
 		// Legacy mode only - no registration, no heartbeat
-		startLegacyWorker(cfg, rdb, ctx)
+		startLegacyWorker(cfg, rdb, ctx, submissionClient, problemClient, judgeClient.client)
 	case "both":
 		// Both modes during migration
-		startAsynqWorker(cfg, rdb, ctx, queueName, judgeClient, completedJobsChan)
-		startLegacyWorker(cfg, rdb, ctx)
+		startAsynqWorker(cfg, rdb, ctx, queueName, judgeClient, completedJobsChan, submissionClient, problemClient)
+		startLegacyWorker(cfg, rdb, ctx, submissionClient, problemClient, judgeClient.client)
 	default:
 		log.Fatalf("Unknown queue mode: %s", cfg.QueueMode)
 	}
@@ -141,7 +127,7 @@ func main() {
 					if err != nil {
 						log.Printf("Heartbeat failed: %v", err)
 					} else {
-						log.Printf("Heartbeat acknowledged: pending=%d, assigned=%v", resp.PendingTasks, resp.AssignedTaskIDs)
+						log.Printf("Heartbeat acknowledged: pending=%d, assigned=%v", resp.PendingTasks, resp.AssignedTaskIds)
 						// Clear completed jobs after successful heartbeat
 						completedJobs = make([]string, 0)
 					}
@@ -168,9 +154,9 @@ func main() {
 }
 
 // startAsynqWorker starts the asynq-based worker
-func startAsynqWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context, queueName string, judgeClient *JudgehostClient, completedJobsChan chan<- string) {
+func startAsynqWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context, queueName string, judgeClient *JudgehostClient, completedJobsChan chan<- string, submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient) {
 	// Create asynq handler
-	handler := worker.NewAsynqHandler(cfg, rdb)
+	handler := worker.NewAsynqHandler(cfg, rdb, submissionClient, problemClient, judgeClient.client)
 
 	// Create asynq server (listen on dedicated queue)
 	server := asynq.NewServer(
@@ -203,12 +189,9 @@ func startAsynqWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context
 }
 
 // startLegacyWorker starts the legacy Redis sorted set worker
-func startLegacyWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context) {
-	// Create legacy queue client
-	judgeQueue := queue.NewJudgeQueue(rdb, cfg.OrchestratorURL)
-
+func startLegacyWorker(cfg *config.Config, rdb *redis.Client, ctx context.Context, submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, judgeServiceClient pbJudge.JudgeServiceClient) {
 	// Create legacy worker
-	legacyWorker := worker.NewJudgeWorker(cfg.JudgehostID, cfg, judgeQueue, rdb)
+	legacyWorker := worker.NewJudgeWorker(cfg.JudgehostID, cfg, rdb, submissionClient, problemClient, judgeServiceClient)
 
 	log.Printf("Starting legacy worker (Redis sorted set queue)")
 
@@ -220,112 +203,40 @@ func startLegacyWorker(cfg *config.Config, rdb *redis.Client, ctx context.Contex
 	}()
 }
 
-// Register registers the judgehost with Judge Service
+// Register registers the judgehost with Judge Service via gRPC
 func (c *JudgehostClient) Register(ctx context.Context, judgehostID string) (string, error) {
-	url := fmt.Sprintf("%s/internal/judge/judgehosts", c.judgeServiceURL)
-
-	body := map[string]interface{}{
-		"judgehost_id": judgehostID,
-		"capabilities": map[string]interface{}{
-			"languages":            []string{"cpp17", "cpp20", "python3", "go", "java", "rust"},
-			"max_concurrent_jobs":  5,
-			"supports_interactive": true,
-			"supports_special":     true,
+	resp, err := c.client.RegisterJudgehost(ctx, &pbJudge.RegisterJudgehostRequest{
+		JudgehostId: judgehostID,
+		Capabilities: &pbJudge.JudgehostCapabilities{
+			Languages:           []string{"cpp17", "cpp20", "python3", "go", "java", "rust"},
+			MaxConcurrentJobs:   5,
+			SupportsInteractive: true,
+			SupportsSpecial:     true,
 		},
-	}
-
-	bodyBytes, err := json.Marshal(body)
+	})
 	if err != nil {
 		return "", err
 	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to register: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		respBody, _ := json.Marshal(resp.Body)
-		return "", fmt.Errorf("register failed: status %d, body: %s", resp.StatusCode, string(respBody))
-	}
-
-	var result RegisterResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode register response: %w", err)
-	}
-
-	return result.QueueName, nil
+	return resp.QueueName, nil
 }
 
-// Heartbeat sends heartbeat to Judge Service
-func (c *JudgehostClient) Heartbeat(ctx context.Context, judgehostID, status, currentJobID string, completedJobIDs []string) (*HeartbeatResponse, error) {
-	url := fmt.Sprintf("%s/internal/judge/judgehosts/%s/heartbeat", c.judgeServiceURL, judgehostID)
-
-	body := HeartbeatRequest{
-		JudgehostID:     judgehostID,
-		Status:          status,
-		CurrentJobID:    currentJobID,
-		ActiveJobs:      0, // Will be updated later
-		CompletedJobIDs: completedJobIDs,
-	}
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("heartbeat failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := json.Marshal(resp.Body)
-		return nil, fmt.Errorf("heartbeat failed: status %d, body: %s", resp.StatusCode, string(respBody))
-	}
-
-	var result HeartbeatResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode heartbeat response: %w", err)
-	}
-
-	return &result, nil
+// Heartbeat sends heartbeat to Judge Service via gRPC
+func (c *JudgehostClient) Heartbeat(ctx context.Context, judgehostID, status, currentJobID string, completedJobIDs []string) (*pbJudge.HeartbeatResponse, error) {
+	return c.client.Heartbeat(ctx, &pbJudge.HeartbeatRequest{
+		JudgehostId:     judgehostID,
+		Status:          pbJudge.JudgehostStatus_JUDGEHOST_STATUS_IDLE,
+		CurrentJobId:    currentJobID,
+		ActiveJobs:      0,
+		CompletedJobIds: completedJobIDs,
+	})
 }
 
-// Deregister deregisters the judgehost from Judge Service
+// Deregister deregisters the judgehost from Judge Service via gRPC
 func (c *JudgehostClient) Deregister(ctx context.Context, judgehostID string) error {
-	url := fmt.Sprintf("%s/internal/judge/judgehosts/%s", c.judgeServiceURL, judgehostID)
-
-	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("deregister failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("deregister failed: status %d", resp.StatusCode)
-	}
-
-	return nil
+	_, err := c.client.DeregisterJudgehost(ctx, &pbJudge.DeregisterJudgehostRequest{
+		JudgehostId: judgehostID,
+	})
+	return err
 }
 
 // asynqLogger implements asynq.Logger interface

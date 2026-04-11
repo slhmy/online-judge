@@ -85,6 +85,13 @@ service ProblemService {
     };
   }
 
+  // Toggle testcase sample flag (admin)
+  rpc ToggleTestCaseSample(ToggleTestCaseSampleRequest) returns (ToggleTestCaseSampleResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/testcases/{id}/toggle-sample"
+    };
+  }
+
   // List languages
   rpc ListLanguages(google.protobuf.Empty) returns (ListLanguagesResponse) {
     option (google.api.http) = {
@@ -104,6 +111,20 @@ service ProblemService {
     option (google.api.http) = {
       put: "/api/v1/problems/{problem_id}/statement"
       body: "*"
+    };
+  }
+
+  // Internal: Get test case content (input/output) for judge daemon
+  rpc InternalGetTestCaseContent(InternalGetTestCaseContentRequest) returns (InternalGetTestCaseContentResponse) {
+    option (google.api.http) = {
+      get: "/internal/testcases/{test_case_id}/content"
+    };
+  }
+
+  // Internal: Get executable binary (validator/interactor) for judge daemon
+  rpc InternalGetExecutable(InternalGetExecutableRequest) returns (InternalGetExecutableResponse) {
+    option (google.api.http) = {
+      get: "/internal/executables/{id}"
     };
   }
 }
@@ -281,6 +302,14 @@ message DeleteTestCaseRequest {
   string id = 1;
 }
 
+message ToggleTestCaseSampleRequest {
+  string id = 1;
+}
+
+message ToggleTestCaseSampleResponse {
+  TestCase test_case = 1;
+}
+
 message BatchUploadTestCasesRequest {
   string problem_id = 1;
   repeated TestCaseData test_cases = 2;
@@ -333,4 +362,25 @@ message SetProblemStatementRequest {
 
 message SetProblemStatementResponse {
   ProblemStatement statement = 1;
+}
+
+message InternalGetTestCaseContentRequest {
+  string test_case_id = 1;
+}
+
+message InternalGetTestCaseContentResponse {
+  string test_case_id = 1;
+  string input = 2;
+  string output = 3;
+}
+
+message InternalGetExecutableRequest {
+  string id = 1;
+}
+
+message InternalGetExecutableResponse {
+  string id = 1;
+  string type = 2;
+  string md5sum = 3;
+  bytes binary_data = 4;
 }

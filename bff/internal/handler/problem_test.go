@@ -171,6 +171,18 @@ func (m *MockProblemServiceClient) SetProblemStatement(ctx context.Context, req 
 	}, nil
 }
 
+func (m *MockProblemServiceClient) ToggleTestCaseSample(ctx context.Context, req *pb.ToggleTestCaseSampleRequest, opts ...grpc.CallOption) (*pb.ToggleTestCaseSampleResponse, error) {
+	return &pb.ToggleTestCaseSampleResponse{}, nil
+}
+
+func (m *MockProblemServiceClient) InternalGetTestCaseContent(ctx context.Context, req *pb.InternalGetTestCaseContentRequest, opts ...grpc.CallOption) (*pb.InternalGetTestCaseContentResponse, error) {
+	return &pb.InternalGetTestCaseContentResponse{}, nil
+}
+
+func (m *MockProblemServiceClient) InternalGetExecutable(ctx context.Context, req *pb.InternalGetExecutableRequest, opts ...grpc.CallOption) (*pb.InternalGetExecutableResponse, error) {
+	return &pb.InternalGetExecutableResponse{}, nil
+}
+
 func TestProblemHandler_ListProblems(t *testing.T) {
 	tests := []struct {
 		name       string

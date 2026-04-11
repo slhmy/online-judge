@@ -18,7 +18,7 @@ const (
 
 // JudgehostStore manages judgehost data in PostgreSQL and Redis
 type JudgehostStore struct {
-	db   *pgxpool.Pool
+	db    *pgxpool.Pool
 	redis *redis.Client
 }
 
@@ -32,21 +32,21 @@ func NewJudgehostStore(db *pgxpool.Pool, redis *redis.Client) *JudgehostStore {
 
 // Judgehost represents a registered judgehost
 type Judgehost struct {
-	ID             string
-	QueueName      string
-	Languages      []string
-	MaxConcurrent  int32
-	MemoryLimit    int64
-	TimeLimit      float64
-	Interactive    bool
-	Special        bool
-	Extra          map[string]string
-	Status         string
-	CurrentJobID   string
-	LastPing       time.Time
-	ActiveJobs     int32
-	CompletedJobs  int32
-	RegisteredAt   time.Time
+	ID            string
+	QueueName     string
+	Languages     []string
+	MaxConcurrent int32
+	MemoryLimit   int64
+	TimeLimit     float64
+	Interactive   bool
+	Special       bool
+	Extra         map[string]string
+	Status        string
+	CurrentJobID  string
+	LastPing      time.Time
+	ActiveJobs    int32
+	CompletedJobs int32
+	RegisteredAt  time.Time
 }
 
 // Register inserts a new judgehost and returns the assigned queue name
@@ -55,12 +55,22 @@ func (s *JudgehostStore) Register(ctx context.Context, id string, languages []st
 	// Generate queue name based on judgehost ID
 	queueName := fmt.Sprintf("judgehost-%s", id)
 
-	// Insert into PostgreSQL
+	// Insert into PostgreSQL (upsert: update capabilities on re-registration)
 	var registeredAt pgtype.Timestamp
 	err := s.db.QueryRow(ctx, `
 		INSERT INTO judgehosts (id, queue_name, languages, max_concurrent, memory_limit, time_limit,
 		                       supports_interactive, supports_special, extra, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'idle')
+		ON CONFLICT (id) DO UPDATE SET
+			queue_name = EXCLUDED.queue_name,
+			languages = EXCLUDED.languages,
+			max_concurrent = EXCLUDED.max_concurrent,
+			memory_limit = EXCLUDED.memory_limit,
+			time_limit = EXCLUDED.time_limit,
+			supports_interactive = EXCLUDED.supports_interactive,
+			supports_special = EXCLUDED.supports_special,
+			extra = EXCLUDED.extra,
+			status = 'idle'
 		RETURNING registered_at
 	`, id, queueName, languages, maxConcurrent, memoryLimit, timeLimit, interactive, special, extra).Scan(&registeredAt)
 	if err != nil {
@@ -70,15 +80,15 @@ func (s *JudgehostStore) Register(ctx context.Context, id string, languages []st
 	// Cache in Redis for fast lookup
 	judgehostKey := judgehostKeyPrefix + id
 	s.redis.HSet(ctx, judgehostKey, map[string]interface{}{
-		"id":                id,
-		"queue_name":        queueName,
-		"languages":         fmt.Sprintf("%v", languages),
-		"max_concurrent":    maxConcurrent,
-		"status":            "idle",
-		"last_ping":         time.Now().Format(time.RFC3339),
-		"active_jobs":       0,
+		"id":                   id,
+		"queue_name":           queueName,
+		"languages":            fmt.Sprintf("%v", languages),
+		"max_concurrent":       maxConcurrent,
+		"status":               "idle",
+		"last_ping":            time.Now().Format(time.RFC3339),
+		"active_jobs":          0,
 		"supports_interactive": interactive,
-		"supports_special":  special,
+		"supports_special":     special,
 	})
 	s.redis.Expire(ctx, judgehostKey, 24*time.Hour)
 
@@ -94,10 +104,10 @@ func (s *JudgehostStore) UpdateHeartbeat(ctx context.Context, id string, status 
 	// Update Redis cache (fast path)
 	judgehostKey := judgehostKeyPrefix + id
 	s.redis.HSet(ctx, judgehostKey, map[string]interface{}{
-		"status":       status,
+		"status":         status,
 		"current_job_id": currentJobID,
-		"last_ping":    time.Now().Format(time.RFC3339),
-		"active_jobs":  activeJobs,
+		"last_ping":      time.Now().Format(time.RFC3339),
+		"active_jobs":    activeJobs,
 	})
 	s.redis.Expire(ctx, judgehostKey, 24*time.Hour)
 

@@ -1,15 +1,16 @@
 package queue
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	pbJudge "github.com/slhmy/online-judge/gen/go/judge/v1"
+	pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/slhmy/online-judge/gen/go/submission/v1"
 )
 
 // Task type constant (matches backend)
@@ -99,19 +100,19 @@ type TestCaseData struct {
 
 // JudgeQueue manages the judging job queue
 type JudgeQueue struct {
-	redis           *redis.Client
-	httpClient      *http.Client
-	orchestratorURL string
+	redis            *redis.Client
+	submissionClient pbSubmission.SubmissionServiceClient
+	problemClient    pbProblem.ProblemServiceClient
+	judgeClient      pbJudge.JudgeServiceClient
 }
 
 // NewJudgeQueue creates a new judge queue client
-func NewJudgeQueue(redis *redis.Client, orchestratorURL string) *JudgeQueue {
+func NewJudgeQueue(redis *redis.Client, submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, judgeClient pbJudge.JudgeServiceClient) *JudgeQueue {
 	return &JudgeQueue{
-		redis: redis,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
-		orchestratorURL: orchestratorURL,
+		redis:            redis,
+		submissionClient: submissionClient,
+		problemClient:    problemClient,
+		judgeClient:      judgeClient,
 	}
 }
 
@@ -199,80 +200,47 @@ func (q *JudgeQueue) Ping(ctx context.Context) error {
 	return q.redis.Ping(ctx).Err()
 }
 
-// FetchSubmission fetches submission details from the BFF API
+// FetchSubmission fetches submission details via gRPC
 func (q *JudgeQueue) FetchSubmission(ctx context.Context, submissionID string) (*SubmissionDetails, error) {
-	url := fmt.Sprintf("%s/api/v1/submissions/%s", q.orchestratorURL, submissionID)
-
-	resp, err := q.httpClient.Get(url)
+	resp, err := q.submissionClient.GetSubmission(ctx, &pbSubmission.GetSubmissionRequest{
+		Id: submissionID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch submission: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to fetch submission: status %d, body: %s", resp.StatusCode, string(body))
-	}
+	sub := resp.GetSubmission()
 
-	// Parse the response - it's wrapped in a proto-like structure
-	var rawResp struct {
-		Submission struct {
-			ID         string `json:"id"`
-			UserId     string `json:"user_id"`
-			ProblemId  string `json:"problem_id"`
-			ContestId  string `json:"contest_id"`
-			LanguageId string `json:"language_id"`
-			SourcePath string `json:"source_path"`
-			SubmitTime string `json:"submit_time"`
-		} `json:"submission"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
-		return nil, fmt.Errorf("failed to decode submission response: %w", err)
-	}
-
-	// Fetch source code from internal API
-	sourceCode, err := q.fetchSourceCode(ctx, submissionID)
+	// Fetch source code via internal RPC
+	sourceResp, err := q.submissionClient.InternalGetSourceCode(ctx, &pbSubmission.InternalGetSourceCodeRequest{
+		SubmissionId: submissionID,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch source code: %w", err)
+		// Fallback: try to get from Redis cache
+		sourceCode, cacheErr := q.getSourceFromQueue(ctx, submissionID)
+		if cacheErr != nil {
+			return nil, fmt.Errorf("failed to fetch source code: %w", err)
+		}
+		return &SubmissionDetails{
+			ID:         sub.GetId(),
+			UserID:     sub.GetUserId(),
+			ProblemID:  sub.GetProblemId(),
+			ContestID:  sub.GetContestId(),
+			LanguageID: sub.GetLanguageId(),
+			SourceCode: sourceCode,
+			SubmitTime: sub.GetSubmitTime(),
+		}, nil
 	}
 
 	return &SubmissionDetails{
-		ID:         rawResp.Submission.ID,
-		UserID:     rawResp.Submission.UserId,
-		ProblemID:  rawResp.Submission.ProblemId,
-		ContestID:  rawResp.Submission.ContestId,
-		LanguageID: rawResp.Submission.LanguageId,
-		SourceCode: sourceCode,
-		SubmitTime: rawResp.Submission.SubmitTime,
+		ID:         sub.GetId(),
+		UserID:     sub.GetUserId(),
+		ProblemID:  sub.GetProblemId(),
+		ContestID:  sub.GetContestId(),
+		LanguageID: sub.GetLanguageId(),
+		SourceCode: sourceResp.GetSourceCode(),
+		SubmitTime: sub.GetSubmitTime(),
 	}, nil
-}
-
-// fetchSourceCode fetches the source code for a submission
-func (q *JudgeQueue) fetchSourceCode(ctx context.Context, submissionID string) (string, error) {
-	// Try to get from internal endpoint first
-	url := fmt.Sprintf("%s/internal/submissions/%s/source", q.orchestratorURL, submissionID)
-
-	resp, err := q.httpClient.Get(url)
-	if err != nil {
-		// Fallback: try to get from cache or queue data
-		return q.getSourceFromQueue(ctx, submissionID)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return q.getSourceFromQueue(ctx, submissionID)
-	}
-
-	var sourceResp struct {
-		SourceCode string `json:"source_code"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&sourceResp); err != nil {
-		return "", fmt.Errorf("failed to decode source response: %w", err)
-	}
-
-	return sourceResp.SourceCode, nil
 }
 
 // getSourceFromQueue tries to retrieve source code from Redis cache
@@ -288,146 +256,51 @@ func (q *JudgeQueue) getSourceFromQueue(ctx context.Context, submissionID string
 	return source, nil
 }
 
-// FetchProblem fetches problem details from the BFF API
+// FetchProblem fetches problem details via gRPC
 func (q *JudgeQueue) FetchProblem(ctx context.Context, problemID string) (*ProblemDetails, error) {
-	url := fmt.Sprintf("%s/api/v1/problems/%s", q.orchestratorURL, problemID)
-
-	resp, err := q.httpClient.Get(url)
+	resp, err := q.problemClient.GetProblem(ctx, &pbProblem.GetProblemRequest{
+		Id: problemID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch problem: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to fetch problem: status %d, body: %s", resp.StatusCode, string(body))
-	}
-
-	var rawResp struct {
-		Problem struct {
-			Id                 string  `json:"id"`
-			TimeLimit          float64 `json:"time_limit"`
-			MemoryLimit        int32   `json:"memory_limit"`
-			OutputLimit        int32   `json:"output_limit"`
-			ProcessLimit       int32   `json:"process_limit"`
-			SpecialRunId       string  `json:"special_run_id"`
-			SpecialCompareId   string  `json:"special_compare_id"`
-			SpecialCompareArgs string  `json:"special_compare_args"`
-		} `json:"problem"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
-		return nil, fmt.Errorf("failed to decode problem response: %w", err)
-	}
-
+	problem := resp.GetProblem()
 	return &ProblemDetails{
-		ID:                 rawResp.Problem.Id,
-		TimeLimit:          rawResp.Problem.TimeLimit,
-		MemoryLimit:        rawResp.Problem.MemoryLimit,
-		OutputLimit:        rawResp.Problem.OutputLimit,
-		ProcessLimit:       rawResp.Problem.ProcessLimit,
-		SpecialRunID:       rawResp.Problem.SpecialRunId,
-		SpecialCompare:     rawResp.Problem.SpecialCompareId,
-		SpecialCompareArgs: rawResp.Problem.SpecialCompareArgs,
+		ID:                 problem.GetId(),
+		TimeLimit:          problem.GetTimeLimit(),
+		MemoryLimit:        problem.GetMemoryLimit(),
+		OutputLimit:        problem.GetOutputLimit(),
+		ProcessLimit:       problem.GetProcessLimit(),
+		SpecialRunID:       problem.GetSpecialRunId(),
+		SpecialCompare:     problem.GetSpecialCompareId(),
+		SpecialCompareArgs: problem.GetSpecialCompareArgs(),
 	}, nil
 }
 
-// FetchTestCases fetches all test cases for a problem from the BFF API
+// FetchTestCases fetches all test cases for a problem via gRPC
 func (q *JudgeQueue) FetchTestCases(ctx context.Context, problemID string) ([]*TestCase, error) {
-	url := fmt.Sprintf("%s/internal/problems/%s/testcases", q.orchestratorURL, problemID)
-
-	resp, err := q.httpClient.Get(url)
+	resp, err := q.problemClient.ListTestCases(ctx, &pbProblem.ListTestCasesRequest{
+		ProblemId:   problemID,
+		SamplesOnly: false,
+	})
 	if err != nil {
-		// Fallback to public API (sample test cases only)
-		return q.fetchSampleTestCases(ctx, problemID)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		// Fallback to public API
-		return q.fetchSampleTestCases(ctx, problemID)
+		return nil, fmt.Errorf("failed to fetch test cases: %w", err)
 	}
 
-	var rawResp struct {
-		TestCases []struct {
-			Id            string `json:"id"`
-			ProblemId     string `json:"problem_id"`
-			Rank          int32  `json:"rank"`
-			IsSample      bool   `json:"is_sample"`
-			InputPath     string `json:"input_path"`
-			OutputPath    string `json:"output_path"`
-			Description   string `json:"description"`
-			IsInteractive bool   `json:"is_interactive"`
-			InputData     string `json:"input_data"`
-			OutputData    string `json:"output_data"`
-		} `json:"test_cases"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
-		return nil, fmt.Errorf("failed to decode testcases response: %w", err)
-	}
-
-	testCases := make([]*TestCase, len(rawResp.TestCases))
-	for i, tc := range rawResp.TestCases {
+	testCases := make([]*TestCase, len(resp.GetTestCases()))
+	for i, tc := range resp.GetTestCases() {
 		testCases[i] = &TestCase{
-			ID:            tc.Id,
-			ProblemID:     tc.ProblemId,
-			Rank:          tc.Rank,
-			IsSample:      tc.IsSample,
-			InputPath:     tc.InputPath,
-			OutputPath:    tc.OutputPath,
-			Description:   tc.Description,
-			IsInteractive: tc.IsInteractive,
-			InputData:     tc.InputData,
-			OutputData:    tc.OutputData,
-		}
-	}
-
-	return testCases, nil
-}
-
-// fetchSampleTestCases fetches only sample test cases from public API
-func (q *JudgeQueue) fetchSampleTestCases(ctx context.Context, problemID string) ([]*TestCase, error) {
-	url := fmt.Sprintf("%s/api/v1/problems/%s", q.orchestratorURL, problemID)
-
-	resp, err := q.httpClient.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch problem with samples: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch problem: status %d", resp.StatusCode)
-	}
-
-	var rawResp struct {
-		SampleTestCases []struct {
-			Id            string `json:"id"`
-			ProblemId     string `json:"problem_id"`
-			Rank          int32  `json:"rank"`
-			IsSample      bool   `json:"is_sample"`
-			InputPath     string `json:"input_path"`
-			OutputPath    string `json:"output_path"`
-			Description   string `json:"description"`
-			IsInteractive bool   `json:"is_interactive"`
-		} `json:"sample_test_cases"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
-		return nil, fmt.Errorf("failed to decode sample testcases: %w", err)
-	}
-
-	testCases := make([]*TestCase, len(rawResp.SampleTestCases))
-	for i, tc := range rawResp.SampleTestCases {
-		testCases[i] = &TestCase{
-			ID:            tc.Id,
-			ProblemID:     tc.ProblemId,
-			Rank:          tc.Rank,
-			IsSample:      tc.IsSample,
-			InputPath:     tc.InputPath,
-			OutputPath:    tc.OutputPath,
-			Description:   tc.Description,
-			IsInteractive: tc.IsInteractive,
+			ID:            tc.GetId(),
+			ProblemID:     tc.GetProblemId(),
+			Rank:          tc.GetRank(),
+			IsSample:      tc.GetIsSample(),
+			InputPath:     tc.GetInputPath(),
+			OutputPath:    tc.GetOutputPath(),
+			Description:   tc.GetDescription(),
+			IsInteractive: tc.GetIsInteractive(),
+			InputData:     tc.GetInputContent(),
+			OutputData:    tc.GetOutputContent(),
 		}
 	}
 
@@ -444,147 +317,62 @@ func (q *JudgeQueue) FetchTestCaseData(ctx context.Context, testCase *TestCase) 
 		}, nil
 	}
 
-	// Fetch from storage paths via internal API
-	inputURL := fmt.Sprintf("%s/internal/testcases/%s/input", q.orchestratorURL, testCase.ID)
-	outputURL := fmt.Sprintf("%s/internal/testcases/%s/output", q.orchestratorURL, testCase.ID)
-
-	inputResp, err := q.httpClient.Get(inputURL)
+	// Fetch from backend via gRPC
+	resp, err := q.problemClient.InternalGetTestCaseContent(ctx, &pbProblem.InternalGetTestCaseContentRequest{
+		TestCaseId: testCase.ID,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch test case input: %w", err)
-	}
-	defer func() { _ = inputResp.Body.Close() }()
-
-	if inputResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch input: status %d", inputResp.StatusCode)
-	}
-
-	inputData, err := io.ReadAll(inputResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read input data: %w", err)
-	}
-
-	outputResp, err := q.httpClient.Get(outputURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch test case output: %w", err)
-	}
-	defer func() { _ = outputResp.Body.Close() }()
-
-	if outputResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch output: status %d", outputResp.StatusCode)
-	}
-
-	outputData, err := io.ReadAll(outputResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read output data: %w", err)
+		return nil, fmt.Errorf("failed to fetch test case content: %w", err)
 	}
 
 	return &TestCaseData{
-		Input:  inputData,
-		Output: outputData,
+		Input:  []byte(resp.GetInput()),
+		Output: []byte(resp.GetOutput()),
 	}, nil
 }
 
-// CreateJudging creates a new judging record
+// CreateJudging creates a new judging record via gRPC
 func (q *JudgeQueue) CreateJudging(ctx context.Context, submissionID string, judgehostID string) (string, error) {
-	url := fmt.Sprintf("%s/internal/judgings", q.orchestratorURL)
-
-	body := map[string]string{
-		"submission_id": submissionID,
-		"judgehost_id":  judgehostID,
-	}
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := q.httpClient.Post(url, "application/json", bytes.NewReader(bodyBytes))
+	resp, err := q.submissionClient.InternalCreateJudging(ctx, &pbSubmission.InternalCreateJudgingRequest{
+		SubmissionId: submissionID,
+		JudgehostId:  judgehostID,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create judging: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("failed to create judging: status %d, body: %s", resp.StatusCode, string(respBody))
-	}
-
-	var result struct {
-		JudgingId string `json:"judging_id"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode judging response: %w", err)
-	}
-
-	return result.JudgingId, nil
+	return resp.GetJudgingId(), nil
 }
 
-// UpdateJudging updates the judging record with final result
+// UpdateJudging updates the judging record with final result via gRPC
 func (q *JudgeQueue) UpdateJudging(ctx context.Context, judgingID string, result *JudgeResult) error {
-	url := fmt.Sprintf("%s/internal/judgings/%s", q.orchestratorURL, judgingID)
-
-	body := map[string]interface{}{
-		"verdict":       result.Verdict,
-		"max_runtime":   result.Runtime,
-		"max_memory":    result.Memory,
-		"error":         result.Error,
-		"compile_error": result.CompileError,
-	}
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewReader(bodyBytes))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := q.httpClient.Do(req)
+	_, err := q.submissionClient.InternalUpdateJudging(ctx, &pbSubmission.InternalUpdateJudgingRequest{
+		JudgingId:      judgingID,
+		Verdict:        result.Verdict,
+		MaxRuntime:     result.Runtime,
+		MaxMemory:      int32(result.Memory),
+		CompileSuccess: result.CompileError == "",
+		CompileError:   result.CompileError,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to update judging: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to update judging: status %d, body: %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil
 }
 
-// CreateJudgingRun creates a record for a single test case run
+// CreateJudgingRun creates a record for a single test case run via gRPC
 func (q *JudgeQueue) CreateJudgingRun(ctx context.Context, judgingID string, testCaseResult *TestCaseResult) error {
-	url := fmt.Sprintf("%s/internal/judgings/%s/runs", q.orchestratorURL, judgingID)
-
-	body := map[string]interface{}{
-		"test_case_id": testCaseResult.TestCaseID,
-		"rank":         testCaseResult.Rank,
-		"verdict":      testCaseResult.Verdict,
-		"runtime":      testCaseResult.Runtime,
-		"memory":       testCaseResult.Memory,
-		"output":       testCaseResult.Output,
-		"error":        testCaseResult.Error,
-	}
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	resp, err := q.httpClient.Post(url, "application/json", bytes.NewReader(bodyBytes))
+	_, err := q.submissionClient.InternalCreateJudgingRun(ctx, &pbSubmission.InternalCreateJudgingRunRequest{
+		JudgingId:  judgingID,
+		TestCaseId: testCaseResult.TestCaseID,
+		Rank:       int32(testCaseResult.Rank),
+		Verdict:    testCaseResult.Verdict,
+		Runtime:    testCaseResult.Runtime,
+		Memory:     int32(testCaseResult.Memory),
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create judging run: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to create judging run: status %d, body: %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil
@@ -613,93 +401,29 @@ func (q *JudgeQueue) PushJudgingResult(ctx context.Context, result *JudgeResult,
 	return nil
 }
 
-// UpdateRejudgeSubmission notifies the backend about a completed rejudge submission
+// UpdateRejudgeSubmission notifies the backend about a completed rejudge submission via gRPC
 func (q *JudgeQueue) UpdateRejudgeSubmission(ctx context.Context, rejudgeID, submissionID, judgingID, verdict string) error {
-	url := fmt.Sprintf("%s/internal/rejudges/%s/submissions", q.orchestratorURL, rejudgeID)
-
-	body := map[string]string{
-		"submission_id":  submissionID,
-		"new_judging_id": judgingID,
-		"new_verdict":    verdict,
-	}
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	resp, err := q.httpClient.Post(url, "application/json", bytes.NewReader(bodyBytes))
+	_, err := q.judgeClient.InternalUpdateRejudgeSubmission(ctx, &pbJudge.InternalUpdateRejudgeSubmissionRequest{
+		RejudgeId:    rejudgeID,
+		SubmissionId: submissionID,
+		NewJudgingId: judgingID,
+		NewVerdict:   verdict,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to update rejudge submission: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to update rejudge submission: status %d, body: %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil
 }
 
-// FetchExecutable fetches an executable binary (validator, run script) from the backend
+// FetchExecutable fetches an executable binary (validator, run script) via gRPC
 func (q *JudgeQueue) FetchExecutable(ctx context.Context, executableID string) ([]byte, string, error) {
-	url := fmt.Sprintf("%s/internal/executables/%s", q.orchestratorURL, executableID)
-
-	resp, err := q.httpClient.Get(url)
+	resp, err := q.problemClient.InternalGetExecutable(ctx, &pbProblem.InternalGetExecutableRequest{
+		Id: executableID,
+	})
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch executable: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, "", fmt.Errorf("failed to fetch executable: status %d, body: %s", resp.StatusCode, string(body))
-	}
-
-	var rawResp struct {
-		Executable struct {
-			Id             string `json:"id"`
-			Type           string `json:"type"`
-			ExecutablePath string `json:"executable_path"`
-			Md5sum         string `json:"md5sum"`
-			BinaryData     string `json:"binary_data"` // Base64 encoded binary
-		} `json:"executable"`
-	}
-
-	// Try to parse as JSON response
-	if err := json.NewDecoder(resp.Body).Decode(&rawResp); err != nil {
-		// If JSON parsing fails, try reading as raw binary
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to read executable data: %w", err)
-		}
-		return data, "", nil
-	}
-
-	// Decode base64 binary if present
-	if rawResp.Executable.BinaryData != "" {
-		// Simple base64 decoding
-		data := []byte(rawResp.Executable.BinaryData) // In real implementation, decode base64
-		return data, rawResp.Executable.Md5sum, nil
-	}
-
-	// If no binary data in response, we need to fetch from the path
-	// This would require a separate endpoint or direct storage access
-	return nil, rawResp.Executable.Md5sum, fmt.Errorf("executable binary not in response, need to fetch from path: %s", rawResp.Executable.ExecutablePath)
-}
-
-// GetExecutable implements the HTTPClient interface for validator fetching
-func (q *JudgeQueue) Get(ctx context.Context, url string) ([]byte, error) {
-	resp, err := q.httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP error: status %d", resp.StatusCode)
-	}
-
-	return io.ReadAll(resp.Body)
+	return resp.GetBinaryData(), resp.GetMd5Sum(), nil
 }

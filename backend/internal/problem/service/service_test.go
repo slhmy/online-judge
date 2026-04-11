@@ -116,7 +116,7 @@ func TestProblemService_ListProblems(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil) // nil redis for tests
+			service := NewProblemService(mockStore, nil, nil) // nil redis for tests
 			resp, err := service.ListProblems(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -188,7 +188,7 @@ func TestProblemService_GetProblem(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.GetProblem(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -240,7 +240,7 @@ func TestProblemService_CreateProblem(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.CreateProblem(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -309,7 +309,7 @@ func TestProblemService_UpdateProblem(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.UpdateProblem(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -362,7 +362,7 @@ func TestProblemService_DeleteProblem(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.DeleteProblem(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -420,7 +420,7 @@ func TestProblemService_ListTestCases(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.ListTestCases(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -458,7 +458,7 @@ func TestProblemService_CreateTestCase(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.CreateTestCase(context.Background(), tt.request)
 
 			tt.want(t, resp, err)
@@ -525,7 +525,7 @@ func TestProblemService_ListLanguages(t *testing.T) {
 			mockStore := store.NewMockProblemStore()
 			tt.setup(mockStore)
 
-			service := NewProblemService(mockStore, nil)
+			service := NewProblemService(mockStore, nil, nil)
 			resp, err := service.ListLanguages(context.Background(), &emptypb.Empty{})
 
 			tt.want(t, resp, err)

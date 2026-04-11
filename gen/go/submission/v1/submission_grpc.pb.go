@@ -28,6 +28,7 @@ const (
 	SubmissionService_InternalCreateJudging_FullMethodName    = "/submission.v1.SubmissionService/InternalCreateJudging"
 	SubmissionService_InternalUpdateJudging_FullMethodName    = "/submission.v1.SubmissionService/InternalUpdateJudging"
 	SubmissionService_InternalCreateJudgingRun_FullMethodName = "/submission.v1.SubmissionService/InternalCreateJudgingRun"
+	SubmissionService_InternalGetSourceCode_FullMethodName    = "/submission.v1.SubmissionService/InternalGetSourceCode"
 )
 
 // SubmissionServiceClient is the client API for SubmissionService service.
@@ -54,6 +55,8 @@ type SubmissionServiceClient interface {
 	InternalUpdateJudging(ctx context.Context, in *InternalUpdateJudgingRequest, opts ...grpc.CallOption) (*InternalUpdateJudgingResponse, error)
 	// Internal: Create judging run (for judge daemon)
 	InternalCreateJudgingRun(ctx context.Context, in *InternalCreateJudgingRunRequest, opts ...grpc.CallOption) (*InternalCreateJudgingRunResponse, error)
+	// Internal: Get source code for a submission (for judge daemon)
+	InternalGetSourceCode(ctx context.Context, in *InternalGetSourceCodeRequest, opts ...grpc.CallOption) (*InternalGetSourceCodeResponse, error)
 }
 
 type submissionServiceClient struct {
@@ -154,6 +157,16 @@ func (c *submissionServiceClient) InternalCreateJudgingRun(ctx context.Context, 
 	return out, nil
 }
 
+func (c *submissionServiceClient) InternalGetSourceCode(ctx context.Context, in *InternalGetSourceCodeRequest, opts ...grpc.CallOption) (*InternalGetSourceCodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InternalGetSourceCodeResponse)
+	err := c.cc.Invoke(ctx, SubmissionService_InternalGetSourceCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SubmissionServiceServer is the server API for SubmissionService service.
 // All implementations must embed UnimplementedSubmissionServiceServer
 // for forward compatibility.
@@ -178,6 +191,8 @@ type SubmissionServiceServer interface {
 	InternalUpdateJudging(context.Context, *InternalUpdateJudgingRequest) (*InternalUpdateJudgingResponse, error)
 	// Internal: Create judging run (for judge daemon)
 	InternalCreateJudgingRun(context.Context, *InternalCreateJudgingRunRequest) (*InternalCreateJudgingRunResponse, error)
+	// Internal: Get source code for a submission (for judge daemon)
+	InternalGetSourceCode(context.Context, *InternalGetSourceCodeRequest) (*InternalGetSourceCodeResponse, error)
 	mustEmbedUnimplementedSubmissionServiceServer()
 }
 
@@ -214,6 +229,9 @@ func (UnimplementedSubmissionServiceServer) InternalUpdateJudging(context.Contex
 }
 func (UnimplementedSubmissionServiceServer) InternalCreateJudgingRun(context.Context, *InternalCreateJudgingRunRequest) (*InternalCreateJudgingRunResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InternalCreateJudgingRun not implemented")
+}
+func (UnimplementedSubmissionServiceServer) InternalGetSourceCode(context.Context, *InternalGetSourceCodeRequest) (*InternalGetSourceCodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InternalGetSourceCode not implemented")
 }
 func (UnimplementedSubmissionServiceServer) mustEmbedUnimplementedSubmissionServiceServer() {}
 func (UnimplementedSubmissionServiceServer) testEmbeddedByValue()                           {}
@@ -398,6 +416,24 @@ func _SubmissionService_InternalCreateJudgingRun_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SubmissionService_InternalGetSourceCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InternalGetSourceCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SubmissionServiceServer).InternalGetSourceCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SubmissionService_InternalGetSourceCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SubmissionServiceServer).InternalGetSourceCode(ctx, req.(*InternalGetSourceCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SubmissionService_ServiceDesc is the grpc.ServiceDesc for SubmissionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -440,6 +476,10 @@ var SubmissionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InternalCreateJudgingRun",
 			Handler:    _SubmissionService_InternalCreateJudgingRun_Handler,
+		},
+		{
+			MethodName: "InternalGetSourceCode",
+			Handler:    _SubmissionService_InternalGetSourceCode_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

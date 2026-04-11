@@ -12,6 +12,9 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 
+	pbJudge "github.com/slhmy/online-judge/gen/go/judge/v1"
+	pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/slhmy/online-judge/gen/go/submission/v1"
 	"github.com/slhmy/online-judge/judge/internal/config"
 	"github.com/slhmy/online-judge/judge/internal/queue"
 	"github.com/slhmy/online-judge/judge/internal/runner"
@@ -35,14 +38,14 @@ type AsynqHandler struct {
 }
 
 // NewAsynqHandler creates a new asynq handler
-func NewAsynqHandler(cfg *config.Config, redisClient *redis.Client) *AsynqHandler {
+func NewAsynqHandler(cfg *config.Config, redisClient *redis.Client, submissionClient pbSubmission.SubmissionServiceClient, problemClient pbProblem.ProblemServiceClient, judgeClient pbJudge.JudgeServiceClient) *AsynqHandler {
 	// Set sandbox work directory if configured
 	if cfg.SandboxWorkDir != "" {
 		sandbox.SetSandboxWorkDir(cfg.SandboxWorkDir)
 	}
 
 	// Create judge queue client for fetching submission/problem data
-	judgeQueue := queue.NewJudgeQueue(redisClient, cfg.OrchestratorURL)
+	judgeQueue := queue.NewJudgeQueue(redisClient, submissionClient, problemClient, judgeClient)
 
 	// Create special validator config
 	specialValidatorConfig := validator.DefaultSpecialValidatorConfig()
@@ -67,7 +70,6 @@ func NewAsynqHandler(cfg *config.Config, redisClient *redis.Client) *AsynqHandle
 		specialValidator: validator.NewSpecialValidator(
 			specialValidatorConfig,
 			judgeQueue,
-			cfg.OrchestratorURL,
 		),
 		interactiveRunner: runner.NewInteractiveRunner(interactiveRunnerConfig),
 		compileCache:      compileCache,

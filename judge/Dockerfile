@@ -14,11 +14,20 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-COPY go.mod go.sum ./
+# Copy gen module (pre-generated protobuf code)
+COPY gen/ ./gen/
+
+# Copy judge module and fix replace directive for Docker context
+COPY judge/go.mod judge/go.sum ./judge/
+WORKDIR /app/judge
+RUN sed -i 's|=> ../gen|=> /app/gen|g' go.mod
 RUN go mod download
 
-COPY . .
+# Copy judge source
+WORKDIR /app
+COPY judge/ ./judge/
 
+WORKDIR /app/judge
 RUN CGO_ENABLED=0 GOOS=linux go build -o /judgedaemon ./cmd/judgedaemon
 
 # Runtime stage with all compilers
@@ -129,7 +138,7 @@ COPY --from=builder /judgedaemon /judgedaemon
 RUN mkdir -p /var/lib/judgehost/work /var/lib/judgehost/chroot
 
 # Copy compile scripts
-COPY scripts/compile/*.sh /usr/local/bin/compile/
+COPY judge/scripts/compile/*.sh /usr/local/bin/compile/
 RUN chmod +x /usr/local/bin/compile/*.sh
 
 # Create symlinks for easier access
