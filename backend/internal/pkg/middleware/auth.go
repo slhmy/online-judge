@@ -2,12 +2,18 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lestrrat-go/jwx/jwk"
+	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -29,13 +35,82 @@ func NewJWTInterceptor(jwksURL string) (*JWTInterceptor, error) {
 	// Fetch JWKS
 	set, err := jwk.Fetch(context.Background(), jwksURL)
 	if err != nil {
-		return nil, err
+		// Fallback for deployments that only expose Identra gRPC.
+		set, err = fetchJWKSViaIdentraGRPC(jwksURL)
+		if err != nil {
+			return nil, fmt.Errorf("fetch jwks: %w", err)
+		}
 	}
 
 	return &JWTInterceptor{
 		jwksURL: jwksURL,
 		keySet:  set,
 	}, nil
+}
+
+func fetchJWKSViaIdentraGRPC(jwksURL string) (jwk.Set, error) {
+	u, err := url.Parse(jwksURL)
+	if err != nil {
+		return nil, err
+	}
+
+	addr := strings.TrimSpace(u.Host)
+	if addr == "" {
+		addr = strings.TrimSpace(jwksURL)
+	}
+	if addr == "" {
+		return nil, fmt.Errorf("empty identra grpc address")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	//nolint:staticcheck // grpc.Dial is deprecated but supported in grpc 1.x
+	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	if err != nil {
+		return nil, fmt.Errorf("dial identra grpc %q: %w", addr, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	resp, err := identra_v1_pb.NewIdentraServiceClient(conn).GetJWKS(ctx, &identra_v1_pb.GetJWKSRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("identra GetJWKS: %w", err)
+	}
+
+	type jwkKey struct {
+		Kty string `json:"kty"`
+		Alg string `json:"alg,omitempty"`
+		Use string `json:"use,omitempty"`
+		Kid string `json:"kid"`
+		N   string `json:"n"`
+		E   string `json:"e"`
+	}
+	type jwksDoc struct {
+		Keys []jwkKey `json:"keys"`
+	}
+
+	doc := jwksDoc{Keys: make([]jwkKey, 0, len(resp.GetKeys()))}
+	for _, key := range resp.GetKeys() {
+		doc.Keys = append(doc.Keys, jwkKey{
+			Kty: strings.TrimSpace(key.GetKty()),
+			Alg: strings.TrimSpace(key.GetAlg()),
+			Use: strings.TrimSpace(key.GetUse()),
+			Kid: strings.TrimSpace(key.GetKid()),
+			N:   strings.TrimSpace(key.GetN()),
+			E:   strings.TrimSpace(key.GetE()),
+		})
+	}
+
+	buf, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	set, err := jwk.Parse(buf)
+	if err != nil {
+		return nil, err
+	}
+	return set, nil
 }
 
 // Unary returns a unary server interceptor for JWT validation
