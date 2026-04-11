@@ -11,24 +11,19 @@ ENV GOPRIVATE=github.com/online-judge/*
 ENV GONOSUMDB=github.com/online-judge/*
 ENV GOINSECURE=github.com/online-judge/*
 
-# Copy backend module
-COPY backend/go.mod backend/go.sum ./backend/
-COPY backend/gen ./backend/gen/
-COPY backend/proto ./backend/proto/
+# Copy gen module (pre-generated protobuf code)
+COPY gen/ ./gen/
 
 # Copy bff module
 COPY bff/go.mod bff/go.sum ./
 COPY bff/cmd ./cmd/
 COPY bff/internal ./internal/
 
-# Update replace directive for Docker build - only replace the path, not module name
-RUN sed -i 's|=> ../backend|=> /app/backend|g' go.mod
+# Update replace directive for Docker build
+RUN sed -i 's|=> ../gen|=> /app/gen|g' go.mod
 
-# Debug: show go.mod and backend structure
-RUN echo "=== go.mod ===" && cat go.mod && echo "=== backend structure ===" && ls -la /app/backend/ && ls -la /app/backend/gen/go/
-
-# Tidy and download modules
-RUN go mod tidy && go mod download
+# Download modules
+RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bff ./cmd/bff
 

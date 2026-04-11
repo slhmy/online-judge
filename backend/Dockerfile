@@ -1,30 +1,26 @@
 # Backend Service Dockerfile
+# Build context must be the repo root (context: . in docker-compose)
 FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Install git, buf CLI, and protoc plugins for protobuf generation
-RUN apk add --no-cache git curl && \
-    curl -sSL "https://github.com/bufbuild/buf/releases/download/v1.47.2/buf-$(uname -s)-$(uname -m)" -o /usr/local/bin/buf && \
-    chmod +x /usr/local/bin/buf && \
-    go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && \
-    go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+RUN apk add --no-cache git
 
-COPY go.mod go.sum ./
+# Copy gen module (pre-generated protobuf code)
+COPY gen/ ./gen/
+
+# Copy backend module and fix replace directive for Docker context
+COPY backend/go.mod backend/go.sum ./backend/
+WORKDIR /app/backend
+RUN sed -i 's|=> ../gen|=> /app/gen|g' go.mod
 RUN go mod download
 
-# Copy proto files and buf config for generation
-COPY proto/ proto/
-COPY buf.gen.yaml buf.work.yaml buf.lock ./
-
-# Generate protobuf code
-RUN buf generate
-
-# Copy the rest of the source code
-COPY . .
+# Copy backend source
+WORKDIR /app
+COPY backend/ ./backend/
 
 ARG SERVICE
+WORKDIR /app/backend
 RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/${SERVICE}
 
 FROM alpine:latest
