@@ -9,6 +9,13 @@ import "common/v1/common.proto";
 
 // User Service - handles user profiles and statistics
 service UserService {
+  // List users for admin panel (admin only)
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/admin/users"
+    };
+  }
+
   // Get user profile by ID
   rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse) {
     option (google.api.http) = {
@@ -43,6 +50,14 @@ service UserService {
   rpc EnsureUserProfile(EnsureUserProfileRequest) returns (EnsureUserProfileResponse) {
     option (google.api.http) = {
       post: "/api/v1/users/ensure-profile"
+      body: "*"
+    };
+  }
+
+  // Update user role (admin only)
+  rpc UpdateUserRole(UpdateUserRoleRequest) returns (UpdateUserRoleResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/admin/users/{user_id}/role"
       body: "*"
     };
   }
@@ -92,6 +107,15 @@ message UserSubmissionSummary {
   string submit_time = 8;
   string contest_id = 9;
   string contest_name = 10;
+}
+
+message ListUsersRequest {
+  common.v1.Pagination pagination = 1;
+}
+
+message ListUsersResponse {
+  repeated UserProfile users = 1;
+  common.v1.PaginatedResponse pagination = 2;
 }
 
 // Request/Response messages
@@ -146,4 +170,13 @@ message EnsureUserProfileRequest {
 message EnsureUserProfileResponse {
   UserProfile profile = 1;
   bool created = 2;          // true when a new profile was created
+}
+
+message UpdateUserRoleRequest {
+  string user_id = 1;
+  string role = 2;
+}
+
+message UpdateUserRoleResponse {
+  UserProfile profile = 1;
 }

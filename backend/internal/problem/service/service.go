@@ -7,6 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
 	"github.com/slhmy/online-judge/backend/internal/problem/store"
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	pb "github.com/slhmy/online-judge/gen/go/problem/v1"
@@ -62,6 +63,10 @@ func (s *ProblemService) GetProblem(ctx context.Context, req *pb.GetProblemReque
 }
 
 func (s *ProblemService) CreateProblem(ctx context.Context, req *pb.CreateProblemRequest) (*pb.CreateProblemResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	id, err := s.store.Create(ctx, req)
 	if err != nil {
 		return nil, err
@@ -71,6 +76,10 @@ func (s *ProblemService) CreateProblem(ctx context.Context, req *pb.CreateProble
 }
 
 func (s *ProblemService) UpdateProblem(ctx context.Context, req *pb.UpdateProblemRequest) (*pb.UpdateProblemResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	if err := s.store.Update(ctx, req.GetId(), req); err != nil {
 		return nil, err
 	}
@@ -84,6 +93,10 @@ func (s *ProblemService) UpdateProblem(ctx context.Context, req *pb.UpdateProble
 }
 
 func (s *ProblemService) DeleteProblem(ctx context.Context, req *pb.DeleteProblemRequest) (*emptypb.Empty, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	if err := s.store.Delete(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
@@ -100,6 +113,10 @@ func (s *ProblemService) ListTestCases(ctx context.Context, req *pb.ListTestCase
 }
 
 func (s *ProblemService) CreateTestCase(ctx context.Context, req *pb.CreateTestCaseRequest) (*pb.CreateTestCaseResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	id, inputPath, outputPath, err := s.store.CreateTestCase(ctx, req)
 	if err != nil {
 		return nil, err
@@ -113,6 +130,10 @@ func (s *ProblemService) CreateTestCase(ctx context.Context, req *pb.CreateTestC
 }
 
 func (s *ProblemService) UpdateTestCase(ctx context.Context, req *pb.UpdateTestCaseRequest) (*pb.UpdateTestCaseResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	tc, err := s.store.UpdateTestCase(ctx, req.GetId(), req)
 	if err != nil {
 		return nil, err
@@ -122,6 +143,10 @@ func (s *ProblemService) UpdateTestCase(ctx context.Context, req *pb.UpdateTestC
 }
 
 func (s *ProblemService) DeleteTestCase(ctx context.Context, req *pb.DeleteTestCaseRequest) (*emptypb.Empty, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	if err := s.store.DeleteTestCase(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
@@ -129,6 +154,10 @@ func (s *ProblemService) DeleteTestCase(ctx context.Context, req *pb.DeleteTestC
 }
 
 func (s *ProblemService) ToggleTestCaseSample(ctx context.Context, req *pb.ToggleTestCaseSampleRequest) (*pb.ToggleTestCaseSampleResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	tc, err := s.store.ToggleTestCaseSample(ctx, req.GetId())
 	if err != nil {
 		return nil, err
@@ -137,6 +166,10 @@ func (s *ProblemService) ToggleTestCaseSample(ctx context.Context, req *pb.Toggl
 }
 
 func (s *ProblemService) BatchUploadTestCases(ctx context.Context, req *pb.BatchUploadTestCasesRequest) (*pb.BatchUploadTestCasesResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	testCases, err := s.store.BatchCreateTestCases(ctx, req)
 	if err != nil {
 		return nil, err
@@ -164,6 +197,10 @@ func (s *ProblemService) GetProblemStatement(ctx context.Context, req *pb.GetPro
 }
 
 func (s *ProblemService) SetProblemStatement(ctx context.Context, req *pb.SetProblemStatementRequest) (*pb.SetProblemStatementResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	statement, err := s.store.SetProblemStatement(ctx, req)
 	if err != nil {
 		return nil, err

@@ -495,6 +495,10 @@ func (s *SubmissionService) InternalGetSourceCode(ctx context.Context, req *pb.I
 
 // RejudgeSubmission re-runs the judging for a submission
 func (s *SubmissionService) RejudgeSubmission(ctx context.Context, req *pb.RejudgeSubmissionRequest) (*pb.RejudgeSubmissionResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, fmt.Errorf("admin access required")
+	}
+
 	// Get the submission
 	sub, err := s.store.GetByID(ctx, req.SubmissionId)
 	if err != nil {

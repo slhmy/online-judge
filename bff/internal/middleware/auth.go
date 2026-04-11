@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -12,9 +10,9 @@ import (
 type contextKey string
 
 const (
-	UserIDKey  contextKey = "user_id"
+	UserIDKey    contextKey = "user_id"
 	UserEmailKey contextKey = "user_email"
-	UserRoleKey contextKey = "user_role"
+	UserRoleKey  contextKey = "user_role"
 )
 
 // Auth middleware validates JWT token and extracts user info
@@ -47,69 +45,22 @@ func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 
 		token := parts[1]
 
-		// For development, we'll accept any non-empty token
-		// and extract best-effort claims from JWT payload.
+		// BFF does not parse/validate JWT claims.
+		// Complex auth should be handled in backend services.
 		if token == "" {
 			http.Error(w, `{"error": "invalid token"}`, http.StatusUnauthorized)
 			return
 		}
 
-		userID, userEmail, userRole := extractClaims(token)
-
-		// Add user info to context
+		// Copy optional trusted identity headers into context.
+		// These are expected to be set by an upstream auth layer when available.
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, UserIDKey, userID)
-		ctx = context.WithValue(ctx, UserEmailKey, userEmail)
-		ctx = context.WithValue(ctx, UserRoleKey, userRole)
+		ctx = context.WithValue(ctx, UserIDKey, strings.TrimSpace(r.Header.Get("X-User-Id")))
+		ctx = context.WithValue(ctx, UserEmailKey, strings.TrimSpace(r.Header.Get("X-User-Email")))
+		ctx = context.WithValue(ctx, UserRoleKey, strings.TrimSpace(r.Header.Get("X-User-Role")))
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func extractClaims(token string) (userID, userEmail, userRole string) {
-	// Safe defaults.
-	userID = "temp-user-id"
-	userEmail = "temp@example.com"
-	userRole = "user"
-
-	parts := strings.Split(token, ".")
-	if len(parts) < 2 {
-		return
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return
-	}
-
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return
-	}
-
-	if v, ok := claims["sub"].(string); ok && v != "" {
-		userID = v
-	}
-	if v, ok := claims["user_id"].(string); ok && v != "" {
-		userID = v
-	}
-	if v, ok := claims["email"].(string); ok && v != "" {
-		userEmail = v
-	}
-
-	if v, ok := claims["role"].(string); ok && v != "" {
-		userRole = v
-	}
-	if roles, ok := claims["roles"].([]interface{}); ok {
-		for _, roleVal := range roles {
-			if role, ok := roleVal.(string); ok && role == "admin" {
-				userRole = "admin"
-				break
-			}
-		}
-	}
-
-	return
 }
 
 // RequireAdmin is a middleware that requires admin role

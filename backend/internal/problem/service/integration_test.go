@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ import (
 func TestProblemService_Integration_CRUDFlow(t *testing.T) {
 	mockStore := store.NewMockProblemStore()
 	service := NewProblemService(mockStore, nil, nil)
-	ctx := context.Background()
+	ctx := testAdminContext()
 
 	// Step 1: Create a problem
 	createResp, err := service.CreateProblem(ctx, &pb.CreateProblemRequest{
@@ -79,7 +78,7 @@ func TestProblemService_Integration_CRUDFlow(t *testing.T) {
 func TestProblemService_Integration_TestCaseFlow(t *testing.T) {
 	mockStore := store.NewMockProblemStore()
 	service := NewProblemService(mockStore, nil, nil)
-	ctx := context.Background()
+	ctx := testAdminContext()
 
 	// Create a problem first
 	createResp, err := service.CreateProblem(ctx, &pb.CreateProblemRequest{
@@ -160,7 +159,7 @@ func TestProblemService_Integration_TestCaseFlow(t *testing.T) {
 func TestProblemService_Integration_BatchUploadTestCases(t *testing.T) {
 	mockStore := store.NewMockProblemStore()
 	service := NewProblemService(mockStore, nil, nil)
-	ctx := context.Background()
+	ctx := testAdminContext()
 
 	// Create a problem first
 	createResp, err := service.CreateProblem(ctx, &pb.CreateProblemRequest{
@@ -213,7 +212,7 @@ func TestProblemService_Integration_BatchUploadTestCases(t *testing.T) {
 func TestProblemService_Integration_ListWithFilters(t *testing.T) {
 	mockStore := store.NewMockProblemStore()
 	service := NewProblemService(mockStore, nil, nil)
-	ctx := context.Background()
+	ctx := testAdminContext()
 
 	// Create problems with different difficulties
 	for _, tc := range []struct {
@@ -261,7 +260,7 @@ func TestProblemService_Integration_ListWithFilters(t *testing.T) {
 func TestProblemService_Integration_Languages(t *testing.T) {
 	mockStore := store.NewMockProblemStore()
 	service := NewProblemService(mockStore, nil, nil)
-	ctx := context.Background()
+	ctx := testAdminContext()
 
 	// List default languages
 	langResp, err := service.ListLanguages(ctx, &emptypb.Empty{})
@@ -288,7 +287,7 @@ func TestProblemService_Integration_Languages(t *testing.T) {
 func TestProblemService_Integration_ErrorHandling(t *testing.T) {
 	mockStore := store.NewMockProblemStore()
 	service := NewProblemService(mockStore, nil, nil)
-	ctx := context.Background()
+	ctx := testAdminContext()
 
 	t.Run("GetNonExistentProblem", func(t *testing.T) {
 		_, err := service.GetProblem(ctx, &pb.GetProblemRequest{Id: "non-existent"})
@@ -332,7 +331,7 @@ func TestProblemService_Integration_StoreErrors(t *testing.T) {
 		mockStore.ListError = assert.AnError
 		service := NewProblemService(mockStore, nil, nil)
 
-		_, err := service.ListProblems(context.Background(), &pb.ListProblemsRequest{
+		_, err := service.ListProblems(testAdminContext(), &pb.ListProblemsRequest{
 			Pagination: &commonv1.Pagination{Page: 1, PageSize: 10},
 		})
 		require.Error(t, err)
@@ -343,7 +342,7 @@ func TestProblemService_Integration_StoreErrors(t *testing.T) {
 		mockStore.GetError = assert.AnError
 		service := NewProblemService(mockStore, nil, nil)
 
-		_, err := service.GetProblem(context.Background(), &pb.GetProblemRequest{Id: "prob-1"})
+		_, err := service.GetProblem(testAdminContext(), &pb.GetProblemRequest{Id: "prob-1"})
 		require.Error(t, err)
 	})
 
@@ -352,7 +351,7 @@ func TestProblemService_Integration_StoreErrors(t *testing.T) {
 		mockStore.CreateError = assert.AnError
 		service := NewProblemService(mockStore, nil, nil)
 
-		_, err := service.CreateProblem(context.Background(), &pb.CreateProblemRequest{Name: "Test"})
+		_, err := service.CreateProblem(testAdminContext(), &pb.CreateProblemRequest{Name: "Test"})
 		require.Error(t, err)
 	})
 
@@ -362,7 +361,7 @@ func TestProblemService_Integration_StoreErrors(t *testing.T) {
 		mockStore.UpdateError = assert.AnError
 		service := NewProblemService(mockStore, nil, nil)
 
-		_, err := service.UpdateProblem(context.Background(), &pb.UpdateProblemRequest{Id: "prob-1"})
+		_, err := service.UpdateProblem(testAdminContext(), &pb.UpdateProblemRequest{Id: "prob-1"})
 		require.Error(t, err)
 	})
 
@@ -371,7 +370,7 @@ func TestProblemService_Integration_StoreErrors(t *testing.T) {
 		mockStore.DeleteError = assert.AnError
 		service := NewProblemService(mockStore, nil, nil)
 
-		_, err := service.DeleteProblem(context.Background(), &pb.DeleteProblemRequest{Id: "prob-1"})
+		_, err := service.DeleteProblem(testAdminContext(), &pb.DeleteProblemRequest{Id: "prob-1"})
 		require.Error(t, err)
 	})
 }

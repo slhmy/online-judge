@@ -234,6 +234,10 @@ func (s *JudgeService) DeregisterJudgehost(ctx context.Context, req *pb.Deregist
 
 // CreateRejudge creates a new rejudging operation
 func (s *JudgeService) CreateRejudge(ctx context.Context, req *pb.CreateRejudgeRequest) (*pb.CreateRejudgeResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	// Get user ID from context (admin only)
 	userID := middleware.GetUserID(ctx)
 	if userID == "" {
@@ -308,6 +312,10 @@ func (s *JudgeService) CreateRejudge(ctx context.Context, req *pb.CreateRejudgeR
 
 // GetRejudge retrieves a rejudging operation
 func (s *JudgeService) GetRejudge(ctx context.Context, req *pb.GetRejudgeRequest) (*pb.GetRejudgeResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	rejudge, err := s.rejudgeStore.GetRejudge(ctx, req.Id)
 	if err != nil {
 		return nil, ErrRejudgeNotFound
@@ -343,6 +351,10 @@ func (s *JudgeService) GetRejudge(ctx context.Context, req *pb.GetRejudgeRequest
 
 // ListRejudges lists rejudging operations
 func (s *JudgeService) ListRejudges(ctx context.Context, req *pb.ListRejudgesRequest) (*pb.ListRejudgesResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	page := req.GetPagination().GetPage()
 	pageSize := req.GetPagination().GetPageSize()
 	if page <= 0 {
@@ -387,6 +399,10 @@ func (s *JudgeService) ListRejudges(ctx context.Context, req *pb.ListRejudgesReq
 
 // CancelRejudge cancels a pending rejudging operation
 func (s *JudgeService) CancelRejudge(ctx context.Context, req *pb.CancelRejudgeRequest) (*pb.CancelRejudgeResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	rejudge, err := s.rejudgeStore.GetRejudge(ctx, req.Id)
 	if err != nil {
 		return nil, ErrRejudgeNotFound
@@ -410,6 +426,10 @@ func (s *JudgeService) CancelRejudge(ctx context.Context, req *pb.CancelRejudgeR
 
 // ApplyRejudge applies the rejudge results
 func (s *JudgeService) ApplyRejudge(ctx context.Context, req *pb.ApplyRejudgeRequest) (*pb.ApplyRejudgeResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	rejudge, err := s.rejudgeStore.GetRejudge(ctx, req.Id)
 	if err != nil {
 		return nil, ErrRejudgeNotFound
@@ -446,6 +466,10 @@ func (s *JudgeService) ApplyRejudge(ctx context.Context, req *pb.ApplyRejudgeReq
 
 // RevertRejudge reverts the rejudge results
 func (s *JudgeService) RevertRejudge(ctx context.Context, req *pb.RevertRejudgeRequest) (*pb.RevertRejudgeResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	rejudge, err := s.rejudgeStore.GetRejudge(ctx, req.Id)
 	if err != nil {
 		return nil, ErrRejudgeNotFound
@@ -478,6 +502,10 @@ func (s *JudgeService) RevertRejudge(ctx context.Context, req *pb.RevertRejudgeR
 
 // GetRejudgeSubmissions retrieves submissions for a rejudging operation
 func (s *JudgeService) GetRejudgeSubmissions(ctx context.Context, req *pb.GetRejudgeSubmissionsRequest) (*pb.GetRejudgeSubmissionsResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, ErrUnauthorized
+	}
+
 	page := req.GetPagination().GetPage()
 	pageSize := req.GetPagination().GetPageSize()
 	if page <= 0 {

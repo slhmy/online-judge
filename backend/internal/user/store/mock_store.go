@@ -8,8 +8,10 @@ import (
 
 // UserStoreInterface defines the interface for UserStore
 type UserStoreInterface interface {
+	ListProfiles(ctx context.Context, page, pageSize int32) ([]*UserProfile, int32, error)
 	GetProfile(ctx context.Context, userID string) (*UserProfile, error)
 	UpdateProfile(ctx context.Context, userID string, displayName, avatarURL, bio, country string) error
+	UpdateRole(ctx context.Context, userID, role string) error
 	GetStats(ctx context.Context, userID string) (*UserStats, error)
 	ListSubmissions(ctx context.Context, userID string, verdictFilter, problemIDFilter string, page, pageSize int32) ([]*UserSubmissionSummary, int32, error)
 	CreateProfile(ctx context.Context, userID, username string) error
@@ -34,6 +36,33 @@ func NewMockUserStore() *MockUserStore {
 		Stats:       make(map[string]*UserStats),
 		Submissions: make(map[string][]*UserSubmissionSummary),
 	}
+}
+
+func (m *MockUserStore) ListProfiles(ctx context.Context, page, pageSize int32) ([]*UserProfile, int32, error) {
+	if m.ListError != nil {
+		return nil, 0, m.ListError
+	}
+
+	profiles := make([]*UserProfile, 0, len(m.Profiles))
+	for _, p := range m.Profiles {
+		profiles = append(profiles, p)
+	}
+
+	total := int32(len(profiles))
+	if pageSize <= 0 {
+		return profiles, total, nil
+	}
+
+	start := (page - 1) * pageSize
+	if start < 0 || start >= total {
+		return []*UserProfile{}, total, nil
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+
+	return profiles[start:end], total, nil
 }
 
 func (m *MockUserStore) GetProfile(ctx context.Context, userID string) (*UserProfile, error) {
@@ -72,6 +101,21 @@ func (m *MockUserStore) UpdateProfile(ctx context.Context, userID string, displa
 	}
 	profile.UpdatedAt = time.Now()
 
+	return nil
+}
+
+func (m *MockUserStore) UpdateRole(ctx context.Context, userID, role string) error {
+	if m.UpdateError != nil {
+		return m.UpdateError
+	}
+
+	profile, ok := m.Profiles[userID]
+	if !ok {
+		return errors.New("profile not found")
+	}
+
+	profile.Role = role
+	profile.UpdatedAt = time.Now()
 	return nil
 }
 

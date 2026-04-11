@@ -4,25 +4,16 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/slhmy/online-judge/bff/internal/middleware"
 	"google.golang.org/grpc/metadata"
 )
 
-// grpcContextFromRequest forwards auth/user identity into gRPC metadata.
+// grpcContextFromRequest forwards authentication header into gRPC metadata.
+// Backend is responsible for token validation and claim extraction.
 func grpcContextFromRequest(r *http.Request) context.Context {
 	pairs := []string{}
 
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		pairs = append(pairs, "authorization", auth)
-	}
-	if userID := middleware.GetUserID(r.Context()); userID != "" {
-		pairs = append(pairs, "x-user-id", userID)
-	}
-	if userEmail := middleware.GetUserEmail(r.Context()); userEmail != "" {
-		pairs = append(pairs, "x-user-email", userEmail)
-	}
-	if userRole := middleware.GetUserRole(r.Context()); userRole != "" {
-		pairs = append(pairs, "x-user-role", userRole)
 	}
 
 	if len(pairs) == 0 {

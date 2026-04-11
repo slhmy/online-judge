@@ -18,6 +18,86 @@ func NewUserStore(db *pgxpool.Pool) *UserStore {
 	return &UserStore{db: db}
 }
 
+// ListProfiles retrieves users ordered by creation time desc.
+func (s *UserStore) ListProfiles(ctx context.Context, page, pageSize int32) ([]*UserProfile, int32, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+
+	var total int32
+	if err := s.db.QueryRow(ctx, `SELECT COUNT(*) FROM user_profiles`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	rows, err := s.db.Query(ctx, `
+		SELECT user_id, username, display_name, rating, solved_count, submission_count,
+		       avatar_url, bio, country, role, created_at, updated_at
+		FROM user_profiles
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`, pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	profiles := make([]*UserProfile, 0)
+	for rows.Next() {
+		var p UserProfile
+		var uid pgtype.UUID
+		var displayName, avatarURL, bio, country, role pgtype.Text
+		var createdAt, updatedAt pgtype.Timestamp
+		var rating, solvedCount, submissionCount pgtype.Int4
+
+		if err := rows.Scan(&uid, &p.Username, &displayName, &rating, &solvedCount, &submissionCount,
+			&avatarURL, &bio, &country, &role, &createdAt, &updatedAt); err != nil {
+			return nil, 0, err
+		}
+
+		if uid.Valid {
+			p.UserID = uuid.UUID(uid.Bytes).String()
+		}
+		if displayName.Valid {
+			p.DisplayName = displayName.String
+		}
+		if rating.Valid {
+			p.Rating = rating.Int32
+		}
+		if solvedCount.Valid {
+			p.SolvedCount = solvedCount.Int32
+		}
+		if submissionCount.Valid {
+			p.SubmissionCount = submissionCount.Int32
+		}
+		if avatarURL.Valid {
+			p.AvatarURL = avatarURL.String
+		}
+		if bio.Valid {
+			p.Bio = bio.String
+		}
+		if country.Valid {
+			p.Country = country.String
+		}
+		if role.Valid {
+			p.Role = role.String
+		}
+		if createdAt.Valid {
+			p.CreatedAt = createdAt.Time
+		}
+		if updatedAt.Valid {
+			p.UpdatedAt = updatedAt.Time
+		}
+
+		profiles = append(profiles, &p)
+	}
+
+	return profiles, total, nil
+}
+
 // UserProfile represents a user's profile from the database
 type UserProfile struct {
 	UserID          string
@@ -111,6 +191,22 @@ func (s *UserStore) UpdateProfile(ctx context.Context, userID string, displayNam
 		    updated_at = NOW()
 		WHERE user_id = $1
 	`, parsedUserID, displayName, avatarURL, bio, country)
+	return err
+}
+
+// UpdateRole updates a user's role.
+func (s *UserStore) UpdateRole(ctx context.Context, userID, role string) error {
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(ctx, `
+		UPDATE user_profiles
+		SET role = $2,
+		    updated_at = NOW()
+		WHERE user_id = $1
+	`, parsedUserID, role)
 	return err
 }
 

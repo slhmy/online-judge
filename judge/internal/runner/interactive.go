@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/slhmy/online-judge/judge/internal/validator"

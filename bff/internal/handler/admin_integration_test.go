@@ -184,7 +184,6 @@ func TestAdminHandler_CreateRejudge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockRejudgeClient{CreateRejudgeFunc: tt.mockFunc}
 			handler := &AdminHandler{
-				db:             nil,
 				rejudgeService: mockClient,
 			}
 
@@ -260,7 +259,6 @@ func TestAdminHandler_GetRejudge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockRejudgeClient{GetRejudgeFunc: tt.mockFunc}
 			handler := &AdminHandler{
-				db:             nil,
 				rejudgeService: mockClient,
 			}
 
@@ -352,7 +350,6 @@ func TestAdminHandler_ListRejudges(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockRejudgeClient{ListRejudgesFunc: tt.mockFunc}
 			handler := &AdminHandler{
-				db:             nil,
 				rejudgeService: mockClient,
 			}
 
@@ -413,7 +410,6 @@ func TestAdminHandler_CancelRejudge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockRejudgeClient{CancelRejudgeFunc: tt.mockFunc}
 			handler := &AdminHandler{
-				db:             nil,
 				rejudgeService: mockClient,
 			}
 
@@ -442,7 +438,6 @@ func TestAdminHandler_ApplyRejudge(t *testing.T) {
 		},
 	}
 	handler := &AdminHandler{
-		db:             nil,
 		rejudgeService: mockClient,
 	}
 
@@ -474,7 +469,6 @@ func TestAdminHandler_RevertRejudge(t *testing.T) {
 		},
 	}
 	handler := &AdminHandler{
-		db:             nil,
 		rejudgeService: mockClient,
 	}
 
@@ -567,7 +561,6 @@ func TestAdminHandler_GetRejudgeSubmissions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockRejudgeClient{GetRejudgeSubmissionsFunc: tt.mockFunc}
 			handler := &AdminHandler{
-				db:             nil,
 				rejudgeService: mockClient,
 			}
 
@@ -594,7 +587,6 @@ func TestAdminHandler_GetRejudgeSubmissions(t *testing.T) {
 func TestAdminHandler_Integration_RejudgeWorkflow(t *testing.T) {
 	mockClient := &MockRejudgeClient{}
 	handler := &AdminHandler{
-		db:             nil,
 		rejudgeService: mockClient,
 	}
 

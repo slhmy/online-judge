@@ -16,6 +16,7 @@ import (
 	judgeStore "github.com/slhmy/online-judge/backend/internal/judge/store"
 	notificationService "github.com/slhmy/online-judge/backend/internal/notification/service"
 	"github.com/slhmy/online-judge/backend/internal/pkg/config"
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
 	"github.com/slhmy/online-judge/backend/internal/pkg/migration"
 	problemService "github.com/slhmy/online-judge/backend/internal/problem/service"
 	problemStore "github.com/slhmy/online-judge/backend/internal/problem/store"
@@ -104,7 +105,12 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	jwtInterceptor, err := middleware.NewJWTInterceptor(cfg.IdentraJWKSURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize JWT interceptor: %v", err)
+	}
+
+	s := grpc.NewServer(grpc.UnaryInterceptor(jwtInterceptor.Unary()))
 
 	// Register all services on the same gRPC server
 	pbProblem.RegisterProblemServiceServer(s, pService)

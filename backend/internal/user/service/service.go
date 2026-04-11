@@ -22,6 +22,54 @@ func NewUserService(s store.UserStoreInterface) *UserService {
 	}
 }
 
+func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "admin access required")
+	}
+
+	page := req.GetPagination().GetPage()
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := req.GetPagination().GetPageSize()
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+
+	profiles, total, err := s.store.ListProfiles(ctx, page, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]*pb.UserProfile, 0, len(profiles))
+	for _, profile := range profiles {
+		users = append(users, &pb.UserProfile{
+			UserId:          profile.UserID,
+			Username:        profile.Username,
+			DisplayName:     profile.DisplayName,
+			Rating:          profile.Rating,
+			SolvedCount:     profile.SolvedCount,
+			SubmissionCount: profile.SubmissionCount,
+			AvatarUrl:       profile.AvatarURL,
+			Bio:             profile.Bio,
+			Country:         profile.Country,
+			Role:            profile.Role,
+			Email:           profile.Email,
+			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+
+	return &pb.ListUsersResponse{
+		Users: users,
+		Pagination: &commonv1.PaginatedResponse{
+			Total:    total,
+			Page:     page,
+			PageSize: pageSize,
+		},
+	}, nil
+}
+
 func (s *UserService) GetUserProfile(ctx context.Context, req *pb.GetUserProfileRequest) (*pb.GetUserProfileResponse, error) {
 	profile, err := s.store.GetProfile(ctx, req.UserId)
 	if err != nil {
@@ -173,5 +221,42 @@ func (s *UserService) EnsureUserProfile(ctx context.Context, req *pb.EnsureUserP
 			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		},
 		Created: created,
+	}, nil
+}
+
+func (s *UserService) UpdateUserRole(ctx context.Context, req *pb.UpdateUserRoleRequest) (*pb.UpdateUserRoleResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "admin access required")
+	}
+
+	if req.Role != "user" && req.Role != "admin" {
+		return nil, status.Error(codes.InvalidArgument, "invalid role")
+	}
+
+	if err := s.store.UpdateRole(ctx, req.UserId, req.Role); err != nil {
+		return nil, err
+	}
+
+	profile, err := s.store.GetProfile(ctx, req.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.UpdateUserRoleResponse{
+		Profile: &pb.UserProfile{
+			UserId:          profile.UserID,
+			Username:        profile.Username,
+			DisplayName:     profile.DisplayName,
+			Rating:          profile.Rating,
+			SolvedCount:     profile.SolvedCount,
+			SubmissionCount: profile.SubmissionCount,
+			AvatarUrl:       profile.AvatarURL,
+			Bio:             profile.Bio,
+			Country:         profile.Country,
+			Role:            profile.Role,
+			Email:           profile.Email,
+			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		},
 	}, nil
 }

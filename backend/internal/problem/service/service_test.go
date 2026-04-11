@@ -6,12 +6,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/slhmy/online-judge/backend/internal/problem/store"
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	pb "github.com/slhmy/online-judge/gen/go/problem/v1"
 )
+
+func testAdminContext() context.Context {
+	return metadata.NewIncomingContext(context.Background(), metadata.Pairs("x-user-role", "admin"))
+}
 
 func TestProblemService_ListProblems(t *testing.T) {
 	tests := []struct {
@@ -117,7 +122,7 @@ func TestProblemService_ListProblems(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil) // nil redis for tests
-			resp, err := service.ListProblems(context.Background(), tt.request)
+			resp, err := service.ListProblems(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -189,7 +194,7 @@ func TestProblemService_GetProblem(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.GetProblem(context.Background(), tt.request)
+			resp, err := service.GetProblem(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -241,7 +246,7 @@ func TestProblemService_CreateProblem(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.CreateProblem(context.Background(), tt.request)
+			resp, err := service.CreateProblem(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -310,7 +315,7 @@ func TestProblemService_UpdateProblem(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.UpdateProblem(context.Background(), tt.request)
+			resp, err := service.UpdateProblem(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -363,7 +368,7 @@ func TestProblemService_DeleteProblem(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.DeleteProblem(context.Background(), tt.request)
+			resp, err := service.DeleteProblem(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -421,7 +426,7 @@ func TestProblemService_ListTestCases(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.ListTestCases(context.Background(), tt.request)
+			resp, err := service.ListTestCases(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -459,7 +464,7 @@ func TestProblemService_CreateTestCase(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.CreateTestCase(context.Background(), tt.request)
+			resp, err := service.CreateTestCase(testAdminContext(), tt.request)
 
 			tt.want(t, resp, err)
 		})
@@ -526,7 +531,7 @@ func TestProblemService_ListLanguages(t *testing.T) {
 			tt.setup(mockStore)
 
 			service := NewProblemService(mockStore, nil, nil)
-			resp, err := service.ListLanguages(context.Background(), &emptypb.Empty{})
+			resp, err := service.ListLanguages(testAdminContext(), &emptypb.Empty{})
 
 			tt.want(t, resp, err)
 		})

@@ -133,7 +133,7 @@ func main() {
 		cfg.OAuthRedirectURL,
 		rdb,
 	)
-	adminHandler := handler.NewAdminHandler(cfg.DatabaseURL, judgeClient)
+	adminHandler := handler.NewAdminHandler(judgeClient, userClient)
 	sseHandler := handler.NewSSEHandler(sseHub)
 	internalHandler := handler.NewInternalHandler(submissionClient, problemClient, rdb, cacheService, cfg.DatabaseURL)
 	testRunHandler := handler.NewTestRunHandler(problemClient)
@@ -174,6 +174,7 @@ func main() {
 		// Problem admin routes (protected)
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.RequireAuth)
+			r.Use(authMiddleware.RequireAdmin)
 			r.Post("/problems", problemHandler.CreateProblem)
 			r.Put("/problems/{id}", problemHandler.UpdateProblem)
 			r.Delete("/problems/{id}", problemHandler.DeleteProblem)
