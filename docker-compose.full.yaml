@@ -161,6 +161,7 @@ services:
     environment:
       - JUDGEHOST_ID=judgehost-01
       - REDIS_URL=redis:6379
+      - JUDGE_SERVICE_URL=http://bff:8080
       - ORCHESTRATOR_URL=http://bff:8080
       - SANDBOX_WORKDIR=/tmp/oj-sandbox
     depends_on:
