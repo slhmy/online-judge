@@ -9,41 +9,41 @@ A modernized online judge platform for competitive programming, built with micro
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js 14)                         │
-│                    + Go BFF Layer                                │
+│                    Frontend (Next.js 14)                        │
+│                    + Go BFF Layer                               │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
-│                    Identra Auth Service                          │
-│                    (OAuth, Email, Password, JWT)                 │
+│                    Identra Auth Service                         │
+│                    (OAuth, Email, Password, JWT)                │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
-│              Backend - Unified gRPC Server (Go)                  │
-│  All domain services run in a single process on port 8002:       │
-│  Problem · Submission · Contest · User · Notification · Judge    │
+│              Backend - Unified gRPC Server (Go)                 │
+│  All domain services run in a single process on port 8002:      │
+│  Problem · Submission · Contest · User · Notification · Judge   │
 └─────────────────────────────┬───────────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────┐
-│                    Judge System (DOMjudge-style)                 │
-│  - Docker + cgroups sandboxing                                   │
-│  - Multi-language support                                        │
-│  - Lazy judging with verdict priority                            │
+│                    Judge System (DOMjudge-style)                │
+│  - Docker + cgroups sandboxing                                  │
+│  - Multi-language support                                       │
+│  - Lazy judging with verdict priority                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Backend | Go 1.21+, Buf, gRPC-Gateway |
-| Frontend | Next.js 14, TypeScript, Tailwind CSS |
-| BFF | Go, Gin |
-| Auth | Identra (JWT, OAuth, Email, Password) |
-| Database | PostgreSQL 16 |
-| Cache/Queue | Redis 7 |
-| Object Storage | MinIO / S3 / Local |
-| Judge | Docker, cgroups |
+| Component      | Technology                            |
+| -------------- | ------------------------------------- |
+| Backend        | Go 1.21+, Buf, gRPC-Gateway           |
+| Frontend       | Next.js 14, TypeScript, Tailwind CSS  |
+| BFF            | Go, Gin                               |
+| Auth           | Identra (JWT, OAuth, Email, Password) |
+| Database       | PostgreSQL 16                         |
+| Cache/Queue    | Redis 7                               |
+| Object Storage | MinIO / S3 / Local                    |
+| Judge          | Docker, cgroups                       |
 
 ## Project Structure
 
@@ -124,16 +124,16 @@ make infra-down
 
 ## Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| Frontend | 3000 | Next.js web application |
-| BFF | 8080 | Go BFF layer (chi HTTP router) |
-| Identra (gRPC) | 50051 | Authentication service |
-| Backend (gRPC) | 8002 | Unified server: Problem, Submission, Contest, User, Notification, Judge |
-| Judge Daemon | - | Judge workers |
-| PostgreSQL | 5432 | Database |
-| Redis | 6379 | Cache & message queue |
-| MinIO | 9000/9001 | Object storage (API/Console) |
+| Service        | Port      | Description                                                             |
+| -------------- | --------- | ----------------------------------------------------------------------- |
+| Frontend       | 3000      | Next.js web application                                                 |
+| BFF            | 8080      | Go BFF layer (chi HTTP router)                                          |
+| Identra (gRPC) | 50051     | Authentication service                                                  |
+| Backend (gRPC) | 8002      | Unified server: Problem, Submission, Contest, User, Notification, Judge |
+| Judge Daemon   | -         | Judge workers                                                           |
+| PostgreSQL     | 5432      | Database                                                                |
+| Redis          | 6379      | Cache & message queue                                                   |
+| MinIO          | 9000/9001 | Object storage (API/Console)                                            |
 
 ## Judge Runtime
 
@@ -148,6 +148,7 @@ make judge-runtime-check
 ```
 
 Supported languages:
+
 - C++17 (g++)
 - C11 (gcc)
 - Python3
@@ -199,6 +200,7 @@ cp .env.example .env
 ```
 
 Key environment variables:
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `REDIS_URL` - Redis connection
 - `IDENTRA_GRPC_HOST` - Identra gRPC service address

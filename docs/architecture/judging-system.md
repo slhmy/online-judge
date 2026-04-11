@@ -16,15 +16,15 @@ This document outlines the architecture for the Online Judge execution system, f
 
 ## Technology Stack
 
-| Component | Technology | Justification |
-|-----------|------------|---------------|
-| Runtime | Go | High performance, excellent concurrency |
-| Container Runtime | Docker + cgroups | Resource control, process isolation |
-| Sandbox | runguard-style wrapper | CPU/memory/time enforcement |
-| Database | PostgreSQL | Same as backend - relational data integrity |
-| Queue/Cache/PubSub | Redis | Judge queue, caching, real-time updates |
-| Object Storage | MinIO / S3 / Local | Test case files, submission archives |
-| Monitoring | Prometheus | Metrics collection, alerting |
+| Component          | Technology             | Justification                               |
+| ------------------ | ---------------------- | ------------------------------------------- |
+| Runtime            | Go                     | High performance, excellent concurrency     |
+| Container Runtime  | Docker + cgroups       | Resource control, process isolation         |
+| Sandbox            | runguard-style wrapper | CPU/memory/time enforcement                 |
+| Database           | PostgreSQL             | Same as backend - relational data integrity |
+| Queue/Cache/PubSub | Redis                  | Judge queue, caching, real-time updates     |
+| Object Storage     | MinIO / S3 / Local     | Test case files, submission archives        |
+| Monitoring         | Prometheus             | Metrics collection, alerting                |
 
 ## Architecture Overview
 
@@ -129,11 +129,11 @@ const (
     VerdictMemoryLimit   Verdict = "memory-limit"   // Memory Limit Exceeded
     VerdictRunError      Verdict = "run-error"      // Runtime Error
     VerdictCompilerError Verdict = "compiler-error" // Compilation Error
-    
+
     // Additional verdicts
     VerdictOutputLimit   Verdict = "output-limit"   // Output Limit Exceeded
     VerdictPresentation  Verdict = "presentation"   // Presentation Error
-    
+
     // System verdicts
     VerdictInternalError Verdict = "internal-error" // Judge Error
 )
@@ -169,7 +169,7 @@ func CalculateTimeLimits(baseTimeLimit float64, cfg *Config) TimeLimits {
     // Example: 2 seconds + 10% of base limit
     hardCPUTime := baseTimeLimit + cfg.TimeLimitOvershoot.Absolute
     hardCPUTime += baseTimeLimit * cfg.TimeLimitOvershoot.Relative
-    
+
     return TimeLimits{
         SoftCPUTime:  baseTimeLimit,
         HardCPUTime:  hardCPUTime,
@@ -184,25 +184,25 @@ func (r *Runguard) Execute(cmd *exec.Cmd, limits TimeLimits) (*ExecutionResult, 
     cgroup := cgroups.NewCgroup()
     cgroup.SetCPULimit(limits.HardCPUTime)
     cgroup.SetMemoryLimit(r.MemoryLimit)
-    
+
     // Run with timeout monitoring
     startTime := time.Now()
     err := cmd.Run()
     elapsed := time.Since(startTime)
-    
+
     result := &ExecutionResult{
         WallTime: elapsed.Seconds(),
         CPUTime:  cgroup.GetCPUUsage(),
         Memory:   cgroup.GetMemoryUsage(),
     }
-    
+
     // Determine if soft/hard limit was reached
     if result.CPUTime > limits.HardCPUTime {
         result.TimelimitReached = "hard"
     } else if result.CPUTime > limits.SoftCPUTime {
         result.TimelimitReached = "soft"
     }
-    
+
     return result, nil
 }
 ```
@@ -213,14 +213,14 @@ func (r *Runguard) Execute(cmd *exec.Cmd, limits TimeLimits) (*ExecutionResult, 
 # Default limits (can be overridden per problem)
 limits:
   timelimit_overshoot:
-    absolute: 2.0      # seconds
-    relative: 0.1      # 10%
-  
-  memory_limit: 524288  # 512 MB default
-  output_limit: 4096    # 4 MB output limit
-  process_limit: 50     # Max processes/threads
-  
-  disk_space_error: 1073741824  # 1GB minimum free
+    absolute: 2.0 # seconds
+    relative: 0.1 # 10%
+
+  memory_limit: 524288 # 512 MB default
+  output_limit: 4096 # 4 MB output limit
+  process_limit: 50 # Max processes/threads
+
+  disk_space_error: 1073741824 # 1GB minimum free
 ```
 
 ## Testcase Design (DOMjudge-style)
@@ -233,16 +233,16 @@ type Testcase struct {
     ProblemID   string    `json:"problem_id"`
     Rank        int       `json:"rank"`         // Order of execution
     IsSample    bool      `json:"is_sample"`    // Visible to teams
-    
+
     // Input/Output stored in object storage
     InputFile   string    `json:"input_file"`   // S3 path to input
     OutputFile  string    `json:"output_file"`  // S3 path to expected output
-    
+
     // Metadata
     MD5Input    string    `json:"md5_input"`    // Checksum for caching
     MD5Output   string    `json:"md5_output"`
     Description string    `json:"description"`  // Optional description
-    
+
     // For interactive problems
     IsInteractive bool    `json:"is_interactive"`
 }
@@ -253,7 +253,7 @@ type Testcase struct {
 ```
 Testcases run in order by rank:
   Rank 1 (sample) → Rank 2 (sample) → Rank 3 (secret) → ...
-  
+
 Sample testcases:
   - Visible to teams before submission
   - Can be downloaded for practice
@@ -275,28 +275,28 @@ func DefaultValidator(expected, actual string, config ValidatorConfig) Verdict {
     // Normalize line endings
     expected = strings.ReplaceAll(expected, "\r\n", "\n")
     actual = strings.ReplaceAll(actual, "\r\n", "\n")
-    
+
     // Apply normalization based on config
     if config.IgnoreTrailingWhitespace {
         expected = normalizeTrailingWhitespace(expected)
         actual = normalizeTrailingWhitespace(actual)
     }
-    
+
     if config.IgnoreCase {
         expected = strings.ToLower(expected)
         actual = strings.ToLower(actual)
     }
-    
+
     // Exact match
     if expected == actual {
         return VerdictCorrect
     }
-    
+
     // Check presentation error (whitespace differences)
     if isPresentationError(expected, actual, config) {
         return VerdictPresentation
     }
-    
+
     return VerdictWrongAnswer
 }
 
@@ -325,15 +325,15 @@ func (v *SpecialValidator) Validate(input, expected, actual string) (Verdict, st
     inputFile := writeFile(input)
     expectedFile := writeFile(expected)
     actualFile := writeFile(actual)
-    
+
     // Run validator
     // Exit codes: 42 = correct, 43 = wrong-answer, other = internal-error
-    cmd := exec.Command(v.ExecutablePath, 
+    cmd := exec.Command(v.ExecutablePath,
         inputFile, expectedFile, actualFile,
         v.Args...)
-    
+
     output, err := cmd.CombinedOutput()
-    
+
     switch cmd.ProcessState.ExitCode() {
     case 42:
         return VerdictCorrect, string(output)
@@ -378,11 +378,11 @@ func (p SubmissionPriority) Priority() int {
     // Teams with more pending submissions get lower priority
     // This prevents a team from flooding the queue
     basePriority := p.TeamPendingCount * 10
-    
+
     if p.IsContest {
         basePriority -= 100  // Contest submissions prioritized
     }
-    
+
     return basePriority
 }
 ```
@@ -396,7 +396,7 @@ type Rejudging struct {
     Status       string    // "pending", "processing", "completed"
     Submissions  []string  // Submission IDs to rejudge
     CreatedBy    string
-    
+
     // For batched rejudging
     ApplyAutomatically bool  // Auto-apply new results
     AutoApplyAt        *time.Time
@@ -407,10 +407,10 @@ func (r *Rejudging) Process() {
     for _, subID := range r.Submissions {
         // Create new judging for old submission
         oldSubmission := GetSubmission(subID)
-        
+
         // Mark old judgings as invalid
         MarkOldJudgingsInvalid(subID)
-        
+
         // Requeue for judging
         SubmitToJudgeQueue(oldSubmission)
     }
@@ -421,7 +421,7 @@ func (r *Rejudging) Apply() {
     for _, subID := range r.Submissions {
         newJudging := GetLatestJudging(subID)
         oldJudging := GetPreviousJudging(subID)
-        
+
         // Update scoreboard if verdict changed
         if newJudging.Verdict != oldJudging.Verdict {
             UpdateScoreboard(subID, newJudging.Verdict)
@@ -440,7 +440,7 @@ type Judging struct {
     Verified     bool      // Has jury reviewed?
     VerifiedBy   string    // Jury member who verified
     VerifyComment string   // Optional comment
-    
+
     // For requiring verification before showing to team
     RequireVerification bool
 }
@@ -466,24 +466,24 @@ type LazyJudgingConfig struct {
 func (j *JudgeWorker) RunTestcases(testcases []Testcase, cfg LazyJudgingConfig) Verdict {
     highestPriority := 0
     finalVerdict := VerdictCorrect
-    
+
     for _, tc := range testcases {
         result := j.RunTestcase(tc)
-        
+
         priority := VerdictPriority[result.Verdict]
-        
+
         // If lazy judging enabled and we found high priority verdict
         if cfg.Enabled && priority > highestPriority {
             highestPriority = priority
             finalVerdict = result.Verdict
-            
+
             // Stop early for error verdicts (not correct)
             if result.Verdict != VerdictCorrect {
                 break
             }
         }
     }
-    
+
     return finalVerdict
 }
 ```
@@ -493,18 +493,21 @@ func (j *JudgeWorker) RunTestcases(testcases []Testcase, cfg LazyJudgingConfig) 
 Using the same stack as backend services: PostgreSQL + Redis + MinIO/S3/Local
 
 ### PostgreSQL (Metadata)
+
 - Submission records
 - Judging results
 - Test run details
 - Rejudging tracking
 
 ### Redis (Queue & Cache)
+
 - Judge job queue (priority queue)
 - Submission status caching
 - Real-time progress pub/sub
 - Compiled binary cache
 
 ### MinIO / S3 / Local (Object Storage)
+
 - Test case input/output files
 - Submission source archives
 - Compilation outputs
@@ -515,20 +518,20 @@ Using the same stack as backend services: PostgreSQL + Redis + MinIO/S3/Local
 type StorageConfig struct {
     // PostgreSQL
     DatabaseURL string `env:"DATABASE_URL"`
-    
+
     // Redis
     RedisURL    string `env:"REDIS_URL"`
-    
+
     // Object Storage
     StorageType string `env:"STORAGE_TYPE"` // "minio", "s3", "local"
-    
+
     // MinIO/S3 config
     S3Endpoint  string `env:"S3_ENDPOINT"`
     S3Bucket    string `env:"S3_BUCKET"`
     S3AccessKey string `env:"S3_ACCESS_KEY"`
     S3SecretKey string `env:"S3_SECRET_KEY"`
     S3Region    string `env:"S3_REGION"`
-    
+
     // Local storage config
     LocalPath   string `env:"LOCAL_STORAGE_PATH"`
 }
@@ -538,11 +541,11 @@ const (
     // Testcase storage
     PathTestcaseInput  = "testcases/{problem_id}/{testcase_id}/input"
     PathTestcaseOutput = "testcases/{problem_id}/{testcase_id}/output"
-    
+
     // Submission storage
     PathSubmissionSource = "submissions/{submission_id}/source"
     PathSubmissionBinary = "submissions/{submission_id}/binary"
-    
+
     // Judging logs
     PathJudgingStdout = "judgings/{judging_id}/stdout"
     PathJudgingStderr = "judgings/{judging_id}/stderr"
@@ -559,7 +562,7 @@ package storage
 import (
     "context"
     "io"
-    
+
     "github.com/minio/minio-go/v7"
     "github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -578,7 +581,7 @@ func NewStorageService(cfg *StorageConfig) (*StorageService, error) {
             localPath: cfg.LocalPath,
         }, nil
     }
-    
+
     client, err := minio.New(cfg.S3Endpoint, &minio.Options{
         Creds:  credentials.NewStaticV4(cfg.S3AccessKey, cfg.S3SecretKey, ""),
         Region: cfg.S3Region,
@@ -587,7 +590,7 @@ func NewStorageService(cfg *StorageConfig) (*StorageService, error) {
     if err != nil {
         return nil, err
     }
-    
+
     return &StorageService{
         client: client,
         bucket: cfg.S3Bucket,
@@ -621,7 +624,7 @@ import (
     "context"
     "encoding/json"
     "time"
-    
+
     "github.com/redis/go-redis/v9"
 )
 
@@ -642,11 +645,11 @@ type JudgeJob struct {
 // Push job to priority queue
 func (q *JudgeQueue) Push(ctx context.Context, job *JudgeJob) error {
     data, _ := json.Marshal(job)
-    
+
     // Use Redis sorted set for priority queue
     // Lower score = higher priority
     score := float64(job.Priority*1000) - float64(job.SubmitTime.Unix())
-    
+
     return q.client.ZAdd(ctx, "judge:queue", &redis.Z{
         Score:  score,
         Member: data,
@@ -660,7 +663,7 @@ func (q *JudgeQueue) Pop(ctx context.Context) (*JudgeJob, error) {
     if err != nil {
         return nil, err
     }
-    
+
     var job JudgeJob
     json.Unmarshal([]byte(result[0].Member.(string)), &job)
     return &job, nil
@@ -684,9 +687,9 @@ func (q *JudgeQueue) PublishProgress(ctx context.Context, submissionID string, p
 // Subscribe to progress updates
 func (q *JudgeQueue) SubscribeProgress(ctx context.Context, submissionID string) <-chan *JudgeProgress {
     ch := make(chan *JudgeProgress)
-    
+
     pubsub := q.client.Subscribe(ctx, fmt.Sprintf("progress:%s", submissionID))
-    
+
     go func() {
         defer close(ch)
         for msg := range pubsub.Channel() {
@@ -695,7 +698,7 @@ func (q *JudgeQueue) SubscribeProgress(ctx context.Context, submissionID string)
             ch <- &progress
         }
     }()
-    
+
     return ch
 }
 ```
@@ -707,25 +710,25 @@ func (q *JudgeQueue) SubscribeProgress(ctx context.Context, submissionID string)
 judgehost:
   id: "judgehost-01"
   orchestrator_url: "http://domserver:8080/api"
-  
+
   # Number of parallel judgedaemons (one per CPU core recommended)
   daemons: 4
-  
+
   # Work directory
   workdir: "/var/lib/judgehost/work"
-  
+
   # Chroot environment
   chroot_dir: "/var/lib/judgehost/chroot"
-  
+
   # Cleanup settings
-  disk_space_error: 1073741824  # 1GB minimum free
+  disk_space_error: 1073741824 # 1GB minimum free
   auto_cleanup: true
-  
+
   # Cgroup settings
   cgroup:
     memory: true
     cpuset: true
-    
+
   # Logging
   log_level: "info"
   log_file: "/var/log/judgehost/judgedaemon.log"
@@ -734,6 +737,7 @@ judgehost:
 ## Database Schema (PostgreSQL - DOMjudge style)
 
 ### Submissions Table
+
 ```sql
 CREATE TABLE submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -743,10 +747,10 @@ CREATE TABLE submissions (
     language_id VARCHAR(50) NOT NULL,
     source_code TEXT NOT NULL,
     submit_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     -- For team priority calculation
     team_pending_count INTEGER DEFAULT 0,
-    
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -757,36 +761,37 @@ CREATE INDEX idx_submissions_time ON submissions(submit_time DESC);
 ```
 
 ### Judgings Table
+
 ```sql
 CREATE TABLE judgings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     submission_id UUID REFERENCES submissions(id),
     judgehost_id VARCHAR(100) NOT NULL,
-    
+
     -- Timing
     start_time TIMESTAMP WITH TIME ZONE,
     end_time TIMESTAMP WITH TIME ZONE,
-    
+
     -- Results
     verdict VARCHAR(20),
     max_runtime DECIMAL(10, 3),  -- seconds
     max_memory INTEGER,           -- kilobytes
-    
+
     -- Compilation
     compile_success BOOLEAN DEFAULT false,
     compile_output TEXT,
     compile_metadata JSONB,
-    
+
     -- Verification
     valid BOOLEAN DEFAULT true,       -- False if rejudged
     verified BOOLEAN DEFAULT false,
     verified_by VARCHAR(100),
     verify_comment TEXT,
     seen BOOLEAN DEFAULT false,       -- Team has seen result
-    
+
     -- For caching
     uuid UUID DEFAULT uuid_generate_v4(),
-    
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -796,30 +801,31 @@ CREATE INDEX idx_judgings_verdict ON judgings(verdict);
 ```
 
 ### Judging Runs Table (per-testcase results)
+
 ```sql
 CREATE TABLE judging_runs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     judging_id UUID REFERENCES judgings(id),
     testcase_id UUID REFERENCES testcases(id),
     rank INTEGER NOT NULL,
-    
+
     -- Timing
     runtime DECIMAL(10, 3),     -- seconds
     wall_time DECIMAL(10, 3),
     memory INTEGER,              -- kilobytes
-    
+
     -- Result
     verdict VARCHAR(20) NOT NULL,
-    
+
     -- Output
     output_run TEXT,            -- Program stdout
     output_diff TEXT,           -- Diff with expected
     output_error TEXT,          -- Program stderr
     output_system TEXT,         -- System messages
-    
+
     -- Metadata
     metadata JSONB,
-    
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -839,7 +845,7 @@ var (
         },
         []string{"verdict", "language"},
     )
-    
+
     judgeDuration = promauto.NewHistogramVec(
         prometheus.HistogramOpts{
             Name: "judge_duration_seconds",
@@ -848,7 +854,7 @@ var (
         },
         []string{"language"},
     )
-    
+
     testcasesRun = promauto.NewCounterVec(
         prometheus.CounterOpts{
             Name: "judge_testcases_run_total",
@@ -856,14 +862,14 @@ var (
         },
         []string{"problem_id"},
     )
-    
+
     queueLength = promauto.NewGauge(
         prometheus.GaugeOpts{
             Name: "judge_queue_length",
             Help: "Current judge queue length",
         },
     )
-    
+
     judgehostActive = promauto.NewGaugeVec(
         prometheus.GaugeOpts{
             Name: "judgehost_active_judgings",
