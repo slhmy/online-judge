@@ -16,6 +16,7 @@ import (
 	judgeStore "github.com/slhmy/online-judge/backend/internal/judge/store"
 	notificationService "github.com/slhmy/online-judge/backend/internal/notification/service"
 	"github.com/slhmy/online-judge/backend/internal/pkg/config"
+	"github.com/slhmy/online-judge/backend/internal/pkg/migration"
 	problemService "github.com/slhmy/online-judge/backend/internal/problem/service"
 	problemStore "github.com/slhmy/online-judge/backend/internal/problem/store"
 	"github.com/slhmy/online-judge/backend/internal/queue"
@@ -23,6 +24,7 @@ import (
 	submissionStore "github.com/slhmy/online-judge/backend/internal/submission/store"
 	userService "github.com/slhmy/online-judge/backend/internal/user/service"
 	userStore "github.com/slhmy/online-judge/backend/internal/user/store"
+	"github.com/slhmy/online-judge/backend/migrations"
 	pbContest "github.com/slhmy/online-judge/gen/go/contest/v1"
 	pbJudge "github.com/slhmy/online-judge/gen/go/judge/v1"
 	pbNotification "github.com/slhmy/online-judge/gen/go/notification/v1"
@@ -44,6 +46,11 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 	defer dbpool.Close()
+
+	// Run auto-migrations
+	if err := migration.Run(context.Background(), dbpool, migrations.FS); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
 	// Redis connection (shared by most services)
 	rdb := redis.NewClient(&redis.Options{
