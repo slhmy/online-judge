@@ -1,4 +1,4 @@
-.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-backend lint-bff lint-judge lint-frontend check typecheck-frontend typecheck
+.PHONY: all proto build run test clean infra-up infra-down seed seed-docker seed-reset build-seed judge-runtime-image lint lint-backend lint-bff lint-judge lint-frontend check typecheck-frontend typecheck backup restore backup-pg
 
 # Default target
 all: proto build
@@ -316,6 +316,23 @@ test-report:
 	cd bff && go test ./... -v -race -json > bff-test-report.json 2>&1 || true
 	cd judge && go test ./... -v -race -json > judge-test-report.json 2>&1 || true
 	@echo "Test reports generated: backend-test-report.json, bff-test-report.json, judge-test-report.json"
+
+# ============================================
+# Backup & Restore
+# ============================================
+
+backup:
+	@./scripts/backup.sh
+
+restore:
+	@if [ -z "$(DIR)" ]; then echo "Usage: make restore DIR=backups/<timestamp>"; exit 1; fi
+	@./scripts/restore.sh $(DIR)
+
+backup-pg:
+	@echo "Quick PostgreSQL backup..."
+	@mkdir -p backups
+	docker compose exec -T postgres pg_dump -U oj -d oj --no-owner --clean --if-exists > backups/postgres_oj_$$(date +%Y%m%d_%H%M%S).sql
+	@echo "Done."
 
 # ============================================
 # Docker

@@ -79,3 +79,6 @@ Thumbs.db
 *.pem
 *.key
 secrets/
+
+# Backups
+backups/
