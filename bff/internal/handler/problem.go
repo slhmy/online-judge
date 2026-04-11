@@ -339,11 +339,11 @@ func (h *ProblemHandler) CreateTestCase(w http.ResponseWriter, r *http.Request) 
 	problemID := chi.URLParam(r, "id")
 
 	var req struct {
-		Rank         int32  `json:"rank"`
-		IsSample     bool   `json:"is_sample"`
-		InputContent string `json:"input_content"`
+		Rank          int32  `json:"rank"`
+		IsSample      bool   `json:"is_sample"`
+		InputContent  string `json:"input_content"`
 		OutputContent string `json:"output_content"`
-		Description  string `json:"description"`
+		Description   string `json:"description"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

@@ -120,7 +120,7 @@ var sampleProblems = []SampleProblem{
 			{Rank: 1, IsSample: true, Input: "5\n1 2 3 4 5\n", Output: "15\n", Description: "Simple positive numbers"},
 			{Rank: 2, IsSample: true, Input: "3\n-1 5 -3\n", Output: "1\n", Description: "Mixed numbers"},
 			{Rank: 3, IsSample: false, Input: "1\n42\n", Output: "42\n", Description: "Single element"},
-			{Rank: 4, IsSample: false, Input: "1000\n", Output: "0\n", Description: "1000 zeros (truncated input)"},
+			{Rank: 4, IsSample: false, Input: "4\n1000000 -1000000 1000000 -1000000\n", Output: "0\n", Description: "Cancelling numbers"},
 		},
 	},
 	{
@@ -331,7 +331,7 @@ abc</pre>
 			{Rank: 1, IsSample: true, Input: "4 4\n1 2 1\n2 3 2\n3 4 3\n1 4 10\n", Output: "6\n", Description: "Path 1->2->3->4"},
 			{Rank: 2, IsSample: true, Input: "3 1\n1 2 5\n", Output: "-1\n", Description: "No path to node 3"},
 			{Rank: 3, IsSample: false, Input: "2 1\n1 2 100\n", Output: "100\n", Description: "Direct edge"},
-			{Rank: 4, IsSample: false, Input: "5 6\n1 2 3\n2 3 4\n3 4 5\n4 5 6\n1 5 100\n2 5 20\n", Output: "27\n", Description: "Complex graph"},
+			{Rank: 4, IsSample: false, Input: "5 6\n1 2 3\n2 3 4\n3 4 5\n4 5 6\n1 5 100\n2 5 20\n", Output: "18\n", Description: "Complex graph"},
 		},
 	},
 	{

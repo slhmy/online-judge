@@ -147,7 +147,7 @@ func main() {
 				exitCode = ws.ExitStatus()
 				verdict = "runtime-error"
 			}
-			rusage = *exitErr.ProcessState.SysUsage().(*syscall.Rusage)
+			rusage = *exitErr.SysUsage().(*syscall.Rusage)
 		} else {
 			exitCode = 1
 			verdict = "runtime-error"

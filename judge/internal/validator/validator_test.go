@@ -535,7 +535,7 @@ func TestSpecialValidator_FetchValidator_NoHTTPClient(t *testing.T) {
 
 	_, _, err := validator.fetchValidator(context.Background(), "test-id")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no HTTP client configured")
+	assert.Contains(t, err.Error(), "no validator fetcher configured")
 }
 
 // TestValidatorBinary_Execution tests actual validator script execution
