@@ -668,19 +668,17 @@ func seedProblem(ctx context.Context, db *pgxpool.Pool, problem SampleProblem) (
 		tcQuery := `
 			INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			ON CONFLICT (problem_id, rank) DO UPDATE SET
+				input_content = EXCLUDED.input_content,
+				output_content = EXCLUDED.output_content,
+				description = EXCLUDED.description
 		`
 		inputPath := fmt.Sprintf("problems/%s/input/test%d.txt", problem.ExternalID, tc.Rank)
 		outputPath := fmt.Sprintf("problems/%s/output/test%d.txt", problem.ExternalID, tc.Rank)
 
-		// Only include content for sample test cases
-		var inputContent, outputContent interface{}
-		if tc.IsSample {
-			inputContent = tc.Input
-			outputContent = tc.Output
-		} else {
-			inputContent = nil
-			outputContent = nil
-		}
+		// Always include content inline for judge to use
+		inputContent := tc.Input
+		outputContent := tc.Output
 
 		_, err := db.Exec(ctx, tcQuery,
 			problemID, tc.Rank, tc.IsSample, inputPath, outputPath,

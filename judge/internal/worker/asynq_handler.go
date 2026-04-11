@@ -43,6 +43,7 @@ func NewAsynqHandler(cfg *config.Config, redisClient *redis.Client, submissionCl
 	if cfg.SandboxWorkDir != "" {
 		sandbox.SetSandboxWorkDir(cfg.SandboxWorkDir)
 	}
+	sandbox.SetRuntimeImage(cfg.RuntimeImage)
 
 	// Create judge queue client for fetching submission/problem data
 	judgeQueue := queue.NewJudgeQueue(redisClient, submissionClient, problemClient, judgeClient)

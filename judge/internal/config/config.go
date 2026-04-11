@@ -20,7 +20,8 @@ type Config struct {
 	JudgeServiceAddr string `mapstructure:"judge_service_addr"`
 
 	// Docker
-	DockerHost string `mapstructure:"docker_host"`
+	DockerHost   string `mapstructure:"docker_host"`
+	RuntimeImage string `mapstructure:"runtime_image"`
 
 	// Sandbox
 	SandboxWorkDir string `mapstructure:"sandbox_workdir"`
@@ -53,6 +54,7 @@ func Load() (*Config, error) {
 	v.SetDefault("redis_url", "localhost:6379")
 	v.SetDefault("judge_service_addr", "localhost:8002")
 	v.SetDefault("docker_host", "unix:///var/run/docker.sock")
+	v.SetDefault("runtime_image", "judge-runtime:latest")
 	v.SetDefault("sandbox_workdir", "")          // Empty means use default temp directory
 	v.SetDefault("default_memory_limit", 524288) // 512 MB in KB
 	v.SetDefault("default_time_limit", 10)       // 10 seconds

@@ -3,6 +3,7 @@ package sandbox
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,10 +15,10 @@ import (
 
 // Limits defines resource constraints for sandbox execution
 type Limits struct {
-	TimeLimit   time.Duration // CPU time limit in seconds
-	MemoryLimit int64         // Memory limit in kilobytes
-	OutputLimit int64         // Output limit in kilobytes
-	ProcessLimit int          // Max number of processes
+	TimeLimit    time.Duration // CPU time limit in seconds
+	MemoryLimit  int64         // Memory limit in kilobytes
+	OutputLimit  int64         // Output limit in kilobytes
+	ProcessLimit int           // Max number of processes
 }
 
 // Result contains the execution result
@@ -51,16 +52,15 @@ type Sandbox interface {
 
 // LanguageConfig defines compilation and execution for each language
 type LanguageConfig struct {
-	ID              string
-	CompileCmd      []string // Command to compile source
-	RunCmd          []string // Command to run binary
-	SourceFile      string   // Source file name
-	BinaryFile      string   // Output binary name
-	NeedsCompile    bool
-	Image           string   // Docker image to use
-	TimeFactor      float64  // Time multiplier
-	MemoryFactor    float64  // Memory multiplier
-	ExtraFiles      []string // Additional files needed
+	ID           string
+	CompileCmd   []string // Command to compile source
+	RunCmd       []string // Command to run binary
+	SourceFile   string   // Source file name
+	BinaryFile   string   // Output binary name
+	NeedsCompile bool
+	TimeFactor   float64  // Time multiplier
+	MemoryFactor float64  // Memory multiplier
+	ExtraFiles   []string // Additional files needed
 }
 
 // Language configurations - comprehensive settings for all supported languages
@@ -72,7 +72,6 @@ var languageConfigs = map[string]LanguageConfig{
 		SourceFile:   "main.cpp",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "judge-runtime:latest", // Use our custom image
 		TimeFactor:   1.0,
 		MemoryFactor: 1.0,
 	},
@@ -83,20 +82,18 @@ var languageConfigs = map[string]LanguageConfig{
 		SourceFile:   "main.c",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "judge-runtime:latest",
 		TimeFactor:   1.0,
 		MemoryFactor: 1.0,
 	},
 	"python3": {
 		ID:           "python3",
-		CompileCmd:   nil, // No compilation needed
+		CompileCmd:   nil,
 		RunCmd:       []string{"python3", "-S", "-B", "main.py"},
 		SourceFile:   "main.py",
 		BinaryFile:   "main.py",
 		NeedsCompile: false,
-		Image:        "judge-runtime:latest",
-		TimeFactor:   2.0, // Python is slower
-		MemoryFactor: 1.5, // Python uses more memory
+		TimeFactor:   2.0,
+		MemoryFactor: 1.5,
 		ExtraFiles:   []string{"__pycache__"},
 	},
 	"java": {
@@ -106,8 +103,7 @@ var languageConfigs = map[string]LanguageConfig{
 		SourceFile:   "Main.java",
 		BinaryFile:   "Main.class",
 		NeedsCompile: true,
-		Image:        "judge-runtime:latest",
-		TimeFactor:   2.0, // Java startup overhead
+		TimeFactor:   2.0,
 		MemoryFactor: 1.5,
 	},
 	"go": {
@@ -117,7 +113,6 @@ var languageConfigs = map[string]LanguageConfig{
 		SourceFile:   "main.go",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "judge-runtime:latest",
 		TimeFactor:   1.0,
 		MemoryFactor: 1.0,
 	},
@@ -128,19 +123,17 @@ var languageConfigs = map[string]LanguageConfig{
 		SourceFile:   "main.rs",
 		BinaryFile:   "main",
 		NeedsCompile: true,
-		Image:        "judge-runtime:latest",
 		TimeFactor:   1.0,
 		MemoryFactor: 1.0,
 	},
 	"nodejs": {
 		ID:           "nodejs",
-		CompileCmd:   nil, // No compilation needed
+		CompileCmd:   nil,
 		RunCmd:       []string{"node", "--optimize_for_size", "--max-old-space-size=512", "main.js"},
 		SourceFile:   "main.js",
 		BinaryFile:   "main.js",
 		NeedsCompile: false,
-		Image:        "judge-runtime:latest",
-		TimeFactor:   2.0, // Node.js overhead
+		TimeFactor:   2.0,
 		MemoryFactor: 1.5,
 	},
 }
@@ -156,11 +149,21 @@ type DockerSandbox struct {
 // Can be set via SetSandboxWorkDir before creating sandboxes
 var sandboxWorkDirBase string
 
+// runtimeImage is the Docker image used for compilation and execution
+var runtimeImage = "judge-runtime:latest"
+
 // SetSandboxWorkDir sets the base directory for sandbox work directories
 // This is needed for Docker-in-Docker scenarios where the work directory
 // must be accessible from both the host and the container
 func SetSandboxWorkDir(base string) {
 	sandboxWorkDirBase = base
+}
+
+// SetRuntimeImage sets the Docker image used for compilation and execution
+func SetRuntimeImage(image string) {
+	if image != "" {
+		runtimeImage = image
+	}
 }
 
 // NewDockerSandbox creates a new Docker sandbox
@@ -227,10 +230,10 @@ func (s *DockerSandbox) Compile(ctx context.Context, source string, language str
 	}
 
 	// Cache miss or no cache - run compilation in Docker container
-	result, err := s.runDockerWithCopy(ctx, cfg.Image, cfg.CompileCmd, nil, Limits{
+	result, err := s.runDockerWithCopy(ctx, runtimeImage, cfg.CompileCmd, nil, Limits{
 		TimeLimit:    30 * time.Second, // Compilation time limit
-		MemoryLimit:  524288,            // 512MB for compilation
-		OutputLimit:  10240,             // 10KB output limit
+		MemoryLimit:  524288,           // 512MB for compilation
+		OutputLimit:  10240,            // 10KB output limit
 		ProcessLimit: 10,
 	}, false)
 	if err != nil {
@@ -284,7 +287,7 @@ func (s *DockerSandbox) Run(ctx context.Context, binary string, args []string, i
 	effectiveMemoryLimit := int64(float64(limits.MemoryLimit) * cfg.MemoryFactor)
 
 	// Run in Docker with network disabled and read-only filesystem
-	result, err := s.runDockerWithCopy(ctx, cfg.Image, runCmd, inputData, Limits{
+	result, err := s.runDockerWithCopy(ctx, runtimeImage, runCmd, inputData, Limits{
 		TimeLimit:    effectiveTimeLimit,
 		MemoryLimit:  effectiveMemoryLimit,
 		OutputLimit:  limits.OutputLimit,
@@ -297,17 +300,28 @@ func (s *DockerSandbox) Run(ctx context.Context, binary string, args []string, i
 	return result, nil
 }
 
-// runDockerWithCopy executes a command in a Docker container
-// For Docker-in-Docker, we use a shared volume mount approach
+// runguardMetrics contains precise resource usage from the runguard wrapper.
+type runguardMetrics struct {
+	WallTime   float64 `json:"wall_time"`
+	CPUTime    float64 `json:"cpu_time"`
+	UserTime   float64 `json:"user_time"`
+	SystemTime float64 `json:"sys_time"`
+	MaxRSSKB   int64   `json:"max_rss_kb"`
+	ExitCode   int     `json:"exit_code"`
+	Signal     int     `json:"signal"`
+	Verdict    string  `json:"verdict"`
+}
+
+// runDockerWithCopy executes a command in a Docker container.
+// For execution mode (isExecution=true), wraps with runguard for precise CPU time measurement.
 func (s *DockerSandbox) runDockerWithCopy(ctx context.Context, image string, cmd []string, inputData []byte, limits Limits, isExecution bool) (*Result, error) {
 	// Generate a unique container name
 	containerName := fmt.Sprintf("sandbox-%d", time.Now().UnixNano())
 
 	// Build Docker run command with volume mount
-	// The key for Docker-in-Docker is to use the same path inside and outside
 	runArgs := []string{
 		"run",
-			"-i", // Keep stdin open for input
+		"-i",
 		"--rm",
 		"--name", containerName,
 		"-v", s.workDir + ":/workspace",
@@ -318,39 +332,47 @@ func (s *DockerSandbox) runDockerWithCopy(ctx context.Context, image string, cmd
 	memoryBytes := limits.MemoryLimit * 1024
 	runArgs = append(runArgs,
 		"--memory", fmt.Sprintf("%d", memoryBytes),
-		"--memory-swap", fmt.Sprintf("%d", memoryBytes), // Disable swap
+		"--memory-swap", fmt.Sprintf("%d", memoryBytes),
 	)
 
-	// Apply process limit using pids limit (requires cgroups)
+	// Apply process limit
 	if limits.ProcessLimit > 0 {
 		runArgs = append(runArgs, "--pids-limit", fmt.Sprintf("%d", limits.ProcessLimit))
 	}
 
 	// For execution mode, apply stricter constraints
 	if isExecution {
-		// Disable network
 		runArgs = append(runArgs, "--network", "none")
-		// Read-only filesystem - but we need workspace writable
-		// runArgs = append(runArgs, "--read-only")
-		// No new privileges
 		runArgs = append(runArgs, "--cap-drop", "ALL")
-		// Security options
 		runArgs = append(runArgs, "--security-opt", "no-new-privileges")
 	}
 
-	// Add image and command
+	// Add image
 	runArgs = append(runArgs, image)
+
+	// Wrap command with runguard for execution mode
+	if isExecution {
+		timeLimitSec := limits.TimeLimit.Seconds()
+		runguardArgs := []string{
+			"runguard",
+			"-t", fmt.Sprintf("%.1f", timeLimitSec),
+			"-m", fmt.Sprintf("%d", limits.MemoryLimit),
+			"-o", "/workspace/.metrics.json",
+			"--",
+		}
+		runArgs = append(runArgs, runguardArgs...)
+	}
+
 	runArgs = append(runArgs, cmd...)
 
-	// Create timeout context
-	timeoutCtx, cancel := context.WithTimeout(ctx, limits.TimeLimit+10*time.Second)
+	// Create timeout context (generous wall-clock limit)
+	timeoutCtx, cancel := context.WithTimeout(ctx, limits.TimeLimit+30*time.Second)
 	defer cancel()
 
 	// Execute Docker command
 	startTime := time.Now()
 	execCmd := exec.CommandContext(timeoutCtx, "docker", runArgs...)
 
-	// Set up stdin if we have input
 	if len(inputData) > 0 {
 		execCmd.Stdin = bytes.NewReader(inputData)
 	}
@@ -369,7 +391,44 @@ func (s *DockerSandbox) runDockerWithCopy(ctx context.Context, image string, cmd
 		Error:      stderr.Bytes(),
 	}
 
-	// Determine verdict based on error and exit code
+	// For execution mode, parse runguard metrics for precise measurements
+	if isExecution {
+		metricsPath := filepath.Join(s.workDir, ".metrics.json")
+		if metricsData, err := os.ReadFile(metricsPath); err == nil {
+			var m runguardMetrics
+			if err := json.Unmarshal(metricsData, &m); err == nil {
+				// Use precise CPU time from getrusage
+				result.TimeUsed = time.Duration(m.CPUTime * float64(time.Second))
+				result.MemoryUsed = m.MaxRSSKB
+				result.ExitCode = m.ExitCode
+
+				switch m.Verdict {
+				case "ok":
+					result.Verdict = "correct"
+				case "time-limit":
+					result.Verdict = "time-limit"
+				case "memory-limit":
+					result.Verdict = "memory-limit"
+				case "runtime-error":
+					result.Verdict = "run-error"
+				default:
+					result.Verdict = "run-error"
+				}
+
+				// Check output limit
+				if limits.OutputLimit > 0 && int64(len(result.Output)) > limits.OutputLimit*1024 {
+					result.Verdict = "output-limit"
+				}
+
+				// Clean up metrics file
+				_ = os.Remove(metricsPath)
+				return result, nil
+			}
+		}
+		// Fallback: metrics file not found or parse failed, use wall-clock below
+	}
+
+	// Fallback verdict determination (compilation mode or runguard unavailable)
 	if runErr != nil {
 		if timeoutCtx.Err() == context.DeadlineExceeded {
 			result.Verdict = "time-limit"
@@ -469,6 +528,7 @@ func GetLanguageConfig(language string) (*LanguageConfig, error) {
 // This method runs two processes connected by pipes:
 //   - Interactor stdout -> Solution stdin
 //   - Solution stdout -> Interactor stdin
+//
 // For Docker-in-Docker, we use a helper script approach
 func (s *DockerSandbox) RunInteractive(
 	ctx context.Context,
@@ -479,8 +539,8 @@ func (s *DockerSandbox) RunInteractive(
 ) (*InteractiveResult, error) {
 	// DOMjudge-style exit codes
 	const (
-		ExitCodeCorrect     = 42
-		ExitCodeWrongAnswer = 43
+		ExitCodeCorrect      = 42
+		ExitCodeWrongAnswer  = 43
 		ExitCodePresentation = 44
 	)
 
@@ -586,7 +646,7 @@ exit $INTERACTOR_EXIT
 	)
 
 	// Add image and command
-	runArgs = append(runArgs, cfg.Image)
+	runArgs = append(runArgs, runtimeImage)
 	runArgs = append(runArgs, "/workspace/interactive/run_interactive.sh")
 
 	// Create timeout context
@@ -605,7 +665,7 @@ exit $INTERACTOR_EXIT
 	elapsed := time.Since(startTime)
 
 	result := &InteractiveResult{
-		TimeUsed: elapsed,
+		TimeUsed:   elapsed,
 		MemoryUsed: 0, // Approximate - would need cgroups for accurate measurement
 	}
 

@@ -6,6 +6,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JUDGE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 IMAGE_NAME="judge-runtime"
 IMAGE_TAG="latest"
 
@@ -32,11 +33,11 @@ echo "Building image: ${IMAGE_NAME}:${IMAGE_TAG}"
 echo "Using Dockerfile: $DOCKERFILE_PATH"
 echo ""
 
-# Build the image
+# Build the image (context is the judge/ directory for access to go.mod and cmd/runguard)
 docker build \
     -t "${IMAGE_NAME}:${IMAGE_TAG}" \
     -f "$DOCKERFILE_PATH" \
-    "${SCRIPT_DIR}"
+    "${JUDGE_DIR}"
 
 echo ""
 echo "=========================================="

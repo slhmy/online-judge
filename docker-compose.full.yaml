@@ -147,6 +147,16 @@ services:
       - bff
 
   # ============================================
+  # Judge Runtime Image (build only, no running container)
+  # ============================================
+
+  judge-runtime:
+    build:
+      context: ./judge
+      dockerfile: scripts/Dockerfile
+    image: judge-runtime:latest
+
+  # ============================================
   # Judge Daemon
   # ============================================
 
@@ -162,10 +172,15 @@ services:
       - JUDGEHOST_ID=judgehost-01
       - REDIS_URL=redis:6379
       - JUDGE_SERVICE_ADDR=backend:8002
+      - RUNTIME_IMAGE=judge-runtime:latest
       - SANDBOX_WORKDIR=/tmp/oj-sandbox
     depends_on:
-      - backend
-      - redis
+      judge-runtime:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
+      redis:
+        condition: service_started
 
 volumes:
   postgres_data:

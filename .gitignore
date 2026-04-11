@@ -11,6 +11,7 @@ dist/
 bff/bff
 backend/server
 judge/judgedaemon
+judge/runguard
 
 # Go
 *.test
