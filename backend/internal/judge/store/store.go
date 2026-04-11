@@ -288,7 +288,12 @@ func (s *JudgehostStore) Deregister(ctx context.Context, id string, force bool) 
 
 	// Get count of pending tasks to reassign
 	var pendingTasks int32
-	// This would need to query the task queue - placeholder for now
+	var queueName string
+	if err := s.db.QueryRow(ctx, `SELECT queue_name FROM judgehosts WHERE id = $1`, id).Scan(&queueName); err == nil && queueName != "" {
+		if count, err := s.GetPendingTasksCount(ctx, queueName); err == nil {
+			pendingTasks = count
+		}
+	}
 
 	// Remove from PostgreSQL
 	_, err = s.db.Exec(ctx, `DELETE FROM judgehosts WHERE id = $1`, id)
@@ -324,7 +329,45 @@ func (s *JudgehostStore) DecrementActiveJobs(ctx context.Context, id string) err
 
 // GetPendingTasksCount gets the count of pending tasks in a judgehost's queue
 func (s *JudgehostStore) GetPendingTasksCount(ctx context.Context, queueName string) (int32, error) {
-	// This would query Asynq queue stats - placeholder for now
-	// Would use: asynqInspector.GetTaskInfo(queueName, ...)
-	return 0, nil
+	if queueName == "" {
+		return 0, nil
+	}
+
+	// Asynq keeps queue state in Redis keys under asynq:{queue}:*
+	// We consider pending+active+scheduled+retry as not-yet-finished work.
+	keys := []string{
+		fmt.Sprintf("asynq:{%s}:pending", queueName),
+		fmt.Sprintf("asynq:{%s}:active", queueName),
+		fmt.Sprintf("asynq:{%s}:scheduled", queueName),
+		fmt.Sprintf("asynq:{%s}:retry", queueName),
+	}
+
+	var total int64
+	for _, key := range keys {
+		count, err := s.redis.ZCard(ctx, key).Result()
+		if err != nil {
+			return 0, fmt.Errorf("failed to read queue stats for %s: %w", queueName, err)
+		}
+		total += count
+	}
+
+	return int32(total), nil
+}
+
+// PeekPendingTaskIDs returns up to limit pending task IDs from a queue.
+func (s *JudgehostStore) PeekPendingTaskIDs(ctx context.Context, queueName string, limit int64) ([]string, error) {
+	if queueName == "" || limit <= 0 {
+		return []string{}, nil
+	}
+
+	key := fmt.Sprintf("asynq:{%s}:pending", queueName)
+	ids, err := s.redis.ZRange(ctx, key, 0, limit-1).Result()
+	if err == redis.Nil {
+		return []string{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to peek pending task ids for %s: %w", queueName, err)
+	}
+
+	return ids, nil
 }

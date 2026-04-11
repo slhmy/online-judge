@@ -85,10 +85,27 @@ func (h *InternalHandler) GetSubmissionSource(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// If not in cache, we need to fetch the submission from the database
-	// The source code is stored in the submissions table
-	// For now, return an error if not in cache
-	http.Error(w, "source code not found in cache", http.StatusNotFound)
+	// Fallback to database when cache miss.
+	if h.db == nil {
+		http.Error(w, "source code not found", http.StatusNotFound)
+		return
+	}
+
+	var sourceCode string
+	err = h.db.QueryRow(ctx, `SELECT source_code FROM submissions WHERE id = $1`, id).Scan(&sourceCode)
+	if err != nil || sourceCode == "" {
+		http.Error(w, "source code not found", http.StatusNotFound)
+		return
+	}
+
+	// Cache for judge daemon reads.
+	h.redis.Set(ctx, sourceKey, sourceCode, 24*60*60)
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"submission_id": id,
+		"source_code":   sourceCode,
+	})
 }
 
 // GetProblemTestCases returns all test cases for a problem (not just samples)
@@ -140,10 +157,21 @@ func (h *InternalHandler) GetTestCaseInput(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// For now, return placeholder until we implement object storage integration
-	// In production, this would fetch from MinIO/S3
+	if h.db == nil {
+		http.Error(w, "test case input not found", http.StatusNotFound)
+		return
+	}
+
+	var inputContent string
+	err = h.db.QueryRow(ctx, `SELECT input_content FROM test_cases WHERE id = $1`, testCaseID).Scan(&inputContent)
+	if err != nil || inputContent == "" {
+		http.Error(w, "test case input not found", http.StatusNotFound)
+		return
+	}
+
+	h.redis.Set(ctx, inputKey, inputContent, 24*60*60)
 	w.Header().Set("Content-Type", "text/plain")
-	_, _ = w.Write([]byte("Sample input for test case " + testCaseID + "\n"))
+	_, _ = w.Write([]byte(inputContent))
 }
 
 // GetTestCaseOutput returns the expected output for a test case
@@ -160,9 +188,21 @@ func (h *InternalHandler) GetTestCaseOutput(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// For now, return placeholder until we implement object storage integration
+	if h.db == nil {
+		http.Error(w, "test case output not found", http.StatusNotFound)
+		return
+	}
+
+	var outputContent string
+	err = h.db.QueryRow(ctx, `SELECT output_content FROM test_cases WHERE id = $1`, testCaseID).Scan(&outputContent)
+	if err != nil || outputContent == "" {
+		http.Error(w, "test case output not found", http.StatusNotFound)
+		return
+	}
+
+	h.redis.Set(ctx, outputKey, outputContent, 24*60*60)
 	w.Header().Set("Content-Type", "text/plain")
-	_, _ = w.Write([]byte("Sample output for test case " + testCaseID + "\n"))
+	_, _ = w.Write([]byte(outputContent))
 }
 
 // CreateJudging creates a new judging record

@@ -21,6 +21,7 @@ export default function AdminPage() {
   const router = useRouter()
   const { user, isAuthenticated, token } = useAuthStore()
   const [users, setUsers] = useState<User[]>([])
+  const [contestCount, setContestCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -30,8 +31,8 @@ export default function AdminPage() {
       return
     }
 
-    // Fetch users
-    fetchUsers()
+    // Fetch dashboard data
+    Promise.all([fetchUsers(), fetchContests()]).finally(() => setLoading(false))
   }, [isAuthenticated, user, router])
 
   const fetchUsers = async () => {
@@ -47,10 +48,19 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Failed to fetch users:', err)
-    } finally {
-      setLoading(false)
     }
   }
+
+    const fetchContests = async () => {
+      try {
+        const res = await fetch(`${BFF_URL}/api/v1/contests?page=1&page_size=1`)
+        if (!res.ok) return
+        const data = await res.json()
+        setContestCount(data?.pagination?.total || 0)
+      } catch (err) {
+        console.error('Failed to fetch contests:', err)
+      }
+    }
 
   const updateRole = async (userId: string, newRole: string) => {
     try {
@@ -91,10 +101,14 @@ export default function AdminPage() {
           <div className="text-lg font-semibold">Problem Management</div>
           <div className="text-sm opacity-80">Create, edit, and delete problems</div>
         </button>
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contest Management</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Coming soon</div>
-        </div>
+        <button
+          onClick={() => router.push('/contests')}
+          className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contest Overview</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Total contests: {contestCount}</div>
+          <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">Open contest list and scoreboard</div>
+        </button>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">

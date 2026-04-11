@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/slhmy/online-judge/bff/internal/middleware"
 
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	pb "github.com/slhmy/online-judge/gen/go/submission/v1"
@@ -20,7 +21,7 @@ func NewSubmissionHandler(client pb.SubmissionServiceClient) *SubmissionHandler 
 }
 
 func (h *SubmissionHandler) Create(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx := grpcContextFromRequest(r)
 
 	var req struct {
 		ProblemID string `json:"problem_id"`
@@ -115,7 +116,10 @@ func (h *SubmissionHandler) Rejudge(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	submissionID := chi.URLParam(r, "id")
 
-	// TODO: Add admin authorization check
+	if middleware.GetUserRole(ctx) != "admin" {
+		http.Error(w, "admin access required", http.StatusForbidden)
+		return
+	}
 
 	resp, err := h.client.RejudgeSubmission(ctx, &pb.RejudgeSubmissionRequest{
 		SubmissionId: submissionID,

@@ -216,6 +216,7 @@ func main() {
 		// Admin routes (protected)
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.RequireAuth)
+			r.Use(authMiddleware.RequireAdmin)
 			adminHandler.RegisterRoutes(r)
 			// Rejudge submission (admin only)
 			r.Post("/submissions/{id}/rejudge", submissionHandler.Rejudge)

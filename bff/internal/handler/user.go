@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -22,7 +21,7 @@ func NewUserHandler(client pb.UserServiceClient) *UserHandler {
 
 // GetProfile returns a user's profile
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	userID := chi.URLParam(r, "id")
 
 	resp, err := h.client.GetUserProfile(ctx, &pb.GetUserProfileRequest{UserId: userID})
@@ -36,7 +35,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 // GetMyProfile returns the current user's profile
 func (h *UserHandler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	userID := chi.URLParam(r, "user_id")
 
 	if userID == "" {
@@ -55,7 +54,7 @@ func (h *UserHandler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 
 // UpdateProfile updates a user's profile
 func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := grpcContextFromRequest(r)
 	userID := chi.URLParam(r, "id")
 
 	var req struct {
@@ -89,7 +88,7 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 // GetStats returns user statistics
 func (h *UserHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	userID := chi.URLParam(r, "id")
 
 	resp, err := h.client.GetUserStats(ctx, &pb.GetUserStatsRequest{UserId: userID})
@@ -103,7 +102,7 @@ func (h *UserHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 
 // GetSubmissions returns user submissions with pagination
 func (h *UserHandler) GetSubmissions(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	userID := chi.URLParam(r, "id")
 
 	// Parse pagination params

@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -45,26 +47,69 @@ func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 
 		token := parts[1]
 
-		// TODO: Validate JWT using identra JWKS
-		// For now, we'll trust the token and extract user info from claims
-		// In production, this should validate the token signature
-
 		// For development, we'll accept any non-empty token
-		// and use it as user_id (this should be replaced with proper JWT validation)
+		// and extract best-effort claims from JWT payload.
 		if token == "" {
 			http.Error(w, `{"error": "invalid token"}`, http.StatusUnauthorized)
 			return
 		}
 
+		userID, userEmail, userRole := extractClaims(token)
+
 		// Add user info to context
-		// In production, this would be extracted from JWT claims
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, UserIDKey, "temp-user-id")
-		ctx = context.WithValue(ctx, UserEmailKey, "temp@example.com")
-		ctx = context.WithValue(ctx, UserRoleKey, "user")
+		ctx = context.WithValue(ctx, UserIDKey, userID)
+		ctx = context.WithValue(ctx, UserEmailKey, userEmail)
+		ctx = context.WithValue(ctx, UserRoleKey, userRole)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func extractClaims(token string) (userID, userEmail, userRole string) {
+	// Safe defaults.
+	userID = "temp-user-id"
+	userEmail = "temp@example.com"
+	userRole = "user"
+
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return
+	}
+
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return
+	}
+
+	if v, ok := claims["sub"].(string); ok && v != "" {
+		userID = v
+	}
+	if v, ok := claims["user_id"].(string); ok && v != "" {
+		userID = v
+	}
+	if v, ok := claims["email"].(string); ok && v != "" {
+		userEmail = v
+	}
+
+	if v, ok := claims["role"].(string); ok && v != "" {
+		userRole = v
+	}
+	if roles, ok := claims["roles"].([]interface{}); ok {
+		for _, roleVal := range roles {
+			if role, ok := roleVal.(string); ok && role == "admin" {
+				userRole = "admin"
+				break
+			}
+		}
+	}
+
+	return
 }
 
 // RequireAdmin is a middleware that requires admin role

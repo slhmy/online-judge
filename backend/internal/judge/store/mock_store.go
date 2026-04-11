@@ -15,4 +15,5 @@ type JudgehostStoreInterface interface {
 	IncrementActiveJobs(ctx context.Context, id string) error
 	DecrementActiveJobs(ctx context.Context, id string) error
 	GetPendingTasksCount(ctx context.Context, queueName string) (int32, error)
+	PeekPendingTaskIDs(ctx context.Context, queueName string, limit int64) ([]string, error)
 }

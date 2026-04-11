@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"syscall"
 	"sync"
 	"time"
 
@@ -222,7 +224,19 @@ func (r *InteractiveRunner) RunInteractive(
 	}
 
 	// Get solution memory (approximate - would need cgroups for accurate measurement)
-	result.MemoryUsed = 0 // TODO: Implement proper memory tracking
+	if solutionCmd.ProcessState != nil {
+		if rusage, ok := solutionCmd.ProcessState.SysUsage().(*syscall.Rusage); ok {
+			maxRSS := int64(rusage.Maxrss)
+			// On Linux, ru_maxrss is KB; on macOS/BSD it is bytes.
+			if runtime.GOOS != "linux" {
+				maxRSS /= 1024
+			}
+			if maxRSS < 0 {
+				maxRSS = 0
+			}
+			result.MemoryUsed = maxRSS
+		}
+	}
 
 	// Determine verdict based on interactor exit code and solution status
 	if ctx.Err() == context.DeadlineExceeded {

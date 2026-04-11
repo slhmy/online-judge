@@ -158,6 +158,13 @@ func GetUserID(ctx context.Context) string {
 	if userID, ok := ctx.Value(contextKeyUserID).(string); ok {
 		return userID
 	}
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		for _, key := range []string{"x-user-id", "user_id", "user-id"} {
+			if vals := md.Get(key); len(vals) > 0 && vals[0] != "" {
+				return vals[0]
+			}
+		}
+	}
 	return ""
 }
 
@@ -165,6 +172,13 @@ func GetUserID(ctx context.Context) string {
 func GetUserEmail(ctx context.Context) string {
 	if email, ok := ctx.Value(contextKeyEmail).(string); ok {
 		return email
+	}
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		for _, key := range []string{"x-user-email", "user_email", "user-email"} {
+			if vals := md.Get(key); len(vals) > 0 && vals[0] != "" {
+				return vals[0]
+			}
+		}
 	}
 	return ""
 }

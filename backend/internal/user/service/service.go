@@ -3,9 +3,12 @@ package service
 import (
 	"context"
 
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
 	"github.com/slhmy/online-judge/backend/internal/user/store"
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	pb "github.com/slhmy/online-judge/gen/go/user/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type UserService struct {
@@ -44,7 +47,9 @@ func (s *UserService) GetUserProfile(ctx context.Context, req *pb.GetUserProfile
 }
 
 func (s *UserService) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserProfileRequest) (*pb.UpdateUserProfileResponse, error) {
-	// TODO: Validate user_id from context matches req.UserId for authorization
+	if callerID := middleware.GetUserID(ctx); callerID != "" && callerID != req.UserId {
+		return nil, status.Error(codes.PermissionDenied, "cannot update another user's profile")
+	}
 
 	err := s.store.UpdateProfile(ctx, req.UserId, req.DisplayName, req.AvatarUrl, req.Bio, req.Country)
 	if err != nil {

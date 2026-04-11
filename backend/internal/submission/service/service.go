@@ -7,6 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
 	"github.com/slhmy/online-judge/backend/internal/queue"
 	"github.com/slhmy/online-judge/backend/internal/submission/store"
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
@@ -35,8 +36,11 @@ func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client,
 }
 
 func (s *SubmissionService) CreateSubmission(ctx context.Context, req *pb.CreateSubmissionRequest) (*pb.CreateSubmissionResponse, error) {
-	// TODO: Get user ID from context (from JWT)
-	userID := "00000000-0000-0000-0000-000000000001"
+	userID := middleware.GetUserID(ctx)
+	if userID == "" {
+		// Keep backward compatibility for non-authenticated tests/dev calls.
+		userID = "00000000-0000-0000-0000-000000000001"
+	}
 
 	// Create submission record with source code
 	id, err := s.store.Create(ctx, userID, req.ProblemId, req.ContestId, req.LanguageId, req.SourceCode)

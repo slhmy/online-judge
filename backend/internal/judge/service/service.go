@@ -95,11 +95,16 @@ func (s *JudgeService) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 	}
 
 	// Get pending tasks count (would query Asynq queue stats)
-	pendingCount, _ := s.store.GetPendingTasksCount(ctx, fmt.Sprintf("judgehost-%s", req.JudgehostId))
+	queueName := fmt.Sprintf("judgehost-%s", req.JudgehostId)
+	pendingCount, _ := s.store.GetPendingTasksCount(ctx, queueName)
 
-	// If judgehost was idle and has capacity, potentially assign new tasks
-	var assignedTasks []string
-	// TODO: If judgehost was idle and has capacity, assign new tasks via task assignment logic
+	// If judgehost is idle, return a small preview of pending task IDs as assignment hints.
+	assignedTasks := []string{}
+	if req.Status == pb.JudgehostStatus_JUDGEHOST_STATUS_IDLE && req.ActiveJobs == 0 && pendingCount > 0 {
+		if ids, err := s.store.PeekPendingTaskIDs(ctx, queueName, 3); err == nil {
+			assignedTasks = ids
+		}
+	}
 
 	return &pb.HeartbeatResponse{
 		Acknowledged:    true,

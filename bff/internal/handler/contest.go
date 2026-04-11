@@ -118,7 +118,7 @@ func (h *ContestHandler) GetScoreboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ContestHandler) Register(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx := grpcContextFromRequest(r)
 	contestID := chi.URLParam(r, "id")
 
 	var req struct {
