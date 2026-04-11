@@ -14,9 +14,9 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/judge/v1"
-	"github.com/online-judge/bff/internal/middleware"
+	"github.com/slhmy/online-judge/bff/internal/middleware"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/judge/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 )

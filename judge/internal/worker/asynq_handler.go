@@ -12,22 +12,22 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/online-judge/judge/internal/config"
-	"github.com/online-judge/judge/internal/queue"
-	"github.com/online-judge/judge/internal/runner"
-	"github.com/online-judge/judge/internal/sandbox"
-	"github.com/online-judge/judge/internal/validator"
+	"github.com/slhmy/online-judge/judge/internal/config"
+	"github.com/slhmy/online-judge/judge/internal/queue"
+	"github.com/slhmy/online-judge/judge/internal/runner"
+	"github.com/slhmy/online-judge/judge/internal/sandbox"
+	"github.com/slhmy/online-judge/judge/internal/validator"
 )
 
 // AsynqHandler handles judge tasks from asynq queue
 type AsynqHandler struct {
-	config           *config.Config
-	queue            *queue.JudgeQueue
-	validator        *validator.DefaultValidator
-	specialValidator *validator.SpecialValidator
+	config            *config.Config
+	queue             *queue.JudgeQueue
+	validator         *validator.DefaultValidator
+	specialValidator  *validator.SpecialValidator
 	interactiveRunner *runner.InteractiveRunner
-	compileCache     *sandbox.CompileCache
-	redisClient      *redis.Client
+	compileCache      *sandbox.CompileCache
+	redisClient       *redis.Client
 
 	// Track current job for heartbeat
 	mu         sync.Mutex
@@ -61,9 +61,9 @@ func NewAsynqHandler(cfg *config.Config, redisClient *redis.Client) *AsynqHandle
 	compileCache := sandbox.NewCompileCache(redisClient, cacheTTL, cfg.CompileCacheEnabled)
 
 	return &AsynqHandler{
-		config:            cfg,
-		queue:             judgeQueue,
-		validator:         validator.NewDefaultValidator(),
+		config:    cfg,
+		queue:     judgeQueue,
+		validator: validator.NewDefaultValidator(),
 		specialValidator: validator.NewSpecialValidator(
 			specialValidatorConfig,
 			judgeQueue,

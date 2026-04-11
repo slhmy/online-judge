@@ -7,11 +7,12 @@
 package commonv1
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -241,7 +242,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\aUserRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\"\a\n" +
-	"\x05EmptyB3Z1github.com/online-judge/gen/go/common/v1;commonv1b\x06proto3"
+	"\x05EmptyB3Z1github.com/slhmy/online-judge/gen/go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_common_proto_rawDescOnce sync.Once

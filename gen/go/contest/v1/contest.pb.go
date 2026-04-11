@@ -7,14 +7,15 @@
 package contestv1
 
 import (
-	v1 "github.com/online-judge/gen/go/common/v1"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
+	v1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/known/emptypb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -1257,7 +1258,7 @@ const file_contest_v1_contest_proto_rawDesc = "" +
 	"\rCreateContest\x12 .contest.v1.CreateContestRequest\x1a!.contest.v1.CreateContestResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/api/v1/contests\x12\x8d\x01\n" +
 	"\x0fRegisterContest\x12\".contest.v1.RegisterContestRequest\x1a#.contest.v1.RegisterContestResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/api/v1/contests/{contest_id}/register\x12\x93\x01\n" +
 	"\x12GetContestProblems\x12%.contest.v1.GetContestProblemsRequest\x1a&.contest.v1.GetContestProblemsResponse\".\x82\xd3\xe4\x93\x02(\x12&/api/v1/contests/{contest_id}/problems\x12\x86\x01\n" +
-	"\rGetScoreboard\x12 .contest.v1.GetScoreboardRequest\x1a!.contest.v1.GetScoreboardResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/contests/{contest_id}/scoreboardB5Z3github.com/online-judge/gen/go/contest/v1;contestv1b\x06proto3"
+	"\rGetScoreboard\x12 .contest.v1.GetScoreboardRequest\x1a!.contest.v1.GetScoreboardResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/contests/{contest_id}/scoreboardB5Z3github.com/slhmy/online-judge/gen/go/contest/v1;contestv1b\x06proto3"
 
 var (
 	file_contest_v1_contest_proto_rawDescOnce sync.Once

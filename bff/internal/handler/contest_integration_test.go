@@ -16,19 +16,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/contest/v1"
-	"github.com/online-judge/bff/internal/cache"
+	"github.com/slhmy/online-judge/bff/internal/cache"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/contest/v1"
 )
 
 // MockContestServiceClientIntegration is a mock implementation for integration tests
 type MockContestServiceClientIntegration struct {
-	ListContestsFunc      func(ctx context.Context, req *pb.ListContestsRequest) (*pb.ListContestsResponse, error)
-	GetContestFunc        func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error)
+	ListContestsFunc       func(ctx context.Context, req *pb.ListContestsRequest) (*pb.ListContestsResponse, error)
+	GetContestFunc         func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error)
 	GetContestProblemsFunc func(ctx context.Context, req *pb.GetContestProblemsRequest) (*pb.GetContestProblemsResponse, error)
-	GetScoreboardFunc     func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error)
-	RegisterContestFunc   func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error)
-	CreateContestFunc     func(ctx context.Context, req *pb.CreateContestRequest) (*pb.CreateContestResponse, error)
+	GetScoreboardFunc      func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error)
+	RegisterContestFunc    func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error)
+	CreateContestFunc      func(ctx context.Context, req *pb.CreateContestRequest) (*pb.CreateContestResponse, error)
 }
 
 func (m *MockContestServiceClientIntegration) ListContests(ctx context.Context, req *pb.ListContestsRequest, opts ...grpc.CallOption) (*pb.ListContestsResponse, error) {
@@ -144,8 +144,8 @@ func TestContestHandler_Integration_List(t *testing.T) {
 			name: "empty contest list",
 			mockFunc: func(ctx context.Context, req *pb.ListContestsRequest) (*pb.ListContestsResponse, error) {
 				return &pb.ListContestsResponse{
-					Contests:    []*pb.Contest{},
-					Pagination:  &commonv1.PaginatedResponse{Total: 0, Page: 1, PageSize: 20},
+					Contests:   []*pb.Contest{},
+					Pagination: &commonv1.PaginatedResponse{Total: 0, Page: 1, PageSize: 20},
 				}, nil
 			},
 			wantStatus: http.StatusOK,
@@ -483,8 +483,8 @@ func TestContestHandler_Integration_Register(t *testing.T) {
 			name:      "register successfully",
 			contestID: "contest-1",
 			body: map[string]string{
-				"team_name":    "Team Alpha",
-				"affiliation":  "MIT",
+				"team_name":   "Team Alpha",
+				"affiliation": "MIT",
 			},
 			mockFunc: func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error) {
 				assert.Equal(t, "Team Alpha", req.TeamName)

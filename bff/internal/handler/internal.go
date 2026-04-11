@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	pbProblem "github.com/online-judge/gen/go/problem/v1"
-	pbSubmission "github.com/online-judge/gen/go/submission/v1"
-	"github.com/online-judge/bff/internal/cache"
+	"github.com/slhmy/online-judge/bff/internal/cache"
+	pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/slhmy/online-judge/gen/go/submission/v1"
 )
 
 // InternalHandler handles internal API endpoints for judge daemon
@@ -109,13 +109,13 @@ func (h *InternalHandler) GetProblemTestCases(w http.ResponseWriter, r *http.Req
 	testCases := make([]map[string]interface{}, len(resp.TestCases))
 	for i, tc := range resp.TestCases {
 		testCases[i] = map[string]interface{}{
-			"id":            tc.Id,
-			"problem_id":    tc.ProblemId,
-			"rank":          tc.Rank,
-			"is_sample":     tc.IsSample,
-			"input_path":    tc.InputPath,
-			"output_path":   tc.OutputPath,
-			"description":   tc.Description,
+			"id":             tc.Id,
+			"problem_id":     tc.ProblemId,
+			"rank":           tc.Rank,
+			"is_sample":      tc.IsSample,
+			"input_path":     tc.InputPath,
+			"output_path":    tc.OutputPath,
+			"description":    tc.Description,
 			"is_interactive": tc.IsInteractive,
 		}
 	}
@@ -229,10 +229,10 @@ func (h *InternalHandler) UpdateJudging(w http.ResponseWriter, r *http.Request) 
 
 	// Call gRPC to update judging in database
 	_, err := h.submissionClient.InternalUpdateJudging(ctx, &pbSubmission.InternalUpdateJudgingRequest{
-		JudgingId:   judgingID,
-		Verdict:     req.Verdict,
-		MaxRuntime:  req.MaxRuntime,
-		MaxMemory:   int32(req.MaxMemory),
+		JudgingId:  judgingID,
+		Verdict:    req.Verdict,
+		MaxRuntime: req.MaxRuntime,
+		MaxMemory:  int32(req.MaxMemory),
 	})
 	if err != nil {
 		log.Printf("Failed to update judging via gRPC: %v", err)

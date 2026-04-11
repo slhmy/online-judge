@@ -7,20 +7,20 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/submission/v1"
-	"github.com/online-judge/backend/internal/queue"
-	"github.com/online-judge/backend/internal/submission/store"
+	"github.com/slhmy/online-judge/backend/internal/queue"
+	"github.com/slhmy/online-judge/backend/internal/submission/store"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/submission/v1"
 )
 
 type SubmissionService struct {
 	pb.UnimplementedSubmissionServiceServer
-	store        store.SubmissionStoreInterface
-	redis        *redis.Client
-	queue        *queue.AsynqClient
-	legacyQueue  *queue.LegacyQueue
-	useAsynq     bool
-	useLegacy    bool
+	store       store.SubmissionStoreInterface
+	redis       *redis.Client
+	queue       *queue.AsynqClient
+	legacyQueue *queue.LegacyQueue
+	useAsynq    bool
+	useLegacy   bool
 }
 
 func NewSubmissionService(s store.SubmissionStoreInterface, redis *redis.Client, asynqClient *queue.AsynqClient, legacyQueue *queue.LegacyQueue, useAsynq bool, useLegacy bool) *SubmissionService {

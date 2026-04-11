@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/submission/v1"
-	"github.com/online-judge/backend/internal/submission/store"
+	"github.com/slhmy/online-judge/backend/internal/submission/store"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/submission/v1"
 )
 
 func TestSubmissionService_CreateSubmission(t *testing.T) {

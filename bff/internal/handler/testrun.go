@@ -9,8 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	pbProblem "github.com/online-judge/gen/go/problem/v1"
-	"github.com/online-judge/bff/internal/sandbox"
+	"github.com/slhmy/online-judge/bff/internal/sandbox"
+	pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
 )
 
 // TestRunHandler handles test run requests
@@ -34,13 +34,13 @@ type TestRunRequest struct {
 
 // TestRunResult represents the complete test run result
 type TestRunResult struct {
-	ID           string                  `json:"id"`
-	Status       string                  `json:"status"`
-	Verdict      string                  `json:"verdict"`
-	Runtime      float64                 `json:"runtime"`
-	Memory       int64                   `json:"memory"`
-	CompileError string                  `json:"compile_error,omitempty"`
-	TestCases    []TestCaseRunResult     `json:"test_cases"`
+	ID           string              `json:"id"`
+	Status       string              `json:"status"`
+	Verdict      string              `json:"verdict"`
+	Runtime      float64             `json:"runtime"`
+	Memory       int64               `json:"memory"`
+	CompileError string              `json:"compile_error,omitempty"`
+	TestCases    []TestCaseRunResult `json:"test_cases"`
 }
 
 // TestCaseRunResult represents result for a single test case

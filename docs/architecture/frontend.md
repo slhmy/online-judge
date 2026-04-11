@@ -225,8 +225,8 @@ import (
     "net/http"
 
     "github.com/go-chi/chi/v5"
-    pbProblem "github.com/online-judge/gen/go/problem/v1"
-    "github.com/online-judge/bff/internal/cache"
+    pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
+    "github.com/slhmy/online-judge/bff/internal/cache"
     "google.golang.org/protobuf/encoding/protojson"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/online-judge/bff/internal/sse"
+	"github.com/slhmy/online-judge/bff/internal/sse"
 )
 
 // SSEHandler handles SSE connections for real-time submission updates

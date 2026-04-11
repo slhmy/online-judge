@@ -16,19 +16,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/contest/v1"
-	"github.com/online-judge/bff/internal/cache"
+	"github.com/slhmy/online-judge/bff/internal/cache"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/contest/v1"
 )
 
 // MockContestServiceClient is a mock implementation of ContestServiceClient
 type MockContestServiceClient struct {
-	ListContestsFunc     func(ctx context.Context, req *pb.ListContestsRequest) (*pb.ListContestsResponse, error)
-	GetContestFunc       func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error)
-	CreateContestFunc    func(ctx context.Context, req *pb.CreateContestRequest) (*pb.CreateContestResponse, error)
-	RegisterContestFunc  func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error)
+	ListContestsFunc       func(ctx context.Context, req *pb.ListContestsRequest) (*pb.ListContestsResponse, error)
+	GetContestFunc         func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error)
+	CreateContestFunc      func(ctx context.Context, req *pb.CreateContestRequest) (*pb.CreateContestResponse, error)
+	RegisterContestFunc    func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error)
 	GetContestProblemsFunc func(ctx context.Context, req *pb.GetContestProblemsRequest) (*pb.GetContestProblemsResponse, error)
-	GetScoreboardFunc    func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error)
+	GetScoreboardFunc      func(ctx context.Context, req *pb.GetScoreboardRequest) (*pb.GetScoreboardResponse, error)
 }
 
 func setupTestContestHandler(t *testing.T, mockClient *MockContestServiceClient) (*ContestHandler, *miniredis.Miniredis) {
@@ -190,12 +190,12 @@ func TestContestHandler_Get(t *testing.T) {
 			mockFunc: func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error) {
 				return &pb.GetContestResponse{
 					Contest: &pb.Contest{
-						Id:         "contest-1",
-						Name:       "ICPC Regional 2024",
-						ShortName:  "ICPC24",
-						StartTime:  "2024-03-01T10:00:00Z",
-						EndTime:    "2024-03-01T15:00:00Z",
-						Public:     true,
+						Id:        "contest-1",
+						Name:      "ICPC Regional 2024",
+						ShortName: "ICPC24",
+						StartTime: "2024-03-01T10:00:00Z",
+						EndTime:   "2024-03-01T15:00:00Z",
+						Public:    true,
 					},
 					Problems: []*pb.ContestProblem{
 						{ProblemId: "prob-1", ShortName: "A", Rank: 1, Points: 100},
@@ -257,12 +257,12 @@ func TestContestHandler_Get_CacheHit(t *testing.T) {
 		GetContestFunc: func(ctx context.Context, req *pb.GetContestRequest) (*pb.GetContestResponse, error) {
 			return &pb.GetContestResponse{
 				Contest: &pb.Contest{
-					Id:         "contest-1",
-					Name:       "Cached Contest",
-					ShortName:  "CC",
-					StartTime:  "2024-03-01T10:00:00Z",
-					EndTime:    "2024-03-01T15:00:00Z",
-					Public:     true,
+					Id:        "contest-1",
+					Name:      "Cached Contest",
+					ShortName: "CC",
+					StartTime: "2024-03-01T10:00:00Z",
+					EndTime:   "2024-03-01T15:00:00Z",
+					Public:    true,
 				},
 			}, nil
 		},
@@ -509,7 +509,7 @@ func TestContestHandler_Register(t *testing.T) {
 			name:      "register successfully",
 			contestID: "contest-1",
 			body: map[string]string{
-				"team_name":    "Team Gamma",
+				"team_name":   "Team Gamma",
 				"affiliation": "University C",
 			},
 			mockFunc: func(ctx context.Context, req *pb.RegisterContestRequest) (*pb.RegisterContestResponse, error) {

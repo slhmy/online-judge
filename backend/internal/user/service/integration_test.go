@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/user/v1"
-	"github.com/online-judge/backend/internal/user/store"
+	"github.com/slhmy/online-judge/backend/internal/user/store"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/user/v1"
 )
 
 func TestUserService_GetUserProfile(t *testing.T) {

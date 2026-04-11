@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/online-judge/judge/internal/validator"
+	"github.com/slhmy/online-judge/judge/internal/validator"
 )
 
 // DOMjudge-style exit codes (same as validator)

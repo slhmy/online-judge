@@ -10,11 +10,11 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/online-judge/judge/internal/config"
-	"github.com/online-judge/judge/internal/queue"
-	"github.com/online-judge/judge/internal/runner"
-	"github.com/online-judge/judge/internal/sandbox"
-	"github.com/online-judge/judge/internal/validator"
+	"github.com/slhmy/online-judge/judge/internal/config"
+	"github.com/slhmy/online-judge/judge/internal/queue"
+	"github.com/slhmy/online-judge/judge/internal/runner"
+	"github.com/slhmy/online-judge/judge/internal/sandbox"
+	"github.com/slhmy/online-judge/judge/internal/validator"
 )
 
 // Verdict constants
@@ -31,15 +31,15 @@ const (
 
 // JudgeWorker handles judging jobs from the queue
 type JudgeWorker struct {
-	id               string
-	queue            *queue.JudgeQueue
-	config           *config.Config
-	validator        *validator.DefaultValidator
-	specialValidator *validator.SpecialValidator
+	id                string
+	queue             *queue.JudgeQueue
+	config            *config.Config
+	validator         *validator.DefaultValidator
+	specialValidator  *validator.SpecialValidator
 	interactiveRunner *runner.InteractiveRunner
-	compileCache     *sandbox.CompileCache
-	mu               sync.Mutex
-	currentJob       *queue.JudgeJob
+	compileCache      *sandbox.CompileCache
+	mu                sync.Mutex
+	currentJob        *queue.JudgeJob
 }
 
 // NewJudgeWorker creates a new judge worker

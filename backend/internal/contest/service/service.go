@@ -6,10 +6,10 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/contest/v1"
-	"github.com/online-judge/backend/internal/contest/store"
-	"github.com/online-judge/backend/internal/pkg/middleware"
+	"github.com/slhmy/online-judge/backend/internal/contest/store"
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/contest/v1"
 )
 
 var ErrUnauthorized = errors.New("unauthorized")

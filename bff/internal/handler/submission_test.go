@@ -13,20 +13,20 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/submission/v1"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/submission/v1"
 )
 
 // MockSubmissionServiceClient is a mock implementation of SubmissionServiceClient
 type MockSubmissionServiceClient struct {
-	CreateSubmissionFunc       func(ctx context.Context, req *pb.CreateSubmissionRequest) (*pb.CreateSubmissionResponse, error)
-	GetSubmissionFunc          func(ctx context.Context, req *pb.GetSubmissionRequest) (*pb.GetSubmissionResponse, error)
-	ListSubmissionsFunc        func(ctx context.Context, req *pb.ListSubmissionsRequest) (*pb.ListSubmissionsResponse, error)
-	GetJudgingFunc             func(ctx context.Context, req *pb.GetJudgingRequest) (*pb.GetJudgingResponse, error)
-	GetJudgingRunsFunc         func(ctx context.Context, req *pb.GetJudgingRunsRequest) (*pb.GetJudgingRunsResponse, error)
-	RejudgeSubmissionFunc      func(ctx context.Context, req *pb.RejudgeSubmissionRequest) (*pb.RejudgeSubmissionResponse, error)
-	InternalCreateJudgingFunc  func(ctx context.Context, req *pb.InternalCreateJudgingRequest) (*pb.InternalCreateJudgingResponse, error)
-	InternalUpdateJudgingFunc  func(ctx context.Context, req *pb.InternalUpdateJudgingRequest) (*pb.InternalUpdateJudgingResponse, error)
+	CreateSubmissionFunc         func(ctx context.Context, req *pb.CreateSubmissionRequest) (*pb.CreateSubmissionResponse, error)
+	GetSubmissionFunc            func(ctx context.Context, req *pb.GetSubmissionRequest) (*pb.GetSubmissionResponse, error)
+	ListSubmissionsFunc          func(ctx context.Context, req *pb.ListSubmissionsRequest) (*pb.ListSubmissionsResponse, error)
+	GetJudgingFunc               func(ctx context.Context, req *pb.GetJudgingRequest) (*pb.GetJudgingResponse, error)
+	GetJudgingRunsFunc           func(ctx context.Context, req *pb.GetJudgingRunsRequest) (*pb.GetJudgingRunsResponse, error)
+	RejudgeSubmissionFunc        func(ctx context.Context, req *pb.RejudgeSubmissionRequest) (*pb.RejudgeSubmissionResponse, error)
+	InternalCreateJudgingFunc    func(ctx context.Context, req *pb.InternalCreateJudgingRequest) (*pb.InternalCreateJudgingResponse, error)
+	InternalUpdateJudgingFunc    func(ctx context.Context, req *pb.InternalUpdateJudgingRequest) (*pb.InternalUpdateJudgingResponse, error)
 	InternalCreateJudgingRunFunc func(ctx context.Context, req *pb.InternalCreateJudgingRunRequest) (*pb.InternalCreateJudgingRunResponse, error)
 }
 

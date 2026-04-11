@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/user/v1"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/user/v1"
 )
 
 type UserHandler struct {
@@ -130,7 +130,7 @@ func (h *UserHandler) GetSubmissions(w http.ResponseWriter, r *http.Request) {
 			Page:     int32(page),
 			PageSize: int32(pageSize),
 		},
-		Verdict:  verdict,
+		Verdict:   verdict,
 		ProblemId: problemID,
 	}
 

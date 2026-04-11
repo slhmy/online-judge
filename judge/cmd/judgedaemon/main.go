@@ -15,9 +15,9 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/online-judge/judge/internal/config"
-	"github.com/online-judge/judge/internal/queue"
-	"github.com/online-judge/judge/internal/worker"
+	"github.com/slhmy/online-judge/judge/internal/config"
+	"github.com/slhmy/online-judge/judge/internal/queue"
+	"github.com/slhmy/online-judge/judge/internal/worker"
 )
 
 // JudgehostClient handles communication with Judge Service
@@ -35,10 +35,10 @@ type RegisterResponse struct {
 
 // HeartbeatRequest is the request body for heartbeat API
 type HeartbeatRequest struct {
-	JudgehostID    string   `json:"judgehost_id"`
-	Status         string   `json:"status"`
-	CurrentJobID   string   `json:"current_job_id,omitempty"`
-	ActiveJobs     int      `json:"active_jobs"`
+	JudgehostID     string   `json:"judgehost_id"`
+	Status          string   `json:"status"`
+	CurrentJobID    string   `json:"current_job_id,omitempty"`
+	ActiveJobs      int      `json:"active_jobs"`
 	CompletedJobIDs []string `json:"completed_job_ids,omitempty"`
 }
 
@@ -227,10 +227,10 @@ func (c *JudgehostClient) Register(ctx context.Context, judgehostID string) (str
 	body := map[string]interface{}{
 		"judgehost_id": judgehostID,
 		"capabilities": map[string]interface{}{
-			"languages":           []string{"cpp17", "cpp20", "python3", "go", "java", "rust"},
-			"max_concurrent_jobs": 5,
+			"languages":            []string{"cpp17", "cpp20", "python3", "go", "java", "rust"},
+			"max_concurrent_jobs":  5,
 			"supports_interactive": true,
-			"supports_special":    true,
+			"supports_special":     true,
 		},
 	}
 
@@ -331,8 +331,8 @@ func (c *JudgehostClient) Deregister(ctx context.Context, judgehostID string) er
 // asynqLogger implements asynq.Logger interface
 type asynqLogger struct{}
 
-func (l asynqLogger) Debug(args ...interface{})  { log.Println(args...) }
-func (l asynqLogger) Info(args ...interface{})   { log.Println(args...) }
-func (l asynqLogger) Warn(args ...interface{})   { log.Println(args...) }
-func (l asynqLogger) Error(args ...interface{})  { log.Println(args...) }
-func (l asynqLogger) Fatal(args ...interface{})  { log.Fatalln(args...) }
+func (l asynqLogger) Debug(args ...interface{}) { log.Println(args...) }
+func (l asynqLogger) Info(args ...interface{})  { log.Println(args...) }
+func (l asynqLogger) Warn(args ...interface{})  { log.Println(args...) }
+func (l asynqLogger) Error(args ...interface{}) { log.Println(args...) }
+func (l asynqLogger) Fatal(args ...interface{}) { log.Fatalln(args...) }

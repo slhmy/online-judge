@@ -7,13 +7,14 @@
 package submissionv1
 
 import (
-	v1 "github.com/online-judge/gen/go/common/v1"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	v1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -1875,7 +1876,7 @@ const file_submission_v1_submission_proto_rawDesc = "" +
 	"\x11RejudgeSubmission\x12'.submission.v1.RejudgeSubmissionRequest\x1a(.submission.v1.RejudgeSubmissionResponse\"3\x82\xd3\xe4\x93\x02-\"+/api/v1/submissions/{submission_id}/rejudge\x12\x91\x01\n" +
 	"\x15InternalCreateJudging\x12+.submission.v1.InternalCreateJudgingRequest\x1a,.submission.v1.InternalCreateJudgingResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/internal/judgings\x12\x9e\x01\n" +
 	"\x15InternalUpdateJudging\x12+.submission.v1.InternalUpdateJudgingRequest\x1a,.submission.v1.InternalUpdateJudgingResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/internal/judgings/{judging_id}\x12\xac\x01\n" +
-	"\x18InternalCreateJudgingRun\x12..submission.v1.InternalCreateJudgingRunRequest\x1a/.submission.v1.InternalCreateJudgingRunResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/internal/judgings/{judging_id}/runsB;Z9github.com/online-judge/gen/go/submission/v1;submissionv1b\x06proto3"
+	"\x18InternalCreateJudgingRun\x12..submission.v1.InternalCreateJudgingRunRequest\x1a/.submission.v1.InternalCreateJudgingRunResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/internal/judgings/{judging_id}/runsB;Z9github.com/slhmy/online-judge/gen/go/submission/v1;submissionv1b\x06proto3"
 
 var (
 	file_submission_v1_submission_proto_rawDescOnce sync.Once

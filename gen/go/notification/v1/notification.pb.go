@@ -7,12 +7,13 @@
 package notificationv1
 
 import (
-	_ "google.golang.org/genproto/googleapis/api/annotations"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	_ "google.golang.org/genproto/googleapis/api/annotations"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -744,7 +745,7 @@ const file_notification_v1_notification_proto_rawDesc = "" +
 	"MarkAsRead\x12\".notification.v1.MarkAsReadRequest\x1a#.notification.v1.MarkAsReadResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/notifications/{id}/read\x12\x89\x01\n" +
 	"\rMarkAllAsRead\x12%.notification.v1.MarkAllAsReadRequest\x1a&.notification.v1.MarkAllAsReadResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/notifications/read-all\x12\x89\x01\n" +
 	"\x13StreamNotifications\x12+.notification.v1.StreamNotificationsRequest\x1a\x1d.notification.v1.Notification\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/notifications/stream0\x01\x12\x8d\x01\n" +
-	"\x0eGetUnreadCount\x12&.notification.v1.GetUnreadCountRequest\x1a'.notification.v1.GetUnreadCountResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/notifications/unread-countB?Z=github.com/online-judge/gen/go/notification/v1;notificationv1b\x06proto3"
+	"\x0eGetUnreadCount\x12&.notification.v1.GetUnreadCountRequest\x1a'.notification.v1.GetUnreadCountResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/notifications/unread-countB?Z=github.com/slhmy/online-judge/gen/go/notification/v1;notificationv1b\x06proto3"
 
 var (
 	file_notification_v1_notification_proto_rawDescOnce sync.Once

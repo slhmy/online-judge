@@ -109,7 +109,7 @@ plugins:
 ## Service Definitions (Protobuf)
 
 > Proto files live at `proto/<service>/v1/<service>.proto`.  
-> Generated Go code goes to `gen/go/<service>/v1/` (module `github.com/online-judge/gen`).
+> Generated Go code goes to `gen/go/<service>/v1/` (module `github.com/slhmy/online-judge/gen`).
 
 ### Common Types
 
@@ -119,7 +119,7 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "github.com/online-judge/gen/go/common/v1;commonv1";
+option go_package = "github.com/slhmy/online-judge/gen/go/common/v1;commonv1";
 
 message Pagination {
   int32 page = 1;
@@ -146,7 +146,7 @@ syntax = "proto3";
 
 package user.v1;
 
-option go_package = "github.com/online-judge/gen/go/user/v1;userv1";
+option go_package = "github.com/slhmy/online-judge/gen/go/user/v1;userv1";
 
 import "common/v1/common.proto";
 
@@ -168,7 +168,7 @@ syntax = "proto3";
 
 package problem.v1;
 
-option go_package = "github.com/online-judge/gen/go/problem/v1;problemv1";
+option go_package = "github.com/slhmy/online-judge/gen/go/problem/v1;problemv1";
 
 import "common/v1/common.proto";
 
@@ -193,7 +193,7 @@ syntax = "proto3";
 
 package submission.v1;
 
-option go_package = "github.com/online-judge/gen/go/submission/v1;submissionv1";
+option go_package = "github.com/slhmy/online-judge/gen/go/submission/v1;submissionv1";
 
 import "common/v1/common.proto";
 
@@ -236,21 +236,21 @@ import (
     "google.golang.org/grpc"
     "google.golang.org/grpc/reflection"
 
-    pbContest      "github.com/online-judge/gen/go/contest/v1"
-    pbJudge        "github.com/online-judge/gen/go/judge/v1"
-    pbNotification "github.com/online-judge/gen/go/notification/v1"
-    pbProblem      "github.com/online-judge/gen/go/problem/v1"
-    pbSubmission   "github.com/online-judge/gen/go/submission/v1"
-    pbUser         "github.com/online-judge/gen/go/user/v1"
+    pbContest      "github.com/slhmy/online-judge/gen/go/contest/v1"
+    pbJudge        "github.com/slhmy/online-judge/gen/go/judge/v1"
+    pbNotification "github.com/slhmy/online-judge/gen/go/notification/v1"
+    pbProblem      "github.com/slhmy/online-judge/gen/go/problem/v1"
+    pbSubmission   "github.com/slhmy/online-judge/gen/go/submission/v1"
+    pbUser         "github.com/slhmy/online-judge/gen/go/user/v1"
 
-    contestService      "github.com/online-judge/backend/internal/contest/service"
-    judgeService        "github.com/online-judge/backend/internal/judge/service"
-    notificationService "github.com/online-judge/backend/internal/notification/service"
-    "github.com/online-judge/backend/internal/pkg/config"
-    problemService      "github.com/online-judge/backend/internal/problem/service"
-    "github.com/online-judge/backend/internal/queue"
-    submissionService   "github.com/online-judge/backend/internal/submission/service"
-    userService         "github.com/online-judge/backend/internal/user/service"
+    contestService      "github.com/slhmy/online-judge/backend/internal/contest/service"
+    judgeService        "github.com/slhmy/online-judge/backend/internal/judge/service"
+    notificationService "github.com/slhmy/online-judge/backend/internal/notification/service"
+    "github.com/slhmy/online-judge/backend/internal/pkg/config"
+    problemService      "github.com/slhmy/online-judge/backend/internal/problem/service"
+    "github.com/slhmy/online-judge/backend/internal/queue"
+    submissionService   "github.com/slhmy/online-judge/backend/internal/submission/service"
+    userService         "github.com/slhmy/online-judge/backend/internal/user/service"
     // ...stores omitted for brevity
 )
 
@@ -1024,7 +1024,7 @@ import (
     "google.golang.org/grpc/metadata"
     "google.golang.org/grpc/status"
 
-    "github.com/online-judge/backend/internal/pkg/auth"
+    "github.com/slhmy/online-judge/backend/internal/pkg/auth"
 )
 
 type AuthInterceptor struct {
@@ -1106,13 +1106,13 @@ import (
     "log"
     "net"
 
-    "github.com/online-judge/backend/internal/common/config"
-    "github.com/online-judge/backend/internal/common/middleware"
-    "github.com/online-judge/backend/internal/pkg/auth"
-    "github.com/online-judge/backend/internal/pkg/db"
-    "github.com/online-judge/backend/internal/problem/service"
-    "github.com/online-judge/backend/internal/problem/store"
-    problemv1 "github.com/online-judge/backend/gen/go/problem/v1"
+    "github.com/slhmy/online-judge/backend/internal/common/config"
+    "github.com/slhmy/online-judge/backend/internal/common/middleware"
+    "github.com/slhmy/online-judge/backend/internal/pkg/auth"
+    "github.com/slhmy/online-judge/backend/internal/pkg/db"
+    "github.com/slhmy/online-judge/backend/internal/problem/service"
+    "github.com/slhmy/online-judge/backend/internal/problem/store"
+    problemv1 "github.com/slhmy/online-judge/backend/gen/go/problem/v1"
 
     "google.golang.org/grpc"
 )
@@ -1275,7 +1275,7 @@ import (
     "net/http"
 
     "github.com/gin-gonic/gin"
-    "github.com/online-judge/bff/internal/grpc"
+    "github.com/slhmy/online-judge/bff/internal/grpc"
 )
 
 type AuthHandler struct {

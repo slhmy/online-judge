@@ -7,9 +7,9 @@ RUN apk add --no-cache git
 WORKDIR /app
 
 # Set GOPRIVATE to avoid trying to fetch private modules
-ENV GOPRIVATE=github.com/online-judge/*
-ENV GONOSUMDB=github.com/online-judge/*
-ENV GOINSECURE=github.com/online-judge/*
+ENV GOPRIVATE=github.com/slhmy/online-judge/*
+ENV GONOSUMDB=github.com/slhmy/online-judge/*
+ENV GOINSECURE=github.com/slhmy/online-judge/*
 
 # Copy gen module (pre-generated protobuf code)
 COPY gen/ ./gen/

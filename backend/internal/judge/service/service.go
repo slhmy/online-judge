@@ -10,13 +10,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/judge/v1"
-	conteststore "github.com/online-judge/backend/internal/contest/store"
-	"github.com/online-judge/backend/internal/judge/store"
-	"github.com/online-judge/backend/internal/pkg/middleware"
-	"github.com/online-judge/backend/internal/queue"
-	submissionstore "github.com/online-judge/backend/internal/submission/store"
+	conteststore "github.com/slhmy/online-judge/backend/internal/contest/store"
+	"github.com/slhmy/online-judge/backend/internal/judge/store"
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
+	"github.com/slhmy/online-judge/backend/internal/queue"
+	submissionstore "github.com/slhmy/online-judge/backend/internal/submission/store"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/judge/v1"
 )
 
 var ErrUnauthorized = errors.New("unauthorized")
@@ -102,7 +102,7 @@ func (s *JudgeService) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 	// TODO: If judgehost was idle and has capacity, assign new tasks via task assignment logic
 
 	return &pb.HeartbeatResponse{
-		Acknowledged:     true,
+		Acknowledged:    true,
 		PendingTasks:    pendingCount,
 		AssignedTaskIds: assignedTasks,
 	}, nil
@@ -171,15 +171,15 @@ func (s *JudgeService) ListJudgehosts(ctx context.Context, req *pb.ListJudgehost
 	var pbJudgehosts []*pb.Judgehost
 	for _, j := range judgehosts {
 		pbJudgehosts = append(pbJudgehosts, &pb.Judgehost{
-			Id:             j.ID,
-			QueueName:      j.QueueName,
-			Capabilities:   convertCapabilities(j),
-			Status:         mapStringStatusToProto(j.Status),
-			CurrentJobId:   j.CurrentJobID,
-			LastPing:       j.LastPing.Format(time.RFC3339),
-			ActiveJobs:     j.ActiveJobs,
-			CompletedJobs:  j.CompletedJobs,
-			RegisteredAt:   j.RegisteredAt.Format(time.RFC3339),
+			Id:            j.ID,
+			QueueName:     j.QueueName,
+			Capabilities:  convertCapabilities(j),
+			Status:        mapStringStatusToProto(j.Status),
+			CurrentJobId:  j.CurrentJobID,
+			LastPing:      j.LastPing.Format(time.RFC3339),
+			ActiveJobs:    j.ActiveJobs,
+			CompletedJobs: j.CompletedJobs,
+			RegisteredAt:  j.RegisteredAt.Format(time.RFC3339),
 		})
 	}
 
@@ -198,15 +198,15 @@ func (s *JudgeService) GetJudgehost(ctx context.Context, req *pb.GetJudgehostReq
 
 	return &pb.GetJudgehostResponse{
 		Judgehost: &pb.Judgehost{
-			Id:             j.ID,
-			QueueName:      j.QueueName,
-			Capabilities:   convertCapabilities(j),
-			Status:         mapStringStatusToProto(j.Status),
-			CurrentJobId:   j.CurrentJobID,
-			LastPing:       j.LastPing.Format(time.RFC3339),
-			ActiveJobs:     j.ActiveJobs,
-			CompletedJobs:  j.CompletedJobs,
-			RegisteredAt:   j.RegisteredAt.Format(time.RFC3339),
+			Id:            j.ID,
+			QueueName:     j.QueueName,
+			Capabilities:  convertCapabilities(j),
+			Status:        mapStringStatusToProto(j.Status),
+			CurrentJobId:  j.CurrentJobID,
+			LastPing:      j.LastPing.Format(time.RFC3339),
+			ActiveJobs:    j.ActiveJobs,
+			CompletedJobs: j.CompletedJobs,
+			RegisteredAt:  j.RegisteredAt.Format(time.RFC3339),
 		},
 	}, nil
 }
@@ -571,13 +571,13 @@ func mapStringStatusToProto(status string) pb.JudgehostStatus {
 
 func convertCapabilities(j *store.Judgehost) *pb.JudgehostCapabilities {
 	return &pb.JudgehostCapabilities{
-		Languages:          j.Languages,
-		MaxConcurrentJobs:  j.MaxConcurrent,
-		MemoryLimit:        j.MemoryLimit,
-		TimeLimit:          j.TimeLimit,
+		Languages:           j.Languages,
+		MaxConcurrentJobs:   j.MaxConcurrent,
+		MemoryLimit:         j.MemoryLimit,
+		TimeLimit:           j.TimeLimit,
 		SupportsInteractive: j.Interactive,
-		SupportsSpecial:    j.Special,
-		Extra:              j.Extra,
+		SupportsSpecial:     j.Special,
+		Extra:               j.Extra,
 	}
 }
 

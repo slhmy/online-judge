@@ -7,13 +7,14 @@
 package userv1
 
 import (
-	v1 "github.com/online-judge/gen/go/common/v1"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	v1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -891,7 +892,7 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x0eGetUserProfile\x12\x1e.user.v1.GetUserProfileRequest\x1a\x1f.user.v1.GetUserProfileResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/users/{user_id}/profile\x12\x86\x01\n" +
 	"\x11UpdateUserProfile\x12!.user.v1.UpdateUserProfileRequest\x1a\".user.v1.UpdateUserProfileResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/api/v1/users/{user_id}/profile\x12r\n" +
 	"\fGetUserStats\x12\x1c.user.v1.GetUserStatsRequest\x1a\x1d.user.v1.GetUserStatsResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/users/{user_id}/stats\x12\x8d\x01\n" +
-	"\x13ListUserSubmissions\x12#.user.v1.ListUserSubmissionsRequest\x1a$.user.v1.ListUserSubmissionsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/users/{user_id}/submissionsB/Z-github.com/online-judge/gen/go/user/v1;userv1b\x06proto3"
+	"\x13ListUserSubmissions\x12#.user.v1.ListUserSubmissionsRequest\x1a$.user.v1.ListUserSubmissionsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/users/{user_id}/submissionsB/Z-github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once

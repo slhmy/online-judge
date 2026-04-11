@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/contest/v1"
-	"github.com/online-judge/backend/internal/contest/store"
-	"github.com/online-judge/backend/internal/pkg/middleware"
+	"github.com/slhmy/online-judge/backend/internal/contest/store"
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/contest/v1"
 )
 
 func TestContestService_ListContests(t *testing.T) {

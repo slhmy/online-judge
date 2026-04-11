@@ -10,8 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 
-	pb "github.com/online-judge/gen/go/notification/v1"
-	"github.com/online-judge/backend/internal/pkg/middleware"
+	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
+	pb "github.com/slhmy/online-judge/gen/go/notification/v1"
 )
 
 func setupTestService(t *testing.T) (*NotificationService, *miniredis.Miniredis) {

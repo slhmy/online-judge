@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package user.v1;
 
-option go_package = "github.com/online-judge/gen/go/user/v1;userv1";
+option go_package = "github.com/slhmy/online-judge/gen/go/user/v1;userv1";
 
 import "google/api/annotations.proto";
 import "common/v1/common.proto";

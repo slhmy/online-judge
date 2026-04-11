@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package judge.v1;
 
-option go_package = "github.com/online-judge/gen/go/judge/v1;judgev1";
+option go_package = "github.com/slhmy/online-judge/gen/go/judge/v1;judgev1";
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";

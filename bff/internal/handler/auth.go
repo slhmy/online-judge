@@ -19,8 +19,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/online-judge/bff/internal/identra"
 	pb "github.com/poly-workshop/identra/gen/go/identra/v1"
+	"github.com/slhmy/online-judge/bff/internal/identra"
 )
 
 // AuthErrorCode represents structured error codes for auth operations

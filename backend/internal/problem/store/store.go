@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	pb "github.com/online-judge/gen/go/problem/v1"
+	pb "github.com/slhmy/online-judge/gen/go/problem/v1"
 )
 
 type ProblemStore struct {

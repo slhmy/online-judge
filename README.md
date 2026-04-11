@@ -1,7 +1,7 @@
 # Online Judge Platform
 
 [![CI](https://github.com/slhmy/online-judge/actions/workflows/ci.yml/badge.svg)](https://github.com/slhmy/online-judge/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/online-judge/backend)](https://goreportcard.com/report/github.com/online-judge/backend)
+[![Go Report Card](https://goreportcard.com/badge/github.com/slhmy/online-judge/backend)](https://goreportcard.com/report/github.com/slhmy/online-judge/backend)
 
 A modernized online judge platform for competitive programming, built with microservices architecture.
 

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/online-judge/judge/internal/queue"
+	"github.com/slhmy/online-judge/judge/internal/queue"
 )
 
 // TestWorker_ProcessJob_WithMockQueue tests the worker's processJob logic

@@ -7,14 +7,15 @@
 package judgev1
 
 import (
-	v1 "github.com/online-judge/gen/go/common/v1"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
+	v1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -2467,7 +2468,7 @@ const file_judge_v1_judge_proto_rawDesc = "" +
 	"\fApplyRejudge\x12\x1d.judge.v1.ApplyRejudgeRequest\x1a\x1e.judge.v1.ApplyRejudgeResponse\")\x82\xd3\xe4\x93\x02#\"!/api/v1/admin/rejudges/{id}/apply\x12|\n" +
 	"\rRevertRejudge\x12\x1e.judge.v1.RevertRejudgeRequest\x1a\x1f.judge.v1.RevertRejudgeResponse\"*\x82\xd3\xe4\x93\x02$\"\"/api/v1/admin/rejudges/{id}/revert\x12\xa1\x01\n" +
 	"\x15GetRejudgeSubmissions\x12&.judge.v1.GetRejudgeSubmissionsRequest\x1a'.judge.v1.GetRejudgeSubmissionsResponse\"7\x82\xd3\xe4\x93\x021\x12//api/v1/admin/rejudges/{rejudge_id}/submissions\x12\xbe\x01\n" +
-	"\x1fInternalUpdateRejudgeSubmission\x120.judge.v1.InternalUpdateRejudgeSubmissionRequest\x1a1.judge.v1.InternalUpdateRejudgeSubmissionResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/internal/rejudges/{rejudge_id}/submissionsB1Z/github.com/online-judge/gen/go/judge/v1;judgev1b\x06proto3"
+	"\x1fInternalUpdateRejudgeSubmission\x120.judge.v1.InternalUpdateRejudgeSubmissionRequest\x1a1.judge.v1.InternalUpdateRejudgeSubmissionResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/internal/rejudges/{rejudge_id}/submissionsB1Z/github.com/slhmy/online-judge/gen/go/judge/v1;judgev1b\x06proto3"
 
 var (
 	file_judge_v1_judge_proto_rawDescOnce sync.Once

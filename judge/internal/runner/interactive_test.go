@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/online-judge/judge/internal/validator"
+	"github.com/slhmy/online-judge/judge/internal/validator"
 )
 
 // TestInteractiveRunnerConfig tests the default configuration
@@ -67,10 +67,10 @@ func TestGetInteractor(t *testing.T) {
 	defer func() { _ = os.RemoveAll(cacheDir) }()
 
 	config := InteractiveRunnerConfig{
-		InteractorTimeLimit:    30 * time.Second,
-		InteractorMemoryLimit:  524288,
-		CacheDir:               cacheDir,
-		EnableCache:            true,
+		InteractorTimeLimit:   30 * time.Second,
+		InteractorMemoryLimit: 524288,
+		CacheDir:              cacheDir,
+		EnableCache:           true,
 	}
 
 	r := NewInteractiveRunner(config)
@@ -155,10 +155,10 @@ fi
 	}
 
 	config := InteractiveRunnerConfig{
-		InteractorTimeLimit:    10 * time.Second,
-		InteractorMemoryLimit:  524288,
-		CacheDir:               workDir,
-		EnableCache:            false,
+		InteractorTimeLimit:   10 * time.Second,
+		InteractorMemoryLimit: 524288,
+		CacheDir:              workDir,
+		EnableCache:           false,
 	}
 
 	r := NewInteractiveRunner(config)
@@ -231,10 +231,10 @@ exit 42
 	}
 
 	config := InteractiveRunnerConfig{
-		InteractorTimeLimit:    10 * time.Second,
-		InteractorMemoryLimit:  524288,
-		CacheDir:               workDir,
-		EnableCache:            false,
+		InteractorTimeLimit:   10 * time.Second,
+		InteractorMemoryLimit: 524288,
+		CacheDir:              workDir,
+		EnableCache:           false,
 	}
 
 	r := NewInteractiveRunner(config)
@@ -306,10 +306,10 @@ fi
 	}
 
 	config := InteractiveRunnerConfig{
-		InteractorTimeLimit:    10 * time.Second,
-		InteractorMemoryLimit:  524288,
-		CacheDir:               workDir,
-		EnableCache:            false,
+		InteractorTimeLimit:   10 * time.Second,
+		InteractorMemoryLimit: 524288,
+		CacheDir:              workDir,
+		EnableCache:           false,
 	}
 
 	r := NewInteractiveRunner(config)

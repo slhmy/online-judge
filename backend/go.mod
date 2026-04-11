@@ -1,4 +1,4 @@
-module github.com/online-judge/backend
+module github.com/slhmy/online-judge/backend
 
 go 1.24.0
 
@@ -10,7 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/lestrrat-go/jwx v1.2.25
 	github.com/minio/minio-go/v7 v7.0.66
-	github.com/online-judge/gen v0.0.0
+	github.com/slhmy/online-judge/gen v0.0.0
 	github.com/redis/go-redis/v9 v9.3.1
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.11.1
@@ -74,4 +74,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/online-judge/gen => ../gen
+replace github.com/slhmy/online-judge/gen => ../gen

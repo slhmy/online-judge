@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package notification.v1;
 
-option go_package = "github.com/online-judge/gen/go/notification/v1;notificationv1";
+option go_package = "github.com/slhmy/online-judge/gen/go/notification/v1;notificationv1";
 
 import "google/api/annotations.proto";
 

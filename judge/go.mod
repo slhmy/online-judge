@@ -1,4 +1,4 @@
-module github.com/online-judge/judge
+module github.com/slhmy/online-judge/judge
 
 go 1.24.0
 

@@ -16,16 +16,16 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pbContest "github.com/online-judge/gen/go/contest/v1"
-	pbJudge "github.com/online-judge/gen/go/judge/v1"
-	pbProblem "github.com/online-judge/gen/go/problem/v1"
-	pbSubmission "github.com/online-judge/gen/go/submission/v1"
-	pbUser "github.com/online-judge/gen/go/user/v1"
-	"github.com/online-judge/bff/internal/cache"
-	"github.com/online-judge/bff/internal/config"
-	"github.com/online-judge/bff/internal/handler"
-	"github.com/online-judge/bff/internal/middleware"
-	"github.com/online-judge/bff/internal/sse"
+	"github.com/slhmy/online-judge/bff/internal/cache"
+	"github.com/slhmy/online-judge/bff/internal/config"
+	"github.com/slhmy/online-judge/bff/internal/handler"
+	"github.com/slhmy/online-judge/bff/internal/middleware"
+	"github.com/slhmy/online-judge/bff/internal/sse"
+	pbContest "github.com/slhmy/online-judge/gen/go/contest/v1"
+	pbJudge "github.com/slhmy/online-judge/gen/go/judge/v1"
+	pbProblem "github.com/slhmy/online-judge/gen/go/problem/v1"
+	pbSubmission "github.com/slhmy/online-judge/gen/go/submission/v1"
+	pbUser "github.com/slhmy/online-judge/gen/go/user/v1"
 )
 
 func main() {

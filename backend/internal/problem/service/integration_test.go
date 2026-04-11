@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	commonv1 "github.com/online-judge/gen/go/common/v1"
-	pb "github.com/online-judge/gen/go/problem/v1"
-	"github.com/online-judge/backend/internal/problem/store"
+	"github.com/slhmy/online-judge/backend/internal/problem/store"
+	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
+	pb "github.com/slhmy/online-judge/gen/go/problem/v1"
 )
 
 // Integration tests for Problem Service - testing full workflows
