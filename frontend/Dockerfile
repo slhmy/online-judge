@@ -15,6 +15,9 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
+ARG BFF_URL=http://localhost:8080
+ENV BFF_URL=${BFF_URL}
+
 RUN npm run build
 
 FROM node:20-alpine AS runner
