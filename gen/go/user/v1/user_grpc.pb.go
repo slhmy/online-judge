@@ -23,6 +23,7 @@ const (
 	UserService_UpdateUserProfile_FullMethodName   = "/user.v1.UserService/UpdateUserProfile"
 	UserService_GetUserStats_FullMethodName        = "/user.v1.UserService/GetUserStats"
 	UserService_ListUserSubmissions_FullMethodName = "/user.v1.UserService/ListUserSubmissions"
+	UserService_EnsureUserProfile_FullMethodName   = "/user.v1.UserService/EnsureUserProfile"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -39,6 +40,9 @@ type UserServiceClient interface {
 	GetUserStats(ctx context.Context, in *GetUserStatsRequest, opts ...grpc.CallOption) (*GetUserStatsResponse, error)
 	// List user submissions with pagination
 	ListUserSubmissions(ctx context.Context, in *ListUserSubmissionsRequest, opts ...grpc.CallOption) (*ListUserSubmissionsResponse, error)
+	// Ensure user profile exists, creating one if not found.
+	// Used by auth flows (login, OAuth) to guarantee a profile row.
+	EnsureUserProfile(ctx context.Context, in *EnsureUserProfileRequest, opts ...grpc.CallOption) (*EnsureUserProfileResponse, error)
 }
 
 type userServiceClient struct {
@@ -89,6 +93,16 @@ func (c *userServiceClient) ListUserSubmissions(ctx context.Context, in *ListUse
 	return out, nil
 }
 
+func (c *userServiceClient) EnsureUserProfile(ctx context.Context, in *EnsureUserProfileRequest, opts ...grpc.CallOption) (*EnsureUserProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnsureUserProfileResponse)
+	err := c.cc.Invoke(ctx, UserService_EnsureUserProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -103,6 +117,9 @@ type UserServiceServer interface {
 	GetUserStats(context.Context, *GetUserStatsRequest) (*GetUserStatsResponse, error)
 	// List user submissions with pagination
 	ListUserSubmissions(context.Context, *ListUserSubmissionsRequest) (*ListUserSubmissionsResponse, error)
+	// Ensure user profile exists, creating one if not found.
+	// Used by auth flows (login, OAuth) to guarantee a profile row.
+	EnsureUserProfile(context.Context, *EnsureUserProfileRequest) (*EnsureUserProfileResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -124,6 +141,9 @@ func (UnimplementedUserServiceServer) GetUserStats(context.Context, *GetUserStat
 }
 func (UnimplementedUserServiceServer) ListUserSubmissions(context.Context, *ListUserSubmissionsRequest) (*ListUserSubmissionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListUserSubmissions not implemented")
+}
+func (UnimplementedUserServiceServer) EnsureUserProfile(context.Context, *EnsureUserProfileRequest) (*EnsureUserProfileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnsureUserProfile not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -218,6 +238,24 @@ func _UserService_ListUserSubmissions_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_EnsureUserProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnsureUserProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).EnsureUserProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_EnsureUserProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).EnsureUserProfile(ctx, req.(*EnsureUserProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +278,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUserSubmissions",
 			Handler:    _UserService_ListUserSubmissions_Handler,
+		},
+		{
+			MethodName: "EnsureUserProfile",
+			Handler:    _UserService_EnsureUserProfile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -2,25 +2,18 @@ package handler
 
 import (
 	"context"
-	"crypto/rand"
-	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/crypto/bcrypt"
 
 	pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/slhmy/online-judge/bff/internal/identra"
+	userpb "github.com/slhmy/online-judge/gen/go/user/v1"
 )
 
 // AuthErrorCode represents structured error codes for auth operations
@@ -89,34 +82,19 @@ type identraClientInterface interface {
 	LoginByPassword(ctx context.Context, email, password string) (*pb.LoginByPasswordResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*pb.RefreshTokenResponse, error)
 	GetCurrentUser(ctx context.Context, accessToken string) (*pb.GetCurrentUserLoginInfoResponse, error)
+	GetOAuthAuthorizationURL(ctx context.Context, provider string, redirectURL *string) (*pb.GetOAuthAuthorizationURLResponse, error)
+	LoginByOAuth(ctx context.Context, code, state string) (*pb.LoginByOAuthResponse, error)
 }
 
 type AuthHandler struct {
-	identraClient      identraClientInterface
-	db                 *sql.DB
-	identraDB          *sql.DB
-	adminEmail         string
-	githubClientID     string
-	githubClientSecret string
-	oauthRedirectURL   string
-	redis              *redis.Client
+	identraClient    identraClientInterface
+	userClient       userpb.UserServiceClient
+	adminEmail       string
+	oauthRedirectURL string
+	redis            *redis.Client
 }
 
-func NewAuthHandler(identraGRPCHost, identraHTTPHost, databaseURL, adminEmail, githubClientID, githubClientSecret, oauthRedirectURL string, redisClient *redis.Client) *AuthHandler {
-	// Connect to main database for user profile management
-	db, err := sql.Open("pgx", databaseURL)
-	if err != nil {
-		panic(err)
-	}
-
-	// Connect to identra database for user management
-	// identra database is on the same postgres instance
-	identraDBURL := strings.Replace(databaseURL, "/oj?", "/identra?", 1)
-	identraDB, err := sql.Open("pgx", identraDBURL)
-	if err != nil {
-		panic(err)
-	}
-
+func NewAuthHandler(identraGRPCHost string, userClient userpb.UserServiceClient, adminEmail, oauthRedirectURL string, redisClient *redis.Client) *AuthHandler {
 	// Create identra client
 	client, err := identra.NewClient(identraGRPCHost)
 	if err != nil {
@@ -124,14 +102,11 @@ func NewAuthHandler(identraGRPCHost, identraHTTPHost, databaseURL, adminEmail, g
 	}
 
 	return &AuthHandler{
-		identraClient:      client,
-		db:                 db,
-		identraDB:          identraDB,
-		adminEmail:         adminEmail,
-		githubClientID:     githubClientID,
-		githubClientSecret: githubClientSecret,
-		oauthRedirectURL:   oauthRedirectURL,
-		redis:              redisClient,
+		identraClient:    client,
+		userClient:       userClient,
+		adminEmail:       adminEmail,
+		oauthRedirectURL: oauthRedirectURL,
+		redis:            redisClient,
 	}
 }
 
@@ -165,37 +140,26 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
-	// Check if user already exists
-	var existingID string
-	err := h.identraDB.QueryRowContext(ctx, `
-		SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL
-	`, req.Email).Scan(&existingID)
-
-	if err == nil {
+	// Call LoginByPassword which auto-creates user if not exists
+	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
+	if err != nil {
+		// If login fails, the user may already exist with a different password
 		writeAuthError(w, AuthErrorCodeEmailExists, "该邮箱已被注册", "email")
 		return
 	}
-	if err != sql.ErrNoRows {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "查询用户失败")
+
+	if resp.Token == nil || resp.Token.AccessToken == nil {
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "注册失败")
 		return
 	}
 
-	// Create user in identra database
-	userID := uuid.New().String()
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	// Get user ID from identra via token
+	userInfo, err := h.identraClient.GetCurrentUser(ctx, resp.Token.AccessToken.Token)
 	if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "密码处理失败")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户信息失败")
 		return
 	}
-
-	_, err = h.identraDB.ExecContext(ctx, `
-		INSERT INTO users (id, email, hashed_password, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
-	`, userID, req.Email, string(hashedPassword))
-	if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户失败")
-		return
-	}
+	userID := userInfo.UserId
 
 	// Determine role
 	role := "user"
@@ -209,53 +173,36 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		username = strings.Split(req.Email, "@")[0]
 	}
 
-	// Create user profile in main database
-	_, err = h.db.ExecContext(ctx, `
-		INSERT INTO user_profiles (user_id, username, role, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
-	`, userID, username, role)
+	// Ensure user profile exists via backend
+	profileResp, err := h.userClient.EnsureUserProfile(ctx, &userpb.EnsureUserProfileRequest{
+		UserId:   userID,
+		Email:    req.Email,
+		Username: username,
+		Role:     role,
+	})
 	if err != nil {
-		// Try to clean up identra user
-		_, _ = h.identraDB.ExecContext(ctx, "DELETE FROM users WHERE id = $1", userID)
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
 		return
 	}
 
-	// Login the user to get tokens
-	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
-	if err != nil {
-		// User created but login failed - still return success
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "注册成功，请登录",
-			"user": map[string]interface{}{
-				"id":       userID,
-				"email":    req.Email,
-				"username": username,
-				"role":     role,
-			},
-		})
+	if !profileResp.Created {
+		// Profile already existed — user was already registered
+		writeAuthError(w, AuthErrorCodeEmailExists, "该邮箱已被注册", "email")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if resp.Token != nil && resp.Token.AccessToken != nil {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"access_token":  resp.Token.AccessToken.Token,
-			"refresh_token": resp.Token.RefreshToken.Token,
-			"expires_in":    resp.Token.AccessToken.ExpiresAt,
-			"user": map[string]interface{}{
-				"id":       userID,
-				"email":    req.Email,
-				"username": username,
-				"role":     role,
-			},
-		})
-	} else {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "注册成功，请登录",
-		})
-	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"access_token":  resp.Token.AccessToken.Token,
+		"refresh_token": resp.Token.RefreshToken.Token,
+		"expires_in":    resp.Token.AccessToken.ExpiresAt,
+		"user": map[string]interface{}{
+			"id":       userID,
+			"email":    req.Email,
+			"username": profileResp.Profile.Username,
+			"role":     profileResp.Profile.Role,
+		},
+	})
 }
 
 // Login handles password login via Identra
@@ -306,41 +253,28 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Login succeeded — clear any recorded failures
 	h.clearFailedLogin(ctx, req.Email)
 
-	// Get user ID from identra database
-	var userID string
-	err = h.identraDB.QueryRowContext(ctx, `
-		SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL
-	`, req.Email).Scan(&userID)
-
+	// Get user ID from identra via token
+	userInfo, err := h.identraClient.GetCurrentUser(ctx, resp.Token.AccessToken.Token)
 	if err != nil {
-		writeAuthError(w, AuthErrorCodeInvalidCredentials, "用户不存在", "email")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户信息失败")
 		return
 	}
+	userID := userInfo.UserId
 
-	// Check if user profile exists
-	var username string
-	var role string
-	err = h.db.QueryRowContext(ctx, `
-		SELECT username, role FROM user_profiles WHERE user_id = $1
-	`, userID).Scan(&username, &role)
+	// Determine role
+	role := "user"
+	if req.Email == h.adminEmail {
+		role = "admin"
+	}
 
-	if err == sql.ErrNoRows {
-		// Create user profile
-		username = strings.Split(req.Email, "@")[0]
-		role = "user"
-		if req.Email == h.adminEmail {
-			role = "admin"
-		}
-
-		_, err = h.db.ExecContext(ctx, `
-			INSERT INTO user_profiles (user_id, username, role, created_at, updated_at)
-			VALUES ($1, $2, $3, NOW(), NOW())
-		`, userID, username, role)
-		if err != nil {
-			writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
-			return
-		}
-	} else if err != nil {
+	// Ensure user profile exists via backend
+	profileResp, err := h.userClient.EnsureUserProfile(ctx, &userpb.EnsureUserProfileRequest{
+		UserId:   userID,
+		Email:    req.Email,
+		Username: strings.Split(req.Email, "@")[0],
+		Role:     role,
+	})
+	if err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户资料失败")
 		return
 	}
@@ -353,8 +287,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"user": map[string]interface{}{
 			"id":       userID,
 			"email":    req.Email,
-			"username": username,
-			"role":     role,
+			"username": profileResp.Profile.Username,
+			"role":     profileResp.Profile.Role,
 		},
 	})
 }
@@ -420,40 +354,18 @@ func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
 		provider = "github"
 	}
 
-	// Check if OAuth is configured
-	if h.githubClientID == "" {
-		writeAuthErrorSimple(w, AuthErrorCodeOAuthNotConfigured, "OAuth未配置")
-		return
-	}
-
-	// Generate random state token
-	stateBytes := make([]byte, 16)
-	if _, err := rand.Read(stateBytes); err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "生成状态令牌失败")
-		return
-	}
-	state := hex.EncodeToString(stateBytes)
-
-	// Store state in Redis with 5-minute TTL
 	ctx := context.Background()
-	key := fmt.Sprintf("oauth:state:%s", state)
-	if err := h.redis.Set(ctx, key, state, 5*time.Minute).Err(); err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "存储状态令牌失败")
+	redirectURL := h.oauthRedirectURL
+	resp, err := h.identraClient.GetOAuthAuthorizationURL(ctx, provider, &redirectURL)
+	if err != nil {
+		writeAuthErrorSimple(w, AuthErrorCodeOAuthNotConfigured, "OAuth未配置: "+err.Error())
 		return
 	}
-
-	// Build GitHub authorization URL
-	authURL := fmt.Sprintf(
-		"https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&state=%s&scope=user:email",
-		h.githubClientID,
-		url.QueryEscape(h.oauthRedirectURL),
-		state,
-	)
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"authorization_url": authURL,
-		"state":             state,
+		"authorization_url": resp.Url,
+		"state":             resp.State,
 		"provider":          provider,
 	})
 }
@@ -468,324 +380,62 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate state from Redis
 	ctx := context.Background()
-	key := fmt.Sprintf("oauth:state:%s", state)
-	storedState, err := h.redis.Get(ctx, key).Result()
-	if err != nil || storedState != state {
-		writeAuthErrorSimple(w, AuthErrorCodeOAuthStateExpired, "无效或过期的状态令牌")
-		return
-	}
 
-	// Delete state after validation (one-time use)
-	h.redis.Del(ctx, key)
-
-	// Exchange code for access token
-	tokenResp, err := h.exchangeGitHubCode(code)
+	// Delegate OAuth login to Identra
+	oauthResp, err := h.identraClient.LoginByOAuth(ctx, code, state)
 	if err != nil {
-		writeAuthError(w, AuthErrorCodeOAuthFailed, "交换授权码失败: "+err.Error(), "")
+		writeAuthError(w, AuthErrorCodeOAuthFailed, "OAuth登录失败: "+err.Error(), "")
 		return
 	}
 
-	// Get user info from GitHub
-	githubUser, err := h.getGitHubUserInfo(tokenResp.AccessToken)
+	if oauthResp.Token == nil || oauthResp.Token.AccessToken == nil {
+		writeAuthErrorSimple(w, AuthErrorCodeOAuthFailed, "OAuth登录失败")
+		return
+	}
+
+	// Get user ID from identra via token
+	userInfo, err := h.identraClient.GetCurrentUser(ctx, oauthResp.Token.AccessToken.Token)
 	if err != nil {
-		writeAuthError(w, AuthErrorCodeOAuthFailed, "获取用户信息失败: "+err.Error(), "")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户信息失败")
 		return
 	}
+	userID := userInfo.UserId
+	email := oauthResp.Email
+	username := oauthResp.Username
 
-	// Get user email from GitHub (primary verified email)
-	email := githubUser.Email
-	if email == "" {
-		// Fetch emails separately if not in user info
-		emails, err := h.getGitHubEmails(tokenResp.AccessToken)
-		if err != nil {
-			writeAuthErrorSimple(w, AuthErrorCodeOAuthFailed, "获取用户邮箱失败")
-			return
-		}
-		// Find primary verified email
-		for _, e := range emails {
-			if e.Primary && e.Verified {
-				email = e.Email
-				break
-			}
-		}
-		// Fallback to first verified email
-		if email == "" {
-			for _, e := range emails {
-				if e.Verified {
-					email = e.Email
-					break
-				}
-			}
-		}
-	}
-
-	if email == "" {
-		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "未找到已验证的邮箱")
-		return
-	}
-
-	// Find or create user in identra database
-	userID, randomPassword, err := h.findOrCreateOAuthUser(ctx, email, githubUser.Login, githubUser.ID)
-	if err != nil {
-		writeAuthError(w, AuthErrorCodeInternalError, "创建用户失败: "+err.Error(), "")
-		return
-	}
-
-	// Create or update user profile
-	username := githubUser.Login
+	// Determine role
 	role := "user"
 	if email == h.adminEmail {
 		role = "admin"
 	}
 
-	// Check if profile exists
-	var existingUsername string
-	err = h.db.QueryRowContext(ctx, `
-		SELECT username FROM user_profiles WHERE user_id = $1
-	`, userID).Scan(&existingUsername)
-
-	if err == sql.ErrNoRows {
-		// Create profile
-		_, err = h.db.ExecContext(ctx, `
-			INSERT INTO user_profiles (user_id, username, role, avatar_url, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, NOW(), NOW())
-		`, userID, username, role, githubUser.AvatarURL)
-		if err != nil {
-			writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
-			return
-		}
-	} else if err == nil {
-		// Update avatar if changed
-		_, err = h.db.ExecContext(ctx, `
-			UPDATE user_profiles SET avatar_url = $1, updated_at = NOW() WHERE user_id = $2
-		`, githubUser.AvatarURL, userID)
-		if err != nil {
-			writeAuthErrorSimple(w, AuthErrorCodeInternalError, "更新用户资料失败")
-			return
-		}
-		username = existingUsername
-	} else if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户资料失败")
-		return
-	}
-
-	// Login via identra to get tokens
-	// For new OAuth users, we use LoginByPassword with the random password we generated
-	// For existing users, they should use their existing password or we return user info only
-	var loginResp *pb.LoginByPasswordResponse
-	if randomPassword != "" {
-		// New user - login with the random password we set
-		loginResp, err = h.identraClient.LoginByPassword(ctx, email, randomPassword)
-		if err != nil {
-			// Fallback: return user info without tokens
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"user": map[string]interface{}{
-					"id":         userID,
-					"email":      email,
-					"username":   username,
-					"role":       role,
-					"avatar_url": githubUser.AvatarURL,
-				},
-				"message": "OAuth登录成功，请设置密码完成注册",
-			})
-			return
-		}
-	} else {
-		// Existing user - they should use their existing password
-		// Return user info only, they'll need to login manually
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"user": map[string]interface{}{
-				"id":         userID,
-				"email":      email,
-				"username":   username,
-				"role":       role,
-				"avatar_url": githubUser.AvatarURL,
-			},
-			"message": "账号已关联，请使用密码登录",
-		})
+	// Ensure user profile exists via backend
+	profileResp, err := h.userClient.EnsureUserProfile(ctx, &userpb.EnsureUserProfileRequest{
+		UserId:    userID,
+		Email:     email,
+		Username:  username,
+		Role:      role,
+		AvatarUrl: oauthResp.AvatarUrl,
+	})
+	if err != nil {
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"access_token":  loginResp.Token.AccessToken.Token,
-		"refresh_token": loginResp.Token.RefreshToken.Token,
-		"expires_in":    loginResp.Token.AccessToken.ExpiresAt,
+		"access_token":  oauthResp.Token.AccessToken.Token,
+		"refresh_token": oauthResp.Token.RefreshToken.Token,
+		"expires_in":    oauthResp.Token.AccessToken.ExpiresAt,
 		"user": map[string]interface{}{
 			"id":         userID,
 			"email":      email,
-			"username":   username,
-			"role":       role,
-			"avatar_url": githubUser.AvatarURL,
+			"username":   profileResp.Profile.Username,
+			"role":       profileResp.Profile.Role,
+			"avatar_url": profileResp.Profile.AvatarUrl,
 		},
 	})
-}
-
-// GitHubTokenResponse represents GitHub OAuth token response
-type GitHubTokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	Scope       string `json:"scope"`
-}
-
-// GitHubUser represents GitHub user info
-type GitHubUser struct {
-	ID        int    `json:"id"`
-	Login     string `json:"login"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
-}
-
-// GitHubEmail represents GitHub email info
-type GitHubEmail struct {
-	Email    string `json:"email"`
-	Primary  bool   `json:"primary"`
-	Verified bool   `json:"verified"`
-}
-
-// exchangeGitHubCode exchanges OAuth code for access token
-func (h *AuthHandler) exchangeGitHubCode(code string) (*GitHubTokenResponse, error) {
-	data := url.Values{}
-	data.Set("client_id", h.githubClientID)
-	data.Set("client_secret", h.githubClientSecret)
-	data.Set("code", code)
-	data.Set("redirect_uri", h.oauthRedirectURL)
-
-	req, err := http.NewRequest("POST", "https://github.com/login/oauth/access_token", strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var tokenResp GitHubTokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, err
-	}
-
-	if tokenResp.AccessToken == "" {
-		return nil, fmt.Errorf("no access token in response: %s", string(body))
-	}
-
-	return &tokenResp, nil
-}
-
-// getGitHubUserInfo fetches user info from GitHub API
-func (h *AuthHandler) getGitHubUserInfo(accessToken string) (*GitHubUser, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var user GitHubUser
-	if err := json.Unmarshal(body, &user); err != nil {
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-// getGitHubEmails fetches user emails from GitHub API
-func (h *AuthHandler) getGitHubEmails(accessToken string) ([]GitHubEmail, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/user/emails", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var emails []GitHubEmail
-	if err := json.Unmarshal(body, &emails); err != nil {
-		return nil, err
-	}
-
-	return emails, nil
-}
-
-// findOrCreateOAuthUser finds existing user by email or creates new OAuth user
-// Returns userID and the random password (for new users only, empty for existing)
-func (h *AuthHandler) findOrCreateOAuthUser(ctx context.Context, email, githubLogin string, githubID int) (string, string, error) {
-	// Check if user exists with this email
-	var userID string
-	var hashedPassword string
-	err := h.identraDB.QueryRowContext(ctx, `
-		SELECT id, hashed_password FROM users WHERE email = $1 AND deleted_at IS NULL
-	`, email).Scan(&userID, &hashedPassword)
-
-	if err == nil {
-		// User exists - return their ID (no password needed for existing users)
-		_, updateErr := h.identraDB.ExecContext(ctx, `
-			UPDATE users SET updated_at = NOW() WHERE id = $1
-		`, userID)
-		if updateErr != nil {
-			return "", "", updateErr
-		}
-		return userID, "", nil
-	}
-
-	if err != sql.ErrNoRows {
-		return "", "", err
-	}
-
-	// Create new user
-	userID = uuid.New().String()
-
-	// Generate a random password for OAuth users (they won't use it)
-	randomPassword := uuid.New().String()
-	hashedPass, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", err
-	}
-
-	_, err = h.identraDB.ExecContext(ctx, `
-		INSERT INTO users (id, email, hashed_password, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
-	`, userID, email, string(hashedPass))
-	if err != nil {
-		return "", "", err
-	}
-
-	return userID, randomPassword, nil
 }
 
 // Refresh refreshes the access token
@@ -846,16 +496,16 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	userID := userInfo.UserId
 	email := userInfo.Email
 
-	// Get user profile
-	var username string
-	var role string
-	err = h.db.QueryRowContext(ctx, `
-		SELECT username, role FROM user_profiles WHERE user_id = $1
-	`, userID).Scan(&username, &role)
+	// Get user profile via backend
+	profileResp, err := h.userClient.GetUserProfile(ctx, &userpb.GetUserProfileRequest{UserId: userID})
 
+	var username, role string
 	if err != nil {
 		username = strings.Split(email, "@")[0]
 		role = "user"
+	} else {
+		username = profileResp.Profile.Username
+		role = profileResp.Profile.Role
 	}
 
 	w.Header().Set("Content-Type", "application/json")

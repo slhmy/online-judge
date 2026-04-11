@@ -13,6 +13,7 @@ type UserStoreInterface interface {
 	GetStats(ctx context.Context, userID string) (*UserStats, error)
 	ListSubmissions(ctx context.Context, userID string, verdictFilter, problemIDFilter string, page, pageSize int32) ([]*UserSubmissionSummary, int32, error)
 	CreateProfile(ctx context.Context, userID, username string) error
+	EnsureProfile(ctx context.Context, userID, email, username, role, avatarURL string) (*UserProfile, bool, error)
 }
 
 // MockUserStore is a mock implementation of UserStoreInterface for testing
@@ -144,6 +145,36 @@ func (m *MockUserStore) CreateProfile(ctx context.Context, userID, username stri
 	m.Submissions[userID] = []*UserSubmissionSummary{}
 
 	return nil
+}
+
+func (m *MockUserStore) EnsureProfile(ctx context.Context, userID, email, username, role, avatarURL string) (*UserProfile, bool, error) {
+	if m.CreateError != nil {
+		return nil, false, m.CreateError
+	}
+
+	if profile, exists := m.Profiles[userID]; exists {
+		profile.Email = email
+		return profile, false, nil
+	}
+
+	if role == "" {
+		role = "user"
+	}
+
+	profile := &UserProfile{
+		UserID:    userID,
+		Username:  username,
+		Role:      role,
+		AvatarURL: avatarURL,
+		Email:     email,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	m.Profiles[userID] = profile
+	m.Stats[userID] = &UserStats{UserID: userID}
+	m.Submissions[userID] = []*UserSubmissionSummary{}
+
+	return profile, true, nil
 }
 
 // Ensure MockUserStore implements UserStoreInterface

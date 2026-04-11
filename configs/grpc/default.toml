@@ -5,6 +5,10 @@ jwt_secret = "your-secret-key-change-in-production"
 oauth_state_expiration = "10m"
 token_expiration = "24h"
 
+[auth.oauth_providers.github]
+client_id = ""
+client_secret = ""
+
 [redis]
 urls = "redis:6379"
 

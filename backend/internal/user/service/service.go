@@ -36,6 +36,7 @@ func (s *UserService) GetUserProfile(ctx context.Context, req *pb.GetUserProfile
 			AvatarUrl:       profile.AvatarURL,
 			Bio:             profile.Bio,
 			Country:         profile.Country,
+			Role:            profile.Role,
 			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		},
@@ -67,6 +68,7 @@ func (s *UserService) UpdateUserProfile(ctx context.Context, req *pb.UpdateUserP
 			AvatarUrl:       profile.AvatarURL,
 			Bio:             profile.Bio,
 			Country:         profile.Country,
+			Role:            profile.Role,
 			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		},
@@ -140,5 +142,31 @@ func (s *UserService) ListUserSubmissions(ctx context.Context, req *pb.ListUserS
 			Page:     page,
 			PageSize: pageSize,
 		},
+	}, nil
+}
+
+func (s *UserService) EnsureUserProfile(ctx context.Context, req *pb.EnsureUserProfileRequest) (*pb.EnsureUserProfileResponse, error) {
+	profile, created, err := s.store.EnsureProfile(ctx, req.UserId, req.Email, req.Username, req.Role, req.AvatarUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.EnsureUserProfileResponse{
+		Profile: &pb.UserProfile{
+			UserId:          profile.UserID,
+			Username:        profile.Username,
+			DisplayName:     profile.DisplayName,
+			Rating:          profile.Rating,
+			SolvedCount:     profile.SolvedCount,
+			SubmissionCount: profile.SubmissionCount,
+			AvatarUrl:       profile.AvatarURL,
+			Bio:             profile.Bio,
+			Country:         profile.Country,
+			Role:            profile.Role,
+			Email:           profile.Email,
+			CreatedAt:       profile.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		},
+		Created: created,
 	}, nil
 }

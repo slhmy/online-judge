@@ -37,6 +37,8 @@ type UserProfile struct {
 	Country         string                 `protobuf:"bytes,9,opt,name=country,proto3" json:"country,omitempty"`
 	CreatedAt       string                 `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       string                 `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Role            string                 `protobuf:"bytes,12,opt,name=role,proto3" json:"role,omitempty"`
+	Email           string                 `protobuf:"bytes,13,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -144,6 +146,20 @@ func (x *UserProfile) GetCreatedAt() string {
 func (x *UserProfile) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *UserProfile) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *UserProfile) GetEmail() string {
+	if x != nil {
+		return x.Email
 	}
 	return ""
 }
@@ -807,11 +823,139 @@ func (x *ListUserSubmissionsResponse) GetPagination() *v1.PaginatedResponse {
 	return nil
 }
 
+type EnsureUserProfileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`                    // Desired username (fallback: email prefix)
+	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`                            // e.g. "user" or "admin"
+	AvatarUrl     string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"` // Optional, used by OAuth
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnsureUserProfileRequest) Reset() {
+	*x = EnsureUserProfileRequest{}
+	mi := &file_user_v1_user_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnsureUserProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnsureUserProfileRequest) ProtoMessage() {}
+
+func (x *EnsureUserProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnsureUserProfileRequest.ProtoReflect.Descriptor instead.
+func (*EnsureUserProfileRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *EnsureUserProfileRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *EnsureUserProfileRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *EnsureUserProfileRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *EnsureUserProfileRequest) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *EnsureUserProfileRequest) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+type EnsureUserProfileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Profile       *UserProfile           `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
+	Created       bool                   `protobuf:"varint,2,opt,name=created,proto3" json:"created,omitempty"` // true when a new profile was created
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnsureUserProfileResponse) Reset() {
+	*x = EnsureUserProfileResponse{}
+	mi := &file_user_v1_user_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnsureUserProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnsureUserProfileResponse) ProtoMessage() {}
+
+func (x *EnsureUserProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnsureUserProfileResponse.ProtoReflect.Descriptor instead.
+func (*EnsureUserProfileResponse) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *EnsureUserProfileResponse) GetProfile() *UserProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+func (x *EnsureUserProfileResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
 var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x16common/v1/common.proto\"\xd4\x02\n" +
+	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x16common/v1/common.proto\"\xfe\x02\n" +
 	"\vUserProfile\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -827,7 +971,9 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\tR\tupdatedAt\"\xc0\x03\n" +
+	"updated_at\x18\v \x01(\tR\tupdatedAt\x12\x12\n" +
+	"\x04role\x18\f \x01(\tR\x04role\x12\x14\n" +
+	"\x05email\x18\r \x01(\tR\x05email\"\xc0\x03\n" +
 	"\tUserStats\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
 	"\fsolved_count\x18\x02 \x01(\x05R\vsolvedCount\x12)\n" +
@@ -886,12 +1032,23 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\vsubmissions\x18\x01 \x03(\v2\x1e.user.v1.UserSubmissionSummaryR\vsubmissions\x12<\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1c.common.v1.PaginatedResponseR\n" +
-	"pagination2\x96\x04\n" +
+	"pagination\"\x98\x01\n" +
+	"\x18EnsureUserProfileRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x12\n" +
+	"\x04role\x18\x04 \x01(\tR\x04role\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\"e\n" +
+	"\x19EnsureUserProfileResponse\x12.\n" +
+	"\aprofile\x18\x01 \x01(\v2\x14.user.v1.UserProfileR\aprofile\x12\x18\n" +
+	"\acreated\x18\x02 \x01(\bR\acreated2\x9c\x05\n" +
 	"\vUserService\x12z\n" +
 	"\x0eGetUserProfile\x12\x1e.user.v1.GetUserProfileRequest\x1a\x1f.user.v1.GetUserProfileResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/users/{user_id}/profile\x12\x86\x01\n" +
 	"\x11UpdateUserProfile\x12!.user.v1.UpdateUserProfileRequest\x1a\".user.v1.UpdateUserProfileResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/api/v1/users/{user_id}/profile\x12r\n" +
 	"\fGetUserStats\x12\x1c.user.v1.GetUserStatsRequest\x1a\x1d.user.v1.GetUserStatsResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/users/{user_id}/stats\x12\x8d\x01\n" +
-	"\x13ListUserSubmissions\x12#.user.v1.ListUserSubmissionsRequest\x1a$.user.v1.ListUserSubmissionsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/users/{user_id}/submissionsB5Z3github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
+	"\x13ListUserSubmissions\x12#.user.v1.ListUserSubmissionsRequest\x1a$.user.v1.ListUserSubmissionsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/users/{user_id}/submissions\x12\x83\x01\n" +
+	"\x11EnsureUserProfile\x12!.user.v1.EnsureUserProfileRequest\x1a\".user.v1.EnsureUserProfileResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/users/ensure-profileB5Z3github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once
@@ -905,7 +1062,7 @@ func file_user_v1_user_proto_rawDescGZIP() []byte {
 	return file_user_v1_user_proto_rawDescData
 }
 
-var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_user_v1_user_proto_goTypes = []any{
 	(*UserProfile)(nil),                 // 0: user.v1.UserProfile
 	(*UserStats)(nil),                   // 1: user.v1.UserStats
@@ -918,29 +1075,34 @@ var file_user_v1_user_proto_goTypes = []any{
 	(*GetUserStatsResponse)(nil),        // 8: user.v1.GetUserStatsResponse
 	(*ListUserSubmissionsRequest)(nil),  // 9: user.v1.ListUserSubmissionsRequest
 	(*ListUserSubmissionsResponse)(nil), // 10: user.v1.ListUserSubmissionsResponse
-	(*v1.Pagination)(nil),               // 11: common.v1.Pagination
-	(*v1.PaginatedResponse)(nil),        // 12: common.v1.PaginatedResponse
+	(*EnsureUserProfileRequest)(nil),    // 11: user.v1.EnsureUserProfileRequest
+	(*EnsureUserProfileResponse)(nil),   // 12: user.v1.EnsureUserProfileResponse
+	(*v1.Pagination)(nil),               // 13: common.v1.Pagination
+	(*v1.PaginatedResponse)(nil),        // 14: common.v1.PaginatedResponse
 }
 var file_user_v1_user_proto_depIdxs = []int32{
 	0,  // 0: user.v1.GetUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	0,  // 1: user.v1.UpdateUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	1,  // 2: user.v1.GetUserStatsResponse.stats:type_name -> user.v1.UserStats
-	11, // 3: user.v1.ListUserSubmissionsRequest.pagination:type_name -> common.v1.Pagination
+	13, // 3: user.v1.ListUserSubmissionsRequest.pagination:type_name -> common.v1.Pagination
 	2,  // 4: user.v1.ListUserSubmissionsResponse.submissions:type_name -> user.v1.UserSubmissionSummary
-	12, // 5: user.v1.ListUserSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
-	3,  // 6: user.v1.UserService.GetUserProfile:input_type -> user.v1.GetUserProfileRequest
-	5,  // 7: user.v1.UserService.UpdateUserProfile:input_type -> user.v1.UpdateUserProfileRequest
-	7,  // 8: user.v1.UserService.GetUserStats:input_type -> user.v1.GetUserStatsRequest
-	9,  // 9: user.v1.UserService.ListUserSubmissions:input_type -> user.v1.ListUserSubmissionsRequest
-	4,  // 10: user.v1.UserService.GetUserProfile:output_type -> user.v1.GetUserProfileResponse
-	6,  // 11: user.v1.UserService.UpdateUserProfile:output_type -> user.v1.UpdateUserProfileResponse
-	8,  // 12: user.v1.UserService.GetUserStats:output_type -> user.v1.GetUserStatsResponse
-	10, // 13: user.v1.UserService.ListUserSubmissions:output_type -> user.v1.ListUserSubmissionsResponse
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	14, // 5: user.v1.ListUserSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
+	0,  // 6: user.v1.EnsureUserProfileResponse.profile:type_name -> user.v1.UserProfile
+	3,  // 7: user.v1.UserService.GetUserProfile:input_type -> user.v1.GetUserProfileRequest
+	5,  // 8: user.v1.UserService.UpdateUserProfile:input_type -> user.v1.UpdateUserProfileRequest
+	7,  // 9: user.v1.UserService.GetUserStats:input_type -> user.v1.GetUserStatsRequest
+	9,  // 10: user.v1.UserService.ListUserSubmissions:input_type -> user.v1.ListUserSubmissionsRequest
+	11, // 11: user.v1.UserService.EnsureUserProfile:input_type -> user.v1.EnsureUserProfileRequest
+	4,  // 12: user.v1.UserService.GetUserProfile:output_type -> user.v1.GetUserProfileResponse
+	6,  // 13: user.v1.UserService.UpdateUserProfile:output_type -> user.v1.UpdateUserProfileResponse
+	8,  // 14: user.v1.UserService.GetUserStats:output_type -> user.v1.GetUserStatsResponse
+	10, // 15: user.v1.UserService.ListUserSubmissions:output_type -> user.v1.ListUserSubmissionsResponse
+	12, // 16: user.v1.UserService.EnsureUserProfile:output_type -> user.v1.EnsureUserProfileResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_user_proto_init() }
@@ -954,7 +1116,7 @@ func file_user_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_user_proto_rawDesc), len(file_user_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

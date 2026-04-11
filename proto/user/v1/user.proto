@@ -37,6 +37,15 @@ service UserService {
       get: "/api/v1/users/{user_id}/submissions"
     };
   }
+
+  // Ensure user profile exists, creating one if not found.
+  // Used by auth flows (login, OAuth) to guarantee a profile row.
+  rpc EnsureUserProfile(EnsureUserProfileRequest) returns (EnsureUserProfileResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/users/ensure-profile"
+      body: "*"
+    };
+  }
 }
 
 // User profile
@@ -52,6 +61,8 @@ message UserProfile {
   string country = 9;
   string created_at = 10;
   string updated_at = 11;
+  string role = 12;
+  string email = 13;
 }
 
 // User statistics
@@ -122,4 +133,17 @@ message ListUserSubmissionsRequest {
 message ListUserSubmissionsResponse {
   repeated UserSubmissionSummary submissions = 1;
   common.v1.PaginatedResponse pagination = 2;
+}
+
+message EnsureUserProfileRequest {
+  string user_id = 1;
+  string email = 2;
+  string username = 3;       // Desired username (fallback: email prefix)
+  string role = 4;           // e.g. "user" or "admin"
+  string avatar_url = 5;     // Optional, used by OAuth
+}
+
+message EnsureUserProfileResponse {
+  UserProfile profile = 1;
+  bool created = 2;          // true when a new profile was created
 }

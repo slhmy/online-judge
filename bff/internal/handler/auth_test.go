@@ -34,9 +34,17 @@ func (m *mockIdentraClient) GetCurrentUser(_ context.Context, _ string) (*pb.Get
 	return nil, nil
 }
 
+func (m *mockIdentraClient) GetOAuthAuthorizationURL(_ context.Context, _ string, _ *string) (*pb.GetOAuthAuthorizationURLResponse, error) {
+	return nil, nil
+}
+
+func (m *mockIdentraClient) LoginByOAuth(_ context.Context, _, _ string) (*pb.LoginByOAuthResponse, error) {
+	return nil, nil
+}
+
 // newTestAuthHandler creates a minimal AuthHandler wired to a miniredis instance.
-// db and identraDB are intentionally nil – tests that only exercise the lockout
-// logic never reach database calls.
+// userClient is intentionally nil – tests that only exercise the lockout
+// logic never reach gRPC calls.
 func newTestAuthHandler(t *testing.T, mockClient identraClientInterface) (*AuthHandler, *miniredis.Miniredis) {
 	t.Helper()
 

@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -127,11 +128,8 @@ func main() {
 	userHandler := handler.NewUserHandler(userClient)
 	authHandler := handler.NewAuthHandler(
 		cfg.IdentraGRPCHost,
-		cfg.IdentraHTTPHost,
-		cfg.DatabaseURL,
+		userClient,
 		cfg.AdminEmail,
-		cfg.GitHubClientID,
-		cfg.GitHubClientSecret,
 		cfg.OAuthRedirectURL,
 		rdb,
 	)

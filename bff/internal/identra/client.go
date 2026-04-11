@@ -46,22 +46,6 @@ func (c *Client) LoginByPassword(ctx context.Context, email, password string) (*
 	return resp, nil
 }
 
-// Register registers a new user with email and password
-// Note: identra may have separate register endpoint, using LoginByPassword for now
-// as it creates user if not exists in some configurations
-func (c *Client) Register(ctx context.Context, email, password string) (*pb.LoginByPasswordResponse, error) {
-	// Try login first - if user exists, return error
-	// For registration, we use the same endpoint with register intent
-	resp, err := c.client.LoginByPassword(ctx, &pb.LoginByPasswordRequest{
-		Email:    email,
-		Password: password,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
-}
-
 // RefreshToken refreshes the access token
 func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*pb.RefreshTokenResponse, error) {
 	resp, err := c.client.RefreshToken(ctx, &pb.RefreshTokenRequest{
@@ -77,6 +61,30 @@ func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*pb.Ref
 func (c *Client) GetCurrentUser(ctx context.Context, accessToken string) (*pb.GetCurrentUserLoginInfoResponse, error) {
 	resp, err := c.client.GetCurrentUserLoginInfo(ctx, &pb.GetCurrentUserLoginInfoRequest{
 		AccessToken: accessToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// GetOAuthAuthorizationURL gets the OAuth authorization URL from Identra
+func (c *Client) GetOAuthAuthorizationURL(ctx context.Context, provider string, redirectURL *string) (*pb.GetOAuthAuthorizationURLResponse, error) {
+	resp, err := c.client.GetOAuthAuthorizationURL(ctx, &pb.GetOAuthAuthorizationURLRequest{
+		Provider:    provider,
+		RedirectUrl: redirectURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// LoginByOAuth authenticates user via OAuth code and state
+func (c *Client) LoginByOAuth(ctx context.Context, code, state string) (*pb.LoginByOAuthResponse, error) {
+	resp, err := c.client.LoginByOAuth(ctx, &pb.LoginByOAuthRequest{
+		Code:  code,
+		State: state,
 	})
 	if err != nil {
 		return nil, err

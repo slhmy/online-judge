@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,8 @@ type UserProfile struct {
 	AvatarURL       string
 	Bio             string
 	Country         string
+	Role            string
+	Email           string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -41,16 +44,16 @@ func (s *UserStore) GetProfile(ctx context.Context, userID string) (*UserProfile
 
 	var profile UserProfile
 	var id, uid pgtype.UUID
-	var displayName, avatarURL, bio, country pgtype.Text
+	var displayName, avatarURL, bio, country, role pgtype.Text
 	var createdAt, updatedAt pgtype.Timestamp
 	var rating, solvedCount, submissionCount pgtype.Int4
 
 	err = s.db.QueryRow(ctx, `
 		SELECT id, user_id, username, display_name, rating, solved_count, submission_count,
-		       avatar_url, bio, country, created_at, updated_at
+		       avatar_url, bio, country, created_at, updated_at, role
 		FROM user_profiles WHERE user_id = $1
 	`, parsedUserID).Scan(&id, &uid, &profile.Username, &displayName, &rating, &solvedCount,
-		&submissionCount, &avatarURL, &bio, &country, &createdAt, &updatedAt)
+		&submissionCount, &avatarURL, &bio, &country, &createdAt, &updatedAt, &role)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +87,9 @@ func (s *UserStore) GetProfile(ctx context.Context, userID string) (*UserProfile
 	}
 	if updatedAt.Valid {
 		profile.UpdatedAt = updatedAt.Time
+	}
+	if role.Valid {
+		profile.Role = role.String
 	}
 
 	return &profile, nil
@@ -327,4 +333,51 @@ func (s *UserStore) CreateProfile(ctx context.Context, userID, username string) 
 		ON CONFLICT (user_id) DO NOTHING
 	`, parsedUserID, username)
 	return err
+}
+
+// EnsureProfile creates a profile if it doesn't exist, or returns the existing one.
+// Returns (profile, created, error).
+func (s *UserStore) EnsureProfile(ctx context.Context, userID, email, username, role, avatarURL string) (*UserProfile, bool, error) {
+	// Try to get existing profile first
+	profile, err := s.GetProfile(ctx, userID)
+	if err == nil {
+		// Profile exists – update avatar if provided
+		if avatarURL != "" && avatarURL != profile.AvatarURL {
+			_ = s.UpdateProfile(ctx, userID, "", avatarURL, "", "")
+			profile.AvatarURL = avatarURL
+		}
+		profile.Email = email
+		return profile, false, nil
+	}
+
+	// Profile doesn't exist – create it
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if username == "" {
+		parts := strings.SplitN(email, "@", 2)
+		username = parts[0]
+	}
+	if role == "" {
+		role = "user"
+	}
+
+	_, err = s.db.Exec(ctx, `
+		INSERT INTO user_profiles (user_id, username, role, avatar_url, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+		ON CONFLICT (user_id) DO NOTHING
+	`, parsedUserID, username, role, avatarURL)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Re-fetch to get normalized data
+	profile, err = s.GetProfile(ctx, userID)
+	if err != nil {
+		return nil, false, err
+	}
+	profile.Email = email
+	return profile, true, nil
 }

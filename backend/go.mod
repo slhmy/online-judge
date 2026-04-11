@@ -10,8 +10,8 @@ require (
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/lestrrat-go/jwx v1.2.25
 	github.com/minio/minio-go/v7 v7.0.66
-	github.com/slhmy/online-judge/gen v0.0.0
 	github.com/redis/go-redis/v9 v9.3.1
+	github.com/slhmy/online-judge/gen v0.0.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.79.1
