@@ -38,7 +38,7 @@ A modernized online judge platform for competitive programming, built with micro
 | -------------- | ------------------------------------- |
 | Backend        | Go 1.21+, Buf, gRPC-Gateway           |
 | Frontend       | Next.js 14, TypeScript, Tailwind CSS  |
-| BFF            | Go, Gin                               |
+| BFF            | Go, chi                               |
 | Auth           | Identra (JWT, OAuth, Email, Password) |
 | Database       | PostgreSQL 16                         |
 | Cache/Queue    | Redis 7                               |
