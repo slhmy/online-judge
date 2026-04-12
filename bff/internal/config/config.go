@@ -6,7 +6,6 @@ import (
 
 type Config struct {
 	// Server
-	GRPCPort string `mapstructure:"grpc_port"`
 	HTTPPort string `mapstructure:"http_port"`
 
 	// Redis
@@ -15,56 +14,41 @@ type Config struct {
 	// Database
 	DatabaseURL string `mapstructure:"database_url"`
 
-	// Backend Services
-	ProblemServiceAddr      string `mapstructure:"problem_service_addr"`
-	SubmissionServiceAddr   string `mapstructure:"submission_service_addr"`
-	ContestServiceAddr      string `mapstructure:"contest_service_addr"`
-	NotificationServiceAddr string `mapstructure:"notification_service_addr"`
-	UserServiceAddr         string `mapstructure:"user_service_addr"`
-	JudgeServiceAddr        string `mapstructure:"judge_service_addr"`
+	// Backend Services (unified gRPC entrypoint)
+	BackendServiceAddr string `mapstructure:"backend_service_addr"`
 
 	// Auth
 	IdentraGRPCHost string `mapstructure:"identra_grpc_host"`
-	IdentraHTTPHost  string `mapstructure:"identra_http_host"`
-	AdminEmail       string `mapstructure:"admin_email"`
+	AdminEmail      string `mapstructure:"admin_email"`
 
 	// Rate Limiting
-	RateLimitEnabled                   bool `mapstructure:"rate_limit_enabled"`
-	RateLimitRequestsPerMinute         int  `mapstructure:"rate_limit_requests_per_minute"`
-	RateLimitBurstSize                 int  `mapstructure:"rate_limit_burst_size"`
-	RateLimitSubmissionRequestsPerMin  int  `mapstructure:"rate_limit_submission_requests_per_minute"`
-	RateLimitSubmissionBurstSize       int  `mapstructure:"rate_limit_submission_burst_size"`
-	RateLimitIPRequestsPerMinute       int  `mapstructure:"rate_limit_ip_requests_per_minute"`
-	RateLimitIPBurstSize               int  `mapstructure:"rate_limit_ip_burst_size"`
+	RateLimitEnabled                  bool `mapstructure:"rate_limit_enabled"`
+	RateLimitRequestsPerMinute        int  `mapstructure:"rate_limit_requests_per_minute"`
+	RateLimitBurstSize                int  `mapstructure:"rate_limit_burst_size"`
+	RateLimitSubmissionRequestsPerMin int  `mapstructure:"rate_limit_submission_requests_per_minute"`
+	RateLimitSubmissionBurstSize      int  `mapstructure:"rate_limit_submission_burst_size"`
+	RateLimitIPRequestsPerMinute      int  `mapstructure:"rate_limit_ip_requests_per_minute"`
+	RateLimitIPBurstSize              int  `mapstructure:"rate_limit_ip_burst_size"`
 
 	// Caching
-	CacheEnabled         bool `mapstructure:"cache_enabled"`
-	CacheProblemTTL      int  `mapstructure:"cache_problem_ttl"`      // seconds
-	CacheContestTTL      int  `mapstructure:"cache_contest_ttl"`      // seconds
-	CacheScoreboardTTL   int  `mapstructure:"cache_scoreboard_ttl"`   // seconds
+	CacheEnabled       bool `mapstructure:"cache_enabled"`
+	CacheProblemTTL    int  `mapstructure:"cache_problem_ttl"`    // seconds
+	CacheContestTTL    int  `mapstructure:"cache_contest_ttl"`    // seconds
+	CacheScoreboardTTL int  `mapstructure:"cache_scoreboard_ttl"` // seconds
 
 	// OAuth Configuration
-	GitHubClientID     string `mapstructure:"github_client_id"`
-	GitHubClientSecret string `mapstructure:"github_client_secret"`
-	OAuthRedirectURL   string `mapstructure:"oauth_redirect_url"`
+	OAuthRedirectURL string `mapstructure:"oauth_redirect_url"`
 }
 
 func Load() (*Config, error) {
 	v := viper.New()
 
 	// Set defaults
-	v.SetDefault("grpc_port", "8002")
 	v.SetDefault("http_port", "8080")
 	v.SetDefault("redis_url", "localhost:6379")
 	v.SetDefault("database_url", "postgres://oj:oj@localhost:5432/oj?sslmode=disable")
-	v.SetDefault("problem_service_addr", "localhost:8002")
-	v.SetDefault("submission_service_addr", "localhost:8002")
-	v.SetDefault("contest_service_addr", "localhost:8002")
-	v.SetDefault("notification_service_addr", "localhost:8002")
-	v.SetDefault("user_service_addr", "localhost:8002")
-	v.SetDefault("judge_service_addr", "localhost:8002")
+	v.SetDefault("backend_service_addr", "localhost:8002")
 	v.SetDefault("identra_grpc_host", "localhost:50051")
-	v.SetDefault("identra_http_host", "localhost:8081")
 	v.SetDefault("admin_email", "")
 
 	// Rate Limiting defaults
@@ -78,13 +62,11 @@ func Load() (*Config, error) {
 
 	// Caching defaults
 	v.SetDefault("cache_enabled", true)
-	v.SetDefault("cache_problem_ttl", 300)      // 5 minutes
-	v.SetDefault("cache_contest_ttl", 120)      // 2 minutes
-	v.SetDefault("cache_scoreboard_ttl", 10)    // 10 seconds
+	v.SetDefault("cache_problem_ttl", 300)   // 5 minutes
+	v.SetDefault("cache_contest_ttl", 120)   // 2 minutes
+	v.SetDefault("cache_scoreboard_ttl", 10) // 10 seconds
 
-	// OAuth defaults (disabled by default)
-	v.SetDefault("github_client_id", "")
-	v.SetDefault("github_client_secret", "")
+	// OAuth defaults
 	v.SetDefault("oauth_redirect_url", "http://localhost:3000/auth/callback")
 
 	v.AutomaticEnv()

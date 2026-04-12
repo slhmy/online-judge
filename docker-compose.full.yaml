@@ -117,11 +117,7 @@ services:
       - HTTP_PORT=8080
       - REDIS_URL=redis:6379
       - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
-      - PROBLEM_SERVICE_ADDR=backend:8002
-      - SUBMISSION_SERVICE_ADDR=backend:8002
-      - CONTEST_SERVICE_ADDR=backend:8002
-      - NOTIFICATION_SERVICE_ADDR=backend:8002
-      - USER_SERVICE_ADDR=backend:8002
+      - BACKEND_SERVICE_ADDR=backend:8002
       - IDENTRA_GRPC_HOST=identra-grpc:50051
       - ADMIN_EMAIL=admin@example.com
     depends_on:

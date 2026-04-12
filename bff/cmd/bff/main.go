@@ -62,46 +62,18 @@ func main() {
 	}
 
 	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
-	problemConn, err := grpc.Dial(cfg.ProblemServiceAddr, opts...)
+	backendConn, err := grpc.Dial(cfg.BackendServiceAddr, opts...)
 	if err != nil {
-		log.Fatalf("Failed to connect to problem service: %v", err)
+		log.Fatalf("Failed to connect to backend service: %v", err)
 	}
-	defer func() { _ = problemConn.Close() }()
-
-	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
-	submissionConn, err := grpc.Dial(cfg.SubmissionServiceAddr, opts...)
-	if err != nil {
-		log.Fatalf("Failed to connect to submission service: %v", err)
-	}
-	defer func() { _ = submissionConn.Close() }()
-
-	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
-	contestConn, err := grpc.Dial(cfg.ContestServiceAddr, opts...)
-	if err != nil {
-		log.Fatalf("Failed to connect to contest service: %v", err)
-	}
-	defer func() { _ = contestConn.Close() }()
-
-	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
-	userConn, err := grpc.Dial(cfg.UserServiceAddr, opts...)
-	if err != nil {
-		log.Fatalf("Failed to connect to user service: %v", err)
-	}
-	defer func() { _ = userConn.Close() }()
-
-	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
-	judgeConn, err := grpc.Dial(cfg.JudgeServiceAddr, opts...)
-	if err != nil {
-		log.Fatalf("Failed to connect to judge service: %v", err)
-	}
-	defer func() { _ = judgeConn.Close() }()
+	defer func() { _ = backendConn.Close() }()
 
 	// Create gRPC clients
-	problemClient := pbProblem.NewProblemServiceClient(problemConn)
-	submissionClient := pbSubmission.NewSubmissionServiceClient(submissionConn)
-	contestClient := pbContest.NewContestServiceClient(contestConn)
-	userClient := pbUser.NewUserServiceClient(userConn)
-	judgeClient := pbJudge.NewJudgeServiceClient(judgeConn)
+	problemClient := pbProblem.NewProblemServiceClient(backendConn)
+	submissionClient := pbSubmission.NewSubmissionServiceClient(backendConn)
+	contestClient := pbContest.NewContestServiceClient(backendConn)
+	userClient := pbUser.NewUserServiceClient(backendConn)
+	judgeClient := pbJudge.NewJudgeServiceClient(backendConn)
 
 	// Create SSE hub (manages real-time updates via Server-Sent Events)
 	sseHub := sse.NewHub(rdb)
