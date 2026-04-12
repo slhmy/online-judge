@@ -1,7 +1,6 @@
 -- Seed data for testing
--- This file provides SQL-based seeding as a fallback option
+-- This file provides SQL-based seeding as a fallback option.
 -- The primary seeding mechanism is the Go seed script: backend/cmd/seed/main.go
--- Run with: make seed (Go script) or migrate with this file included
 
 -- Insert languages (with compile/run commands)
 INSERT INTO languages (id, external_id, name, time_factor, extensions, allow_submit, allow_judge, compile_command, run_command, version) VALUES
@@ -20,155 +19,71 @@ ON CONFLICT (id) DO UPDATE SET
     run_command = EXCLUDED.run_command,
     version = EXCLUDED.version;
 
--- Problem A: A + B (Easy)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('A', 'A + B', 1.0, 262144, 'easy', 100, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
+WITH problem_seed(code, name, time_limit, memory_limit, difficulty, points, tc_input, tc_output, tc_description) AS (
+    VALUES
+    ('A', 'A + B', 1.0, 262144, 'easy', 100, '1 2\n', '3\n', 'Simple positive numbers'),
+    ('B', 'Sum of Array', 1.0, 262144, 'easy', 100, '5\n1 2 3 4 5\n', '15\n', 'Simple positive numbers'),
+    ('C', 'Fibonacci Number', 1.0, 262144, 'easy', 100, '0\n', '0\n', 'Base case F(0)'),
+    ('D', 'Binary Search', 1.0, 262144, 'medium', 200, '5\n1 3 5 7 9\n5\n', '2\n', 'Found in middle'),
+    ('E', 'Two Sum', 1.0, 262144, 'medium', 200, '4\n2 7 11 15\n9\n', '0 1\n', 'First two elements'),
+    ('F', 'Longest Common Subsequence', 2.0, 524288, 'hard', 300, 'abcde\nace\n', '3\n', 'LCS ace'),
+    ('G', 'Shortest Path', 2.0, 262144, 'hard', 300, '4 4\n1 2 1\n2 3 2\n3 4 3\n1 4 10\n', '6\n', 'Path 1-2-3-4'),
+    ('H', 'Maximum Subarray', 1.0, 262144, 'medium', 200, '9\n-2 1 -3 4 -1 2 1 -5 4\n', '6\n', 'Kadane'),
+    ('I', 'Palindrome Check', 1.0, 262144, 'easy', 100, 'racecar\n', 'true\n', 'Palindrome'),
+    ('J', 'Prime Factorization', 1.0, 262144, 'medium', 200, '12\n', '2 2\n3 1\n', 'Prime factors'),
+    ('K', 'Stack Implementation', 1.0, 262144, 'easy', 100, '5\npush 10\ntop\n', '10\n', 'Basic test'),
+    ('L', 'String Matching', 1.0, 262144, 'medium', 200, 'abab\nab\n', '0 2\n', 'Multiple matches'),
+    ('M', 'Sorting Algorithms', 2.0, 262144, 'easy', 100, '3\n3 1 2\n', '1 2 3\n', 'Basic sort'),
+    ('N', 'Tree Traversal', 2.0, 524288, 'hard', 300, '3\n2 1 3\n1 2 3\n', '2 3 1\n', 'Simple tree'),
+    ('O', 'Graph DFS', 1.0, 262144, 'medium', 200, '3 2\n1 2\n2 3\n', '1 2 3\n', 'DFS traversal')
+)
+INSERT INTO problems (name, time_limit, memory_limit, difficulty, points, is_published, allow_submit)
+SELECT ps.name, ps.time_limit, ps.memory_limit, ps.difficulty, ps.points, true, true
+FROM problem_seed ps
+WHERE NOT EXISTS (
+    SELECT 1 FROM problems p WHERE p.name = ps.name
+);
 
+WITH problem_seed(code, name, tc_input, tc_output, tc_description) AS (
+    VALUES
+    ('A', 'A + B', '1 2\n', '3\n', 'Simple positive numbers'),
+    ('B', 'Sum of Array', '5\n1 2 3 4 5\n', '15\n', 'Simple positive numbers'),
+    ('C', 'Fibonacci Number', '0\n', '0\n', 'Base case F(0)'),
+    ('D', 'Binary Search', '5\n1 3 5 7 9\n5\n', '2\n', 'Found in middle'),
+    ('E', 'Two Sum', '4\n2 7 11 15\n9\n', '0 1\n', 'First two elements'),
+    ('F', 'Longest Common Subsequence', 'abcde\nace\n', '3\n', 'LCS ace'),
+    ('G', 'Shortest Path', '4 4\n1 2 1\n2 3 2\n3 4 3\n1 4 10\n', '6\n', 'Path 1-2-3-4'),
+    ('H', 'Maximum Subarray', '9\n-2 1 -3 4 -1 2 1 -5 4\n', '6\n', 'Kadane'),
+    ('I', 'Palindrome Check', 'racecar\n', 'true\n', 'Palindrome'),
+    ('J', 'Prime Factorization', '12\n', '2 2\n3 1\n', 'Prime factors'),
+    ('K', 'Stack Implementation', '5\npush 10\ntop\n', '10\n', 'Basic test'),
+    ('L', 'String Matching', 'abab\nab\n', '0 2\n', 'Multiple matches'),
+    ('M', 'Sorting Algorithms', '3\n3 1 2\n', '1 2 3\n', 'Basic sort'),
+    ('N', 'Tree Traversal', '3\n2 1 3\n1 2 3\n', '2 3 1\n', 'Simple tree'),
+    ('O', 'Graph DFS', '3 2\n1 2\n2 3\n', '1 2 3\n', 'DFS traversal')
+),
+problem_map AS (
+    SELECT DISTINCT ON (ps.code) ps.code, p.id
+    FROM problem_seed ps
+    JOIN problems p ON p.name = ps.name
+    ORDER BY ps.code, p.created_at DESC, p.id DESC
+)
 INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/A/input/sample1.txt', 'problems/A/output/sample1.txt', '1 2\n', '3\n', 'Simple positive numbers'
-FROM problems WHERE external_id = 'A'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem B: Sum of Array (Easy)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('B', 'Sum of Array', 1.0, 262144, 'easy', 100, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/B/input/sample1.txt', 'problems/B/output/sample1.txt', '5\n1 2 3 4 5\n', '15\n', 'Simple positive numbers'
-FROM problems WHERE external_id = 'B'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem C: Fibonacci Number (Easy)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('C', 'Fibonacci Number', 1.0, 262144, 'easy', 100, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/C/input/sample1.txt', 'problems/C/output/sample1.txt', '0\n', '0\n', 'Base case F(0)'
-FROM problems WHERE external_id = 'C'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem D: Binary Search (Medium)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('D', 'Binary Search', 1.0, 262144, 'medium', 200, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/D/input/sample1.txt', 'problems/D/output/sample1.txt', '5\n1 3 5 7 9\n5\n', '2\n', 'Found in middle'
-FROM problems WHERE external_id = 'D'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem E: Two Sum (Medium)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('E', 'Two Sum', 1.0, 262144, 'medium', 200, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/E/input/sample1.txt', 'problems/E/output/sample1.txt', '4\n2 7 11 15\n9\n', '0 1\n', 'First two elements'
-FROM problems WHERE external_id = 'E'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem F: LCS (Hard)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('F', 'Longest Common Subsequence', 2.0, 524288, 'hard', 300, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/F/input/sample1.txt', 'problems/F/output/sample1.txt', 'abcde\nace\n', '3\n', 'LCS ace'
-FROM problems WHERE external_id = 'F'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem G: Shortest Path (Hard)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('G', 'Shortest Path', 2.0, 262144, 'hard', 300, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/G/input/sample1.txt', 'problems/G/output/sample1.txt', '4 4\n1 2 1\n2 3 2\n3 4 3\n1 4 10\n', '6\n', 'Path 1-2-3-4'
-FROM problems WHERE external_id = 'G'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem H: Maximum Subarray (Medium)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('H', 'Maximum Subarray', 1.0, 262144, 'medium', 200, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/H/input/sample1.txt', 'problems/H/output/sample1.txt', '9\n-2 1 -3 4 -1 2 1 -5 4\n', '6\n', 'Kadane'
-FROM problems WHERE external_id = 'H'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem I: Palindrome Check (Easy)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('I', 'Palindrome Check', 1.0, 262144, 'easy', 100, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/I/input/sample1.txt', 'problems/I/output/sample1.txt', 'racecar\n', 'true\n', 'Palindrome'
-FROM problems WHERE external_id = 'I'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem J: Prime Factorization (Medium)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('J', 'Prime Factorization', 1.0, 262144, 'medium', 200, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/J/input/sample1.txt', 'problems/J/output/sample1.txt', '12\n', '2 2\n3 1\n', 'Prime factors'
-FROM problems WHERE external_id = 'J'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem K: Stack Implementation (Easy)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('K', 'Stack Implementation', 1.0, 262144, 'easy', 100, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/K/input/sample1.txt', 'problems/K/output/sample1.txt', '5\npush 10\ntop\n', '10\n', 'Basic test'
-FROM problems WHERE external_id = 'K'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem L: String Matching (Medium)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('L', 'String Matching', 1.0, 262144, 'medium', 200, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/L/input/sample1.txt', 'problems/L/output/sample1.txt', 'abab\nab\n', '0 2\n', 'Multiple matches'
-FROM problems WHERE external_id = 'L'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem M: Sorting (Easy)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('M', 'Sorting Algorithms', 2.0, 262144, 'easy', 100, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/M/input/sample1.txt', 'problems/M/output/sample1.txt', '3\n3 1 2\n', '1 2 3\n', 'Basic sort'
-FROM problems WHERE external_id = 'M'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem N: Tree Traversal (Hard)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('N', 'Tree Traversal', 2.0, 524288, 'hard', 300, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/N/input/sample1.txt', 'problems/N/output/sample1.txt', '3\n2 1 3\n1 2 3\n', '2 3 1\n', 'Simple tree'
-FROM problems WHERE external_id = 'N'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
-
--- Problem O: Graph DFS (Medium)
-INSERT INTO problems (external_id, name, time_limit, memory_limit, difficulty, points, is_published, allow_submit) VALUES
-('O', 'Graph DFS', 1.0, 262144, 'medium', 200, true, true)
-ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name;
-
-INSERT INTO test_cases (problem_id, rank, is_sample, input_path, output_path, input_content, output_content, description)
-SELECT id, 1, true, 'problems/O/input/sample1.txt', 'problems/O/output/sample1.txt', '3 2\n1 2\n2 3\n', '1 2 3\n', 'DFS traversal'
-FROM problems WHERE external_id = 'O'
-ON CONFLICT (problem_id, rank) DO UPDATE SET input_content = EXCLUDED.input_content;
+SELECT
+    pm.id,
+    1,
+    true,
+    format('problems/%s/input/sample1.txt', ps.code),
+    format('problems/%s/output/sample1.txt', ps.code),
+    ps.tc_input,
+    ps.tc_output,
+    ps.tc_description
+FROM problem_seed ps
+JOIN problem_map pm ON pm.code = ps.code
+ON CONFLICT (problem_id, rank) DO UPDATE SET
+    input_content = EXCLUDED.input_content,
+    output_content = EXCLUDED.output_content,
+    description = EXCLUDED.description;
 
 -- Intro Contest
 INSERT INTO contests (external_id, name, short_name, start_time, end_time, public) VALUES
@@ -178,30 +93,6 @@ ON CONFLICT (external_id) DO UPDATE SET
     start_time = EXCLUDED.start_time,
     end_time = EXCLUDED.end_time;
 
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'A', 1, 100, true FROM contests c, problems p
-WHERE c.external_id = 'intro-contest-2024' AND p.external_id = 'A' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'B', 2, 100, true FROM contests c, problems p
-WHERE c.external_id = 'intro-contest-2024' AND p.external_id = 'B' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'C', 3, 100, true FROM contests c, problems p
-WHERE c.external_id = 'intro-contest-2024' AND p.external_id = 'C' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'D', 4, 100, true FROM contests c, problems p
-WHERE c.external_id = 'intro-contest-2024' AND p.external_id = 'I' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'E', 5, 100, true FROM contests c, problems p
-WHERE c.external_id = 'intro-contest-2024' AND p.external_id = 'K' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'F', 6, 100, true FROM contests c, problems p
-WHERE c.external_id = 'intro-contest-2024' AND p.external_id = 'M' ON CONFLICT DO NOTHING;
-
 -- Advanced Contest
 INSERT INTO contests (external_id, name, short_name, start_time, end_time, public) VALUES
 ('advanced-contest-2024', 'Advanced Algorithms Contest', 'ADV2024', NOW() - INTERVAL '2 hours', NOW() + INTERVAL '5 days', true)
@@ -209,26 +100,6 @@ ON CONFLICT (external_id) DO UPDATE SET
     name = EXCLUDED.name,
     start_time = EXCLUDED.start_time,
     end_time = EXCLUDED.end_time;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'A', 1, 200, true FROM contests c, problems p
-WHERE c.external_id = 'advanced-contest-2024' AND p.external_id = 'D' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'B', 2, 200, true FROM contests c, problems p
-WHERE c.external_id = 'advanced-contest-2024' AND p.external_id = 'E' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'C', 3, 200, true FROM contests c, problems p
-WHERE c.external_id = 'advanced-contest-2024' AND p.external_id = 'J' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'D', 4, 200, true FROM contests c, problems p
-WHERE c.external_id = 'advanced-contest-2024' AND p.external_id = 'L' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'E', 5, 200, true FROM contests c, problems p
-WHERE c.external_id = 'advanced-contest-2024' AND p.external_id = 'O' ON CONFLICT DO NOTHING;
 
 -- Challenge Contest
 INSERT INTO contests (external_id, name, short_name, start_time, end_time, public) VALUES
@@ -238,14 +109,54 @@ ON CONFLICT (external_id) DO UPDATE SET
     start_time = EXCLUDED.start_time,
     end_time = EXCLUDED.end_time;
 
+WITH problem_seed(code, name) AS (
+    VALUES
+    ('A', 'A + B'),
+    ('B', 'Sum of Array'),
+    ('C', 'Fibonacci Number'),
+    ('D', 'Binary Search'),
+    ('E', 'Two Sum'),
+    ('F', 'Longest Common Subsequence'),
+    ('G', 'Shortest Path'),
+    ('H', 'Maximum Subarray'),
+    ('I', 'Palindrome Check'),
+    ('J', 'Prime Factorization'),
+    ('K', 'Stack Implementation'),
+    ('L', 'String Matching'),
+    ('M', 'Sorting Algorithms'),
+    ('N', 'Tree Traversal'),
+    ('O', 'Graph DFS')
+),
+problem_map AS (
+    SELECT DISTINCT ON (ps.code) ps.code, p.id
+    FROM problem_seed ps
+    JOIN problems p ON p.name = ps.name
+    ORDER BY ps.code, p.created_at DESC, p.id DESC
+),
+contest_problem_seed(contest_external_id, problem_code, short_name, rank, points) AS (
+    VALUES
+    ('intro-contest-2024', 'A', 'A', 1, 100),
+    ('intro-contest-2024', 'B', 'B', 2, 100),
+    ('intro-contest-2024', 'C', 'C', 3, 100),
+    ('intro-contest-2024', 'I', 'D', 4, 100),
+    ('intro-contest-2024', 'K', 'E', 5, 100),
+    ('intro-contest-2024', 'M', 'F', 6, 100),
+    ('advanced-contest-2024', 'D', 'A', 1, 200),
+    ('advanced-contest-2024', 'E', 'B', 2, 200),
+    ('advanced-contest-2024', 'J', 'C', 3, 200),
+    ('advanced-contest-2024', 'L', 'D', 4, 200),
+    ('advanced-contest-2024', 'O', 'E', 5, 200),
+    ('challenge-contest-2024', 'F', 'A', 1, 300),
+    ('challenge-contest-2024', 'G', 'B', 2, 300),
+    ('challenge-contest-2024', 'N', 'C', 3, 300)
+)
 INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'A', 1, 300, true FROM contests c, problems p
-WHERE c.external_id = 'challenge-contest-2024' AND p.external_id = 'F' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'B', 2, 300, true FROM contests c, problems p
-WHERE c.external_id = 'challenge-contest-2024' AND p.external_id = 'G' ON CONFLICT DO NOTHING;
-
-INSERT INTO contest_problems (contest_id, problem_id, short_name, rank, points, allow_submit)
-SELECT c.id, p.id, 'C', 3, 300, true FROM contests c, problems p
-WHERE c.external_id = 'challenge-contest-2024' AND p.external_id = 'N' ON CONFLICT DO NOTHING;
+SELECT c.id, pm.id, cps.short_name, cps.rank, cps.points, true
+FROM contest_problem_seed cps
+JOIN contests c ON c.external_id = cps.contest_external_id
+JOIN problem_map pm ON pm.code = cps.problem_code
+ON CONFLICT (contest_id, problem_id) DO UPDATE SET
+    short_name = EXCLUDED.short_name,
+    rank = EXCLUDED.rank,
+    points = EXCLUDED.points,
+    allow_submit = EXCLUDED.allow_submit;

@@ -74,7 +74,6 @@ func (m *MockProblemStore) List(ctx context.Context, req *pb.ListProblemsRequest
 
 		problems = append(problems, &pb.ProblemSummary{
 			Id:          p.Id,
-			ExternalId:  p.ExternalId,
 			Name:        p.Name,
 			Difficulty:  p.Difficulty,
 			TimeLimit:   p.TimeLimit,
@@ -125,7 +124,6 @@ func (m *MockProblemStore) Create(ctx context.Context, req *pb.CreateProblemRequ
 	id := uuid.New().String()
 	m.Problems[id] = &pb.Problem{
 		Id:          id,
-		ExternalId:  req.GetExternalId(),
 		Name:        req.GetName(),
 		TimeLimit:   req.GetTimeLimit(),
 		MemoryLimit: req.GetMemoryLimit(),

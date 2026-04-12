@@ -24,6 +24,52 @@ type ProblemHandler struct {
 	cache  *cache.Service
 }
 
+type problemView struct {
+	Id          string  `json:"id"`
+	Name        string  `json:"name"`
+	TimeLimit   float64 `json:"time_limit"`
+	MemoryLimit int32   `json:"memory_limit"`
+	OutputLimit int32   `json:"output_limit"`
+	Difficulty  string  `json:"difficulty"`
+	Points      int32   `json:"points"`
+	IsPublished bool    `json:"is_published"`
+	AllowSubmit bool    `json:"allow_submit"`
+}
+
+func toProblemView(p *pb.Problem) *problemView {
+	if p == nil {
+		return nil
+	}
+
+	return &problemView{
+		Id:          p.Id,
+		Name:        p.Name,
+		TimeLimit:   p.TimeLimit,
+		MemoryLimit: p.MemoryLimit,
+		OutputLimit: p.OutputLimit,
+		Difficulty:  p.Difficulty,
+		Points:      p.Points,
+		IsPublished: p.IsPublished,
+		AllowSubmit: p.AllowSubmit,
+	}
+}
+
+func toProblemSummaryViews(items []*pb.ProblemSummary) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(items))
+	for _, p := range items {
+		out = append(out, map[string]interface{}{
+			"id":           p.Id,
+			"name":         p.Name,
+			"difficulty":   p.Difficulty,
+			"time_limit":   p.TimeLimit,
+			"memory_limit": p.MemoryLimit,
+			"points":       p.Points,
+			"allow_submit": p.AllowSubmit,
+		})
+	}
+	return out
+}
+
 func NewProblemHandler(client pb.ProblemServiceClient, cacheService *cache.Service) *ProblemHandler {
 	return &ProblemHandler{
 		client: client,
@@ -45,7 +91,10 @@ func (h *ProblemHandler) ListProblems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"problems":   toProblemSummaryViews(resp.GetProblems()),
+		"pagination": resp.GetPagination(),
+	})
 }
 
 func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
@@ -69,13 +118,18 @@ func (h *ProblemHandler) GetProblem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	view := map[string]interface{}{
+		"problem":           toProblemView(resp.GetProblem()),
+		"sample_test_cases": resp.GetSampleTestCases(),
+	}
+
 	// Cache the response
-	data, _ := json.Marshal(resp)
+	data, _ := json.Marshal(view)
 	_ = h.cache.Set(ctx, cacheKey, data, h.cache.GetConfig().ProblemTTL, "problem:"+id)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "miss")
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(view)
 }
 
 func (h *ProblemHandler) ListLanguages(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +150,6 @@ func (h *ProblemHandler) CreateProblem(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 
 	var req struct {
-		ExternalID  string  `json:"external_id"`
 		Name        string  `json:"name"`
 		TimeLimit   float64 `json:"time_limit"`
 		MemoryLimit int32   `json:"memory_limit"`
@@ -112,7 +165,6 @@ func (h *ProblemHandler) CreateProblem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	grpcReq := &pb.CreateProblemRequest{
-		ExternalId:  req.ExternalID,
 		Name:        req.Name,
 		TimeLimit:   req.TimeLimit,
 		MemoryLimit: req.MemoryLimit,
@@ -197,7 +249,9 @@ func (h *ProblemHandler) UpdateProblem(w http.ResponseWriter, r *http.Request) {
 	// Invalidate problem cache
 	_ = h.cache.InvalidateProblemCache(ctx, id)
 
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"problem": toProblemView(resp.GetProblem()),
+	})
 }
 
 func (h *ProblemHandler) DeleteProblem(w http.ResponseWriter, r *http.Request) {

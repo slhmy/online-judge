@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // SampleProblem represents a problem to seed
 type SampleProblem struct {
-	ExternalID       string
 	Name             string
 	Difficulty       string
 	TimeLimit        float64
@@ -40,15 +40,14 @@ type SampleContest struct {
 	ShortName    string
 	StartTime    time.Time
 	EndTime      time.Time
-	ProblemIDs   []string
 	ProblemNames []string
+	ShortNames   []string
 	Points       []int32
 }
 
 // Sample problems data
 var sampleProblems = []SampleProblem{
 	{
-		ExternalID:  "A",
 		Name:        "A + B",
 		Difficulty:  "easy",
 		TimeLimit:   1.0,
@@ -86,7 +85,6 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID:  "B",
 		Name:        "Sum of Array",
 		Difficulty:  "easy",
 		TimeLimit:   1.0,
@@ -124,7 +122,6 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID:  "C",
 		Name:        "Fibonacci Number",
 		Difficulty:  "easy",
 		TimeLimit:   1.0,
@@ -164,7 +161,6 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID:  "D",
 		Name:        "Binary Search",
 		Difficulty:  "medium",
 		TimeLimit:   1.0,
@@ -206,7 +202,6 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID:  "E",
 		Name:        "Two Sum",
 		Difficulty:  "medium",
 		TimeLimit:   1.0,
@@ -246,7 +241,6 @@ var sampleProblems = []SampleProblem{
 		},
 	},
 	{
-		ExternalID:  "F",
 		Name:        "Longest Common Subsequence",
 		Difficulty:  "hard",
 		TimeLimit:   2.0,
@@ -289,7 +283,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:  "G",
 		Name:        "Shortest Path",
 		Difficulty:  "hard",
 		TimeLimit:   2.0,
@@ -335,7 +328,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:  "H",
 		Name:        "Maximum Subarray",
 		Difficulty:  "medium",
 		TimeLimit:   1.0,
@@ -372,7 +364,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:  "I",
 		Name:        "Palindrome Check",
 		Difficulty:  "easy",
 		TimeLimit:   1.0,
@@ -404,7 +395,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:  "J",
 		Name:        "Prime Factorization",
 		Difficulty:  "medium",
 		TimeLimit:   1.0,
@@ -441,7 +431,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:       "K",
 		Name:             "Stack",
 		Difficulty:       "easy",
 		TimeLimit:        1.0,
@@ -453,7 +442,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:       "L",
 		Name:             "String Match",
 		Difficulty:       "medium",
 		TimeLimit:        1.0,
@@ -465,7 +453,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:       "M",
 		Name:             "Sorting",
 		Difficulty:       "easy",
 		TimeLimit:        2.0,
@@ -477,7 +464,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:       "N",
 		Name:             "Tree",
 		Difficulty:       "hard",
 		TimeLimit:        2.0,
@@ -489,7 +475,6 @@ abc</pre>
 		},
 	},
 	{
-		ExternalID:       "O",
 		Name:             "DFS",
 		Difficulty:       "medium",
 		TimeLimit:        1.0,
@@ -510,8 +495,8 @@ var sampleContests = []SampleContest{
 		ShortName:    "INTRO2024",
 		StartTime:    time.Now().Add(-24 * time.Hour),
 		EndTime:      time.Now().Add(168 * time.Hour),
-		ProblemIDs:   []string{"A", "B", "C", "I", "K", "M"},
-		ProblemNames: []string{"A", "B", "C", "D", "E", "F"},
+		ProblemNames: []string{"A + B", "Sum of Array", "Fibonacci Number", "Palindrome Check", "Stack", "Sorting"},
+		ShortNames:   []string{"A", "B", "C", "D", "E", "F"},
 		Points:       []int32{100, 100, 100, 100, 100, 100},
 	},
 	{
@@ -520,8 +505,8 @@ var sampleContests = []SampleContest{
 		ShortName:    "ADV2024",
 		StartTime:    time.Now().Add(-2 * time.Hour),
 		EndTime:      time.Now().Add(120 * time.Hour),
-		ProblemIDs:   []string{"D", "E", "H", "J", "L", "O"},
-		ProblemNames: []string{"A", "B", "C", "D", "E", "F"},
+		ProblemNames: []string{"Binary Search", "Two Sum", "Maximum Subarray", "Prime Factorization", "String Match", "DFS"},
+		ShortNames:   []string{"A", "B", "C", "D", "E", "F"},
 		Points:       []int32{200, 200, 200, 200, 200, 200},
 	},
 	{
@@ -530,8 +515,8 @@ var sampleContests = []SampleContest{
 		ShortName:    "CHAL2024",
 		StartTime:    time.Now().Add(1 * time.Hour),
 		EndTime:      time.Now().Add(72 * time.Hour),
-		ProblemIDs:   []string{"F", "G", "N"},
-		ProblemNames: []string{"A", "B", "C"},
+		ProblemNames: []string{"Longest Common Subsequence", "Shortest Path", "Tree"},
+		ShortNames:   []string{"A", "B", "C"},
 		Points:       []int32{300, 300, 300},
 	},
 }
@@ -564,11 +549,11 @@ func main() {
 	for _, problem := range sampleProblems {
 		id, err := seedProblem(ctx, dbpool, problem)
 		if err != nil {
-			log.Printf("Failed to seed problem %s: %v", problem.ExternalID, err)
+			log.Printf("Failed to seed problem %s: %v", problem.Name, err)
 			continue
 		}
-		problemIDMap[problem.ExternalID] = id
-		log.Printf("Seeded problem %s (%s) with ID %s", problem.ExternalID, problem.Name, id)
+		problemIDMap[problem.Name] = id
+		log.Printf("Seeded problem %s with ID %s", problem.Name, id)
 	}
 
 	// Seed contests
@@ -627,27 +612,75 @@ func quoteStrings(strs []string) []string {
 	return result
 }
 
-func seedProblem(ctx context.Context, db *pgxpool.Pool, problem SampleProblem) (string, error) {
-	// Insert problem
-	query := `
-		INSERT INTO problems (external_id, name, time_limit, memory_limit, output_limit, difficulty, points, is_published, allow_submit)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, true, true)
-		ON CONFLICT (external_id) DO UPDATE SET
-			name = EXCLUDED.name,
-			time_limit = EXCLUDED.time_limit,
-			memory_limit = EXCLUDED.memory_limit,
-			difficulty = EXCLUDED.difficulty,
-			points = EXCLUDED.points
-		RETURNING id
-	`
+func problemPathKey(name string) string {
+	key := strings.ToLower(name)
+	key = strings.NewReplacer("+", " plus ").Replace(key)
 
+	var b strings.Builder
+	lastDash := false
+	for _, r := range key {
+		isLetter := r >= 'a' && r <= 'z'
+		isDigit := r >= '0' && r <= '9'
+		if isLetter || isDigit {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			b.WriteRune('-')
+			lastDash = true
+		}
+	}
+
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		return "problem"
+	}
+	return out
+}
+
+func seedProblem(ctx context.Context, db *pgxpool.Pool, problem SampleProblem) (string, error) {
 	var idBytes [16]byte
-	err := db.QueryRow(ctx, query,
-		problem.ExternalID, problem.Name, problem.TimeLimit, problem.MemoryLimit,
-		4096, problem.Difficulty, problem.Points,
-	).Scan(&idBytes)
+	err := db.QueryRow(ctx, `
+		SELECT id
+		FROM problems
+		WHERE name = $1
+		LIMIT 1
+	`, problem.Name).Scan(&idBytes)
 	if err != nil {
-		return "", err
+		if err != pgx.ErrNoRows {
+			return "", err
+		}
+
+		insertQuery := `
+			INSERT INTO problems (name, time_limit, memory_limit, output_limit, difficulty, points, is_published, allow_submit)
+			VALUES ($1, $2, $3, $4, $5, $6, true, true)
+			RETURNING id
+		`
+		err = db.QueryRow(ctx, insertQuery,
+			problem.Name, problem.TimeLimit, problem.MemoryLimit,
+			4096, problem.Difficulty, problem.Points,
+		).Scan(&idBytes)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		existingProblemID := uuid.UUID(idBytes).String()
+		_, err = db.Exec(ctx, `
+			UPDATE problems
+			SET time_limit = $2,
+				memory_limit = $3,
+				output_limit = $4,
+				difficulty = $5,
+				points = $6,
+				is_published = true,
+				allow_submit = true,
+				updated_at = NOW()
+			WHERE id = $1
+		`, existingProblemID, problem.TimeLimit, problem.MemoryLimit, 4096, problem.Difficulty, problem.Points)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	problemID := uuid.UUID(idBytes).String()
@@ -660,7 +693,7 @@ func seedProblem(ctx context.Context, db *pgxpool.Pool, problem SampleProblem) (
 	`
 	_, err = db.Exec(ctx, stmtQuery, problemID, problem.Name, problem.ProblemStatement)
 	if err != nil {
-		log.Printf("Warning: Failed to insert problem statement for %s: %v", problem.ExternalID, err)
+		log.Printf("Warning: Failed to insert problem statement for %s: %v", problem.Name, err)
 	}
 
 	// Insert test cases
@@ -673,8 +706,9 @@ func seedProblem(ctx context.Context, db *pgxpool.Pool, problem SampleProblem) (
 				output_content = EXCLUDED.output_content,
 				description = EXCLUDED.description
 		`
-		inputPath := fmt.Sprintf("problems/%s/input/test%d.txt", problem.ExternalID, tc.Rank)
-		outputPath := fmt.Sprintf("problems/%s/output/test%d.txt", problem.ExternalID, tc.Rank)
+		pathKey := problemPathKey(problem.Name)
+		inputPath := fmt.Sprintf("problems/%s/input/test%d.txt", pathKey, tc.Rank)
+		outputPath := fmt.Sprintf("problems/%s/output/test%d.txt", pathKey, tc.Rank)
 
 		// Always include content inline for judge to use
 		inputContent := tc.Input
@@ -685,7 +719,7 @@ func seedProblem(ctx context.Context, db *pgxpool.Pool, problem SampleProblem) (
 			inputContent, outputContent, tc.Description,
 		)
 		if err != nil {
-			log.Printf("Warning: Failed to insert test case %d for %s: %v", tc.Rank, problem.ExternalID, err)
+			log.Printf("Warning: Failed to insert test case %d for %s: %v", tc.Rank, problem.Name, err)
 		}
 	}
 
@@ -717,10 +751,10 @@ func seedContest(ctx context.Context, db *pgxpool.Pool, contest SampleContest, p
 	contestID := uuid.UUID(idBytes).String()
 
 	// Insert contest problems
-	for i, extID := range contest.ProblemIDs {
-		problemID := problemIDMap[extID]
+	for i, problemName := range contest.ProblemNames {
+		problemID := problemIDMap[problemName]
 		if problemID == "" {
-			log.Printf("Warning: Problem %s not found for contest %s", extID, contest.ExternalID)
+			log.Printf("Warning: Problem %s not found for contest %s", problemName, contest.ExternalID)
 			continue
 		}
 
@@ -733,10 +767,10 @@ func seedContest(ctx context.Context, db *pgxpool.Pool, contest SampleContest, p
 				points = EXCLUDED.points
 		`
 		_, err := db.Exec(ctx, cpQuery,
-			contestID, problemID, contest.ProblemNames[i], i+1, contest.Points[i],
+			contestID, problemID, contest.ShortNames[i], i+1, contest.Points[i],
 		)
 		if err != nil {
-			log.Printf("Warning: Failed to add problem %s to contest %s: %v", extID, contest.ExternalID, err)
+			log.Printf("Warning: Failed to add problem %s to contest %s: %v", problemName, contest.ExternalID, err)
 		}
 	}
 

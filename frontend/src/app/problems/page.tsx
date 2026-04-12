@@ -4,7 +4,6 @@ import { useProblems } from '@/hooks/useApi'
 
 interface Problem {
   id: string
-  external_id: string
   name: string
   difficulty: string
   time_limit: number
@@ -74,7 +73,7 @@ export default function ProblemsPage() {
                 <tr key={problem.id} className="hover:bg-gray-100 dark:bg-gray-700/50 cursor-pointer" onClick={() => window.location.href = `/problems/${problem.id}`}>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{index + 1}</td>
                   <td className="px-4 py-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
-                    {problem.external_id}. {problem.name}
+                    {problem.name}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyColors[problem.difficulty as keyof typeof difficultyColors] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>

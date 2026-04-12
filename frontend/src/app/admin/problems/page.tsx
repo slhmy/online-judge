@@ -18,7 +18,6 @@ const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
 
 // Form schema
 const problemSchema = z.object({
-  external_id: z.string().min(1, 'Problem ID is required').max(10, 'ID must be 10 characters or less'),
   name: z.string().min(1, 'Name is required'),
   time_limit: z.coerce.number().min(0.1, 'Time limit must be at least 0.1 seconds').max(60, 'Time limit cannot exceed 60 seconds'),
   memory_limit: z.coerce.number().min(256, 'Memory limit must be at least 256 KB').max(524288, 'Memory limit cannot exceed 512 MB'),
@@ -31,7 +30,6 @@ type ProblemFormData = z.infer<typeof problemSchema>
 
 interface Problem {
   id: string
-  external_id: string
   name: string
   difficulty: string
   time_limit: number
@@ -81,7 +79,6 @@ export default function AdminProblemsPage() {
   } = useForm<ProblemFormData>({
     resolver: zodResolver(problemSchema),
     defaultValues: {
-      external_id: '',
       name: '',
       time_limit: 2,
       memory_limit: 262144, // 256 MB
@@ -101,7 +98,6 @@ export default function AdminProblemsPage() {
 
   useEffect(() => {
     if (editingProblem) {
-      setValue('external_id', editingProblem.external_id)
       setValue('name', editingProblem.name)
       setValue('time_limit', editingProblem.time_limit)
       setValue('memory_limit', editingProblem.memory_limit)
@@ -336,24 +332,7 @@ export default function AdminProblemsPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Problem ID */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Problem ID (e.g., A, B, 101)
-                </label>
-                <input
-                  {...register('external_id')}
-                  type="text"
-                  disabled={!!editingProblem}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
-                  placeholder="A"
-                />
-                {errors.external_id && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.external_id.message}</p>
-                )}
-              </div>
-
-              {/* Name */}
+          {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Problem Name
@@ -592,7 +571,6 @@ export default function AdminProblemsPage() {
           <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow">
             <thead className="bg-gray-100 dark:bg-gray-700">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">ID</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Difficulty</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Time</th>
@@ -604,9 +582,6 @@ export default function AdminProblemsPage() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {problems.map((problem) => (
                 <tr key={problem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {problem.external_id}
-                  </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                     {problem.name}
                   </td>

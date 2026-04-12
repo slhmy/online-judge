@@ -4,7 +4,6 @@
 -- Problems table
 CREATE TABLE problems (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    external_id VARCHAR(190) UNIQUE,
     name VARCHAR(255) NOT NULL,
 
     -- Time limits (seconds - DOMjudge style)
@@ -38,7 +37,6 @@ CREATE TABLE problems (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_problems_external_id ON problems(external_id);
 CREATE INDEX idx_problems_published ON problems(is_published);
 CREATE INDEX idx_problems_special_run ON problems(special_run_id);
 CREATE INDEX idx_problems_special_compare ON problems(special_compare_id);

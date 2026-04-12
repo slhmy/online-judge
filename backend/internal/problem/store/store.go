@@ -20,7 +20,7 @@ func NewProblemStore(db *pgxpool.Pool) *ProblemStore {
 
 func (s *ProblemStore) List(ctx context.Context, req *pb.ListProblemsRequest) ([]*pb.ProblemSummary, int32, error) {
 	query := `
-		SELECT id, external_id, name, difficulty, time_limit, memory_limit, points, allow_submit
+		SELECT id, name, difficulty, time_limit, memory_limit, points, allow_submit
 		FROM problems
 		WHERE is_published = true
 	`
@@ -49,7 +49,7 @@ func (s *ProblemStore) List(ctx context.Context, req *pb.ListProblemsRequest) ([
 
 	// Add pagination
 	offset := (req.GetPagination().GetPage() - 1) * req.GetPagination().GetPageSize()
-	query += " ORDER BY external_id LIMIT $" + string(rune('0'+argIdx)) + " OFFSET $" + string(rune('0'+argIdx+1))
+	query += " ORDER BY name LIMIT $" + string(rune('0'+argIdx)) + " OFFSET $" + string(rune('0'+argIdx+1))
 	args = append(args, req.GetPagination().GetPageSize(), offset)
 
 	rows, err := s.db.Query(ctx, query, args...)
@@ -63,7 +63,7 @@ func (s *ProblemStore) List(ctx context.Context, req *pb.ListProblemsRequest) ([
 		var p pb.ProblemSummary
 		var problemID pgtype.UUID
 		err := rows.Scan(
-			&problemID, &p.ExternalId, &p.Name, &p.Difficulty,
+			&problemID, &p.Name, &p.Difficulty,
 			&p.TimeLimit, &p.MemoryLimit, &p.Points, &p.AllowSubmit,
 		)
 		if err != nil {
@@ -86,7 +86,7 @@ func (s *ProblemStore) GetByID(ctx context.Context, id string) (*pb.Problem, err
 	}
 
 	query := `
-		SELECT id, external_id, name, time_limit, memory_limit, output_limit, process_limit,
+		SELECT id, name, time_limit, memory_limit, output_limit, process_limit,
 		       special_run_id, special_compare_id, special_compare_args,
 		       problem_statement_path, difficulty, color, points,
 		       allow_submit, allow_judge, is_published, author_id, created_at, updated_at
@@ -101,7 +101,7 @@ func (s *ProblemStore) GetByID(ctx context.Context, id string) (*pb.Problem, err
 	var createdAt, updatedAt pgtype.Timestamp
 
 	err = s.db.QueryRow(ctx, query, parsedID).Scan(
-		&problemID, &p.ExternalId, &p.Name, &p.TimeLimit, &p.MemoryLimit, &p.OutputLimit, &p.ProcessLimit,
+		&problemID, &p.Name, &p.TimeLimit, &p.MemoryLimit, &p.OutputLimit, &p.ProcessLimit,
 		&specialRunID, &specialCompareID, &specialCompareArgs,
 		&problemStatementPath, &p.Difficulty, &color, &p.Points,
 		&p.AllowSubmit, &p.AllowJudge, &p.IsPublished, &authorID, &createdAt, &updatedAt,
@@ -143,14 +143,14 @@ func (s *ProblemStore) GetByID(ctx context.Context, id string) (*pb.Problem, err
 
 func (s *ProblemStore) Create(ctx context.Context, req *pb.CreateProblemRequest) (string, error) {
 	query := `
-		INSERT INTO problems (external_id, name, time_limit, memory_limit, output_limit, difficulty, points, is_published)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+		INSERT INTO problems (name, time_limit, memory_limit, output_limit, difficulty, points, is_published)
+		VALUES ($1, $2, $3, $4, $5, $6, true)
 		RETURNING id
 	`
 
 	var problemID pgtype.UUID
 	err := s.db.QueryRow(ctx, query,
-		req.GetExternalId(), req.GetName(), req.GetTimeLimit(), req.GetMemoryLimit(),
+		req.GetName(), req.GetTimeLimit(), req.GetMemoryLimit(),
 		req.GetOutputLimit(), req.GetDifficulty(), req.GetPoints(),
 	).Scan(&problemID)
 	if err != nil {

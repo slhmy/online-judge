@@ -131,7 +131,6 @@ export function useCreateProblem() {
 
   return useMutation({
     mutationFn: (data: {
-      external_id: string
       name: string
       time_limit: number
       memory_limit: number

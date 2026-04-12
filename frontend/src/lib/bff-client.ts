@@ -115,7 +115,6 @@ export class BFFClient {
 
   // Admin - Problem CRUD
   async createProblem(data: {
-    external_id: string
     name: string
     time_limit: number
     memory_limit: number

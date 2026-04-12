@@ -37,7 +37,6 @@ interface TestCase {
 
 interface Problem {
   id: string
-  external_id: string
   name: string
   time_limit: number
   memory_limit: number
@@ -201,7 +200,7 @@ export default function ProblemDetailPage() {
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Problem Description */}
       <div className="w-1/2 p-4 overflow-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">{problem.external_id}. {problem.name}</h1>
+        <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">{problem.name}</h1>
         <div className="flex gap-2 mb-4">
           <span className={`px-2 py-1 rounded text-xs font-medium ${
             problem.difficulty === 'easy' ? 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/50' :
