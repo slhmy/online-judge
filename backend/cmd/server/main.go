@@ -105,7 +105,7 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	jwtInterceptor, err := middleware.NewJWTInterceptor(cfg.IdentraJWKSURL)
+	jwtInterceptor, err := middleware.NewJWTInterceptor(cfg.IdentraJWKSURL, dbpool)
 	if err != nil {
 		log.Fatalf("Failed to initialize JWT interceptor: %v", err)
 	}

@@ -243,8 +243,10 @@ func (h *ProblemHandler) GetProblemStatement(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"format":  resp.Statement.Format,
-		"content": resp.Statement.Content,
+		"language": resp.Statement.Language,
+		"format":   resp.Statement.Format,
+		"title":    resp.Statement.Title,
+		"content":  resp.Statement.Content,
 	})
 }
 

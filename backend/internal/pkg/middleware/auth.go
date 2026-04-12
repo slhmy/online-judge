@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lestrrat-go/jwx/jwk"
 	identra_v1_pb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"google.golang.org/grpc"
@@ -29,9 +30,10 @@ const (
 type JWTInterceptor struct {
 	jwksURL string
 	keySet  jwk.Set
+	db      *pgxpool.Pool
 }
 
-func NewJWTInterceptor(jwksURL string) (*JWTInterceptor, error) {
+func NewJWTInterceptor(jwksURL string, db *pgxpool.Pool) (*JWTInterceptor, error) {
 	// Fetch JWKS
 	set, err := jwk.Fetch(context.Background(), jwksURL)
 	if err != nil {
@@ -45,7 +47,21 @@ func NewJWTInterceptor(jwksURL string) (*JWTInterceptor, error) {
 	return &JWTInterceptor{
 		jwksURL: jwksURL,
 		keySet:  set,
+		db:      db,
 	}, nil
+}
+
+func (i *JWTInterceptor) lookupUserRole(ctx context.Context, userID string) (string, error) {
+	if i.db == nil || strings.TrimSpace(userID) == "" {
+		return "", nil
+	}
+
+	var role string
+	err := i.db.QueryRow(ctx, `SELECT COALESCE(role, '') FROM user_profiles WHERE user_id = $1`, userID).Scan(&role)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(role), nil
 }
 
 func fetchJWKSViaIdentraGRPC(jwksURL string) (jwk.Set, error) {
@@ -136,6 +152,12 @@ func (i *JWTInterceptor) Unary() grpc.UnaryServerInterceptor {
 		claims, err := i.validateToken(token)
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
+
+		if strings.TrimSpace(claims.Role) == "" {
+			if role, err := i.lookupUserRole(ctx, claims.UserID); err == nil && role != "" {
+				claims.Role = role
+			}
 		}
 
 		// Add user info to context

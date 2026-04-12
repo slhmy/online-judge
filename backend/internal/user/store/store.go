@@ -437,6 +437,13 @@ func (s *UserStore) EnsureProfile(ctx context.Context, userID, email, username, 
 	// Try to get existing profile first
 	profile, err := s.GetProfile(ctx, userID)
 	if err == nil {
+		// Keep existing users in sync with admin assignment from auth flow.
+		if strings.EqualFold(strings.TrimSpace(role), "admin") && !strings.EqualFold(strings.TrimSpace(profile.Role), "admin") {
+			if updateErr := s.UpdateRole(ctx, userID, "admin"); updateErr == nil {
+				profile.Role = "admin"
+			}
+		}
+
 		// Profile exists – update avatar if provided
 		if avatarURL != "" && avatarURL != profile.AvatarURL {
 			_ = s.UpdateProfile(ctx, userID, "", avatarURL, "", "")

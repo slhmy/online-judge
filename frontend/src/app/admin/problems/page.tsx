@@ -8,6 +8,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Editor from '@monaco-editor/react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
 
@@ -49,7 +54,11 @@ export default function AdminProblemsPage() {
   const { user, isAuthenticated, token } = useAuthStore()
   const [showForm, setShowForm] = useState(false)
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null)
-  const [markdownContent, setMarkdownContent] = useState('')
+  const [statementContent, setStatementContent] = useState('')
+  const [statementFormat, setStatementFormat] = useState<'markdown' | 'html' | 'plain' | 'pdf'>('markdown')
+  const [statementLanguage, setStatementLanguage] = useState('en')
+  const [statementTitle, setStatementTitle] = useState('')
+  const [previewMode, setPreviewMode] = useState<'edit' | 'preview' | 'split'>('split')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const { data, isLoading, error } = useProblems() as {
@@ -98,17 +107,84 @@ export default function AdminProblemsPage() {
       setValue('memory_limit', editingProblem.memory_limit)
       setValue('difficulty', editingProblem.difficulty as 'easy' | 'medium' | 'hard')
       setValue('points', editingProblem.points)
-      setMarkdownContent('')
+      setStatementContent('')
+      setStatementFormat('markdown')
+      setStatementLanguage('en')
+      setStatementTitle(editingProblem.name || '')
+      setPreviewMode('split')
       setShowForm(true)
     }
   }, [editingProblem, setValue])
+
+  const getEditorLanguage = (format: 'markdown' | 'html' | 'plain' | 'pdf') => {
+    switch (format) {
+      case 'html':
+        return 'html'
+      case 'plain':
+        return 'plaintext'
+      case 'pdf':
+        return 'markdown'
+      case 'markdown':
+      default:
+        return 'markdown'
+    }
+  }
+
+  const renderStatementPreview = () => {
+    if (!statementContent.trim()) {
+      return <p className="text-gray-500 dark:text-gray-400">No content to preview.</p>
+    }
+
+    if (statementFormat === 'html') {
+      return <div dangerouslySetInnerHTML={{ __html: statementContent }} />
+    }
+
+    if (statementFormat === 'plain') {
+      return <pre className="whitespace-pre-wrap break-words text-sm">{statementContent}</pre>
+    }
+
+    if (statementFormat === 'pdf') {
+      return (
+        <div className="text-sm text-yellow-700 dark:text-yellow-300">
+          PDF format is stored as content metadata. Inline PDF preview is not available in this editor.
+        </div>
+      )
+    }
+
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+        {statementContent}
+      </ReactMarkdown>
+    )
+  }
+
+  const upsertProblemStatement = async (problemID: string) => {
+    const res = await fetch(`${BFF_URL}/api/v1/problems/${problemID}/statement`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        language: statementLanguage || 'en',
+        format: statementFormat,
+        title: statementTitle,
+        content: statementContent,
+      }),
+    })
+
+    if (!res.ok) {
+      throw new Error(`Failed to save problem statement: ${res.status}`)
+    }
+  }
 
   const onSubmit = async (data: ProblemFormData) => {
     try {
       const problemData = {
         ...data,
-        description: markdownContent,
       }
+
+      let targetProblemID = editingProblem?.id || ''
 
       if (editingProblem) {
         await updateMutation?.mutateAsync({
@@ -117,15 +193,25 @@ export default function AdminProblemsPage() {
           memory_limit: problemData.memory_limit,
           difficulty: problemData.difficulty,
           points: problemData.points,
-          description: problemData.description,
         })
         setEditingProblem(null)
       } else {
-        await createMutation.mutateAsync(problemData)
+        const created = await createMutation.mutateAsync(problemData)
+        if (created && typeof created === 'object' && 'id' in created) {
+          targetProblemID = String((created as { id?: string }).id || '')
+        }
+      }
+
+      if (targetProblemID) {
+        await upsertProblemStatement(targetProblemID)
       }
 
       reset()
-      setMarkdownContent('')
+      setStatementContent('')
+      setStatementFormat('markdown')
+      setStatementLanguage('en')
+      setStatementTitle('')
+      setPreviewMode('split')
       setShowForm(false)
     } catch (err) {
       console.error('Failed to save problem:', err)
@@ -161,21 +247,49 @@ export default function AdminProblemsPage() {
         })
         if (statementRes.ok) {
           const statementData = await statementRes.json()
-          setMarkdownContent(statementData || '')
+          if (typeof statementData === 'string') {
+            setStatementContent(statementData)
+            setStatementFormat('markdown')
+            setStatementLanguage('en')
+            setStatementTitle(problem.name)
+          } else if (statementData && typeof statementData.content === 'string') {
+            setStatementContent(statementData.content)
+            const fmt = (statementData.format || 'markdown') as 'markdown' | 'html' | 'plain' | 'pdf'
+            setStatementFormat(fmt)
+            setStatementLanguage(statementData.language || 'en')
+            setStatementTitle(statementData.title || problem.name)
+          } else {
+            setStatementContent('')
+            setStatementFormat('markdown')
+            setStatementLanguage('en')
+            setStatementTitle(problem.name)
+          }
         } else {
-          setMarkdownContent('')
+          setStatementContent('')
+          setStatementFormat('markdown')
+          setStatementLanguage('en')
+          setStatementTitle(problem.name)
         }
 
+        setPreviewMode('split')
         setShowForm(true)
       } else {
         setEditingProblem(problem)
-        setMarkdownContent('')
+        setStatementContent('')
+        setStatementFormat('markdown')
+        setStatementLanguage('en')
+        setStatementTitle(problem.name)
+        setPreviewMode('split')
         setShowForm(true)
       }
     } catch (err) {
       console.error('Failed to fetch problem details:', err)
       setEditingProblem(problem)
-      setMarkdownContent('')
+      setStatementContent('')
+      setStatementFormat('markdown')
+      setStatementLanguage('en')
+      setStatementTitle(problem.name)
+      setPreviewMode('split')
       setShowForm(true)
     }
   }
@@ -184,7 +298,11 @@ export default function AdminProblemsPage() {
     setShowForm(false)
     setEditingProblem(null)
     reset()
-    setMarkdownContent('')
+    setStatementContent('')
+    setStatementFormat('markdown')
+    setStatementLanguage('en')
+    setStatementTitle('')
+    setPreviewMode('split')
   }
 
   if (!isAuthenticated || user?.role !== 'admin') {
@@ -322,30 +440,105 @@ export default function AdminProblemsPage() {
               </div>
             </div>
 
-            {/* Markdown Editor for Problem Statement */}
+            {/* Problem Statement Editor */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Problem Statement (Markdown)
+                Problem Statement
               </label>
-              <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                <Editor
-                  height="300px"
-                  defaultLanguage="markdown"
-                  value={markdownContent}
-                  onChange={(value) => setMarkdownContent(value || '')}
-                  theme="vs-dark"
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: 'on',
-                    wordWrap: 'on',
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                  }}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Format</label>
+                  <select
+                    value={statementFormat}
+                    onChange={(e) => setStatementFormat(e.target.value as 'markdown' | 'html' | 'plain' | 'pdf')}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="markdown">markdown</option>
+                    <option value="html">html</option>
+                    <option value="plain">plain</option>
+                    <option value="pdf">pdf</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Language</label>
+                  <input
+                    type="text"
+                    value={statementLanguage}
+                    onChange={(e) => setStatementLanguage(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="en"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={statementTitle}
+                    onChange={(e) => setStatementTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Problem title"
+                  />
+                </div>
               </div>
+
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('edit')}
+                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'edit' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('preview')}
+                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'preview' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('split')}
+                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'split' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                >
+                  Split
+                </button>
+              </div>
+
+              <div className={`grid gap-3 ${previewMode === 'split' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                {previewMode !== 'preview' && (
+                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                    <Editor
+                      height="320px"
+                      defaultLanguage="markdown"
+                      language={getEditorLanguage(statementFormat)}
+                      value={statementContent}
+                      onChange={(value) => setStatementContent(value || '')}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
+                )}
+
+                {previewMode !== 'edit' && (
+                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40 overflow-auto min-h-[320px]">
+                    <div className="prose max-w-none dark:prose-invert">
+                      {renderStatementPreview()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Use Markdown format for the problem description. Include input/output format, examples, and constraints.
+                Supports multiple statement formats and live preview.
               </p>
             </div>
 
