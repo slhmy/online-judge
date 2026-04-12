@@ -1,0 +1,6 @@
+:80 {
+    @api path /api/*
+    reverse_proxy @api bff:8080
+
+    reverse_proxy frontend:3000
+}
