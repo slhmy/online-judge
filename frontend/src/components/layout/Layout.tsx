@@ -44,11 +44,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: '/submissions', label: 'Submissions' },
   ]
 
-  // Add admin link for admins
-  if (user?.role === 'admin') {
-    navLinks.push({ href: '/admin', label: 'Admin' })
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
