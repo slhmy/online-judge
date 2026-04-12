@@ -67,7 +67,7 @@ services:
     ports:
       - "50051:50051"
     volumes:
-      - ./configs:/app/configs
+      - ./configs/identra:/app/configs
     depends_on:
       postgres:
         condition: service_healthy
