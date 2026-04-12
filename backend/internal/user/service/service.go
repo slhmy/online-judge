@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
 	"github.com/slhmy/online-judge/backend/internal/user/store"
@@ -259,4 +260,83 @@ func (s *UserService) UpdateUserRole(ctx context.Context, req *pb.UpdateUserRole
 			UpdatedAt:       profile.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		},
 	}, nil
+}
+
+func (s *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
+	if middleware.GetUserRole(ctx) != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "admin access required")
+	}
+
+	if strings.TrimSpace(req.GetUserId()) == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	targetProfile, err := s.store.GetProfile(ctx, req.GetUserId())
+	if err != nil {
+		if strings.Contains(err.Error(), "profile not found") {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, err
+	}
+
+	callerID := strings.TrimSpace(middleware.GetUserID(ctx))
+	callerEmail := strings.TrimSpace(middleware.GetUserEmail(ctx))
+	if (callerID != "" && callerID == req.GetUserId()) ||
+		(callerEmail != "" && targetProfile.Email != "" && strings.EqualFold(callerEmail, strings.TrimSpace(targetProfile.Email))) {
+		return nil, status.Error(codes.FailedPrecondition, "cannot delete your own account")
+	}
+
+	if targetProfile.Role == "admin" {
+		adminCount, err := s.countAdmins(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if adminCount <= 1 {
+			return nil, status.Error(codes.FailedPrecondition, "cannot delete the last admin")
+		}
+	}
+
+	if err := s.store.DeleteProfile(ctx, req.GetUserId()); err != nil {
+		if strings.Contains(err.Error(), "profile not found") {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, err
+	}
+
+	return &pb.DeleteUserResponse{Success: true}, nil
+}
+
+func (s *UserService) countAdmins(ctx context.Context) (int, error) {
+	const pageSize int32 = 200
+	var (
+		page       int32 = 1
+		seen       int32
+		total      int32
+		adminCount int
+	)
+
+	for {
+		profiles, listTotal, err := s.store.ListProfiles(ctx, page, pageSize)
+		if err != nil {
+			return 0, err
+		}
+
+		if page == 1 {
+			total = listTotal
+		}
+
+		for _, p := range profiles {
+			if p.Role == "admin" {
+				adminCount++
+			}
+		}
+
+		seen += int32(len(profiles))
+		if seen >= total || len(profiles) == 0 {
+			break
+		}
+		page++
+	}
+
+	return adminCount, nil
 }

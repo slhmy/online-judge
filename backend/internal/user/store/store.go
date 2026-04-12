@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -214,6 +215,64 @@ func (s *UserStore) UpdateRole(ctx context.Context, userID, role string) error {
 		WHERE user_id = $1
 	`, parsedUserID, role)
 	return err
+}
+
+// DeleteProfile removes a user profile and related data records.
+func (s *UserStore) DeleteProfile(ctx context.Context, userID string) error {
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Remove judging details for this user's submissions first.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM judging_runs
+		WHERE judging_id IN (
+			SELECT j.id
+			FROM judgings j
+			JOIN submissions s ON s.id = j.submission_id
+			WHERE s.user_id = $1
+		)
+	`, parsedUserID); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM judgings
+		WHERE submission_id IN (
+			SELECT id FROM submissions WHERE user_id = $1
+		)
+	`, parsedUserID); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM submissions WHERE user_id = $1`, parsedUserID); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM contest_participants WHERE user_id = $1`, parsedUserID); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM teams WHERE user_id = $1`, parsedUserID); err != nil {
+		return err
+	}
+
+	res, err := tx.Exec(ctx, `DELETE FROM user_profiles WHERE user_id = $1`, parsedUserID)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		return errors.New("profile not found")
+	}
+
+	return tx.Commit(ctx)
 }
 
 // UserStats represents computed user statistics

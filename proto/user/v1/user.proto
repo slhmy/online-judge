@@ -61,6 +61,13 @@ service UserService {
       body: "*"
     };
   }
+
+  // Delete user profile and related contest/submission records (admin only)
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/admin/users/{user_id}"
+    };
+  }
 }
 
 // User profile
@@ -179,4 +186,12 @@ message UpdateUserRoleRequest {
 
 message UpdateUserRoleResponse {
   UserProfile profile = 1;
+}
+
+message DeleteUserRequest {
+  string user_id = 1;
+}
+
+message DeleteUserResponse {
+  bool success = 1;
 }

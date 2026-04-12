@@ -12,6 +12,7 @@ type UserStoreInterface interface {
 	GetProfile(ctx context.Context, userID string) (*UserProfile, error)
 	UpdateProfile(ctx context.Context, userID string, displayName, avatarURL, bio, country string) error
 	UpdateRole(ctx context.Context, userID, role string) error
+	DeleteProfile(ctx context.Context, userID string) error
 	GetStats(ctx context.Context, userID string) (*UserStats, error)
 	ListSubmissions(ctx context.Context, userID string, verdictFilter, problemIDFilter string, page, pageSize int32) ([]*UserSubmissionSummary, int32, error)
 	CreateProfile(ctx context.Context, userID, username string) error
@@ -116,6 +117,21 @@ func (m *MockUserStore) UpdateRole(ctx context.Context, userID, role string) err
 
 	profile.Role = role
 	profile.UpdatedAt = time.Now()
+	return nil
+}
+
+func (m *MockUserStore) DeleteProfile(ctx context.Context, userID string) error {
+	if m.UpdateError != nil {
+		return m.UpdateError
+	}
+
+	if _, ok := m.Profiles[userID]; !ok {
+		return errors.New("profile not found")
+	}
+
+	delete(m.Profiles, userID)
+	delete(m.Stats, userID)
+	delete(m.Submissions, userID)
 	return nil
 }
 

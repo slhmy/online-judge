@@ -1143,6 +1143,94 @@ func (x *UpdateUserRoleResponse) GetProfile() *UserProfile {
 	return nil
 }
 
+type DeleteUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteUserRequest) Reset() {
+	*x = DeleteUserRequest{}
+	mi := &file_user_v1_user_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteUserRequest) ProtoMessage() {}
+
+func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
+func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *DeleteUserRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type DeleteUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteUserResponse) Reset() {
+	*x = DeleteUserResponse{}
+	mi := &file_user_v1_user_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteUserResponse) ProtoMessage() {}
+
+func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteUserResponse.ProtoReflect.Descriptor instead.
+func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *DeleteUserResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
@@ -1248,7 +1336,11 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\"H\n" +
 	"\x16UpdateUserRoleResponse\x12.\n" +
-	"\aprofile\x18\x01 \x01(\v2\x14.user.v1.UserProfileR\aprofile2\x80\a\n" +
+	"\aprofile\x18\x01 \x01(\v2\x14.user.v1.UserProfileR\aprofile\",\n" +
+	"\x11DeleteUserRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\".\n" +
+	"\x12DeleteUserResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xee\a\n" +
 	"\vUserService\x12_\n" +
 	"\tListUsers\x12\x19.user.v1.ListUsersRequest\x1a\x1a.user.v1.ListUsersResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/v1/admin/users\x12z\n" +
 	"\x0eGetUserProfile\x12\x1e.user.v1.GetUserProfileRequest\x1a\x1f.user.v1.GetUserProfileResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/users/{user_id}/profile\x12\x86\x01\n" +
@@ -1256,7 +1348,9 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\fGetUserStats\x12\x1c.user.v1.GetUserStatsRequest\x1a\x1d.user.v1.GetUserStatsResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/users/{user_id}/stats\x12\x8d\x01\n" +
 	"\x13ListUserSubmissions\x12#.user.v1.ListUserSubmissionsRequest\x1a$.user.v1.ListUserSubmissionsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/v1/users/{user_id}/submissions\x12\x83\x01\n" +
 	"\x11EnsureUserProfile\x12!.user.v1.EnsureUserProfileRequest\x1a\".user.v1.EnsureUserProfileResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/users/ensure-profile\x12\x80\x01\n" +
-	"\x0eUpdateUserRole\x12\x1e.user.v1.UpdateUserRoleRequest\x1a\x1f.user.v1.UpdateUserRoleResponse\"-\x82\xd3\xe4\x93\x02':\x01*\x1a\"/api/v1/admin/users/{user_id}/roleB5Z3github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
+	"\x0eUpdateUserRole\x12\x1e.user.v1.UpdateUserRoleRequest\x1a\x1f.user.v1.UpdateUserRoleResponse\"-\x82\xd3\xe4\x93\x02':\x01*\x1a\"/api/v1/admin/users/{user_id}/role\x12l\n" +
+	"\n" +
+	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/admin/users/{user_id}B5Z3github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once
@@ -1270,7 +1364,7 @@ func file_user_v1_user_proto_rawDescGZIP() []byte {
 	return file_user_v1_user_proto_rawDescData
 }
 
-var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_user_v1_user_proto_goTypes = []any{
 	(*UserProfile)(nil),                 // 0: user.v1.UserProfile
 	(*UserStats)(nil),                   // 1: user.v1.UserStats
@@ -1289,19 +1383,21 @@ var file_user_v1_user_proto_goTypes = []any{
 	(*EnsureUserProfileResponse)(nil),   // 14: user.v1.EnsureUserProfileResponse
 	(*UpdateUserRoleRequest)(nil),       // 15: user.v1.UpdateUserRoleRequest
 	(*UpdateUserRoleResponse)(nil),      // 16: user.v1.UpdateUserRoleResponse
-	(*v1.Pagination)(nil),               // 17: common.v1.Pagination
-	(*v1.PaginatedResponse)(nil),        // 18: common.v1.PaginatedResponse
+	(*DeleteUserRequest)(nil),           // 17: user.v1.DeleteUserRequest
+	(*DeleteUserResponse)(nil),          // 18: user.v1.DeleteUserResponse
+	(*v1.Pagination)(nil),               // 19: common.v1.Pagination
+	(*v1.PaginatedResponse)(nil),        // 20: common.v1.PaginatedResponse
 }
 var file_user_v1_user_proto_depIdxs = []int32{
-	17, // 0: user.v1.ListUsersRequest.pagination:type_name -> common.v1.Pagination
+	19, // 0: user.v1.ListUsersRequest.pagination:type_name -> common.v1.Pagination
 	0,  // 1: user.v1.ListUsersResponse.users:type_name -> user.v1.UserProfile
-	18, // 2: user.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginatedResponse
+	20, // 2: user.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginatedResponse
 	0,  // 3: user.v1.GetUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	0,  // 4: user.v1.UpdateUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	1,  // 5: user.v1.GetUserStatsResponse.stats:type_name -> user.v1.UserStats
-	17, // 6: user.v1.ListUserSubmissionsRequest.pagination:type_name -> common.v1.Pagination
+	19, // 6: user.v1.ListUserSubmissionsRequest.pagination:type_name -> common.v1.Pagination
 	2,  // 7: user.v1.ListUserSubmissionsResponse.submissions:type_name -> user.v1.UserSubmissionSummary
-	18, // 8: user.v1.ListUserSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
+	20, // 8: user.v1.ListUserSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
 	0,  // 9: user.v1.EnsureUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	0,  // 10: user.v1.UpdateUserRoleResponse.profile:type_name -> user.v1.UserProfile
 	3,  // 11: user.v1.UserService.ListUsers:input_type -> user.v1.ListUsersRequest
@@ -1311,15 +1407,17 @@ var file_user_v1_user_proto_depIdxs = []int32{
 	11, // 15: user.v1.UserService.ListUserSubmissions:input_type -> user.v1.ListUserSubmissionsRequest
 	13, // 16: user.v1.UserService.EnsureUserProfile:input_type -> user.v1.EnsureUserProfileRequest
 	15, // 17: user.v1.UserService.UpdateUserRole:input_type -> user.v1.UpdateUserRoleRequest
-	4,  // 18: user.v1.UserService.ListUsers:output_type -> user.v1.ListUsersResponse
-	6,  // 19: user.v1.UserService.GetUserProfile:output_type -> user.v1.GetUserProfileResponse
-	8,  // 20: user.v1.UserService.UpdateUserProfile:output_type -> user.v1.UpdateUserProfileResponse
-	10, // 21: user.v1.UserService.GetUserStats:output_type -> user.v1.GetUserStatsResponse
-	12, // 22: user.v1.UserService.ListUserSubmissions:output_type -> user.v1.ListUserSubmissionsResponse
-	14, // 23: user.v1.UserService.EnsureUserProfile:output_type -> user.v1.EnsureUserProfileResponse
-	16, // 24: user.v1.UserService.UpdateUserRole:output_type -> user.v1.UpdateUserRoleResponse
-	18, // [18:25] is the sub-list for method output_type
-	11, // [11:18] is the sub-list for method input_type
+	17, // 18: user.v1.UserService.DeleteUser:input_type -> user.v1.DeleteUserRequest
+	4,  // 19: user.v1.UserService.ListUsers:output_type -> user.v1.ListUsersResponse
+	6,  // 20: user.v1.UserService.GetUserProfile:output_type -> user.v1.GetUserProfileResponse
+	8,  // 21: user.v1.UserService.UpdateUserProfile:output_type -> user.v1.UpdateUserProfileResponse
+	10, // 22: user.v1.UserService.GetUserStats:output_type -> user.v1.GetUserStatsResponse
+	12, // 23: user.v1.UserService.ListUserSubmissions:output_type -> user.v1.ListUserSubmissionsResponse
+	14, // 24: user.v1.UserService.EnsureUserProfile:output_type -> user.v1.EnsureUserProfileResponse
+	16, // 25: user.v1.UserService.UpdateUserRole:output_type -> user.v1.UpdateUserRoleResponse
+	18, // 26: user.v1.UserService.DeleteUser:output_type -> user.v1.DeleteUserResponse
+	19, // [19:27] is the sub-list for method output_type
+	11, // [11:19] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -1336,7 +1434,7 @@ func file_user_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_user_proto_rawDesc), len(file_user_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

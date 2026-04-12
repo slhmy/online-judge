@@ -37,6 +37,7 @@ type RejudgeClient interface {
 type UserAdminClient interface {
 	ListUsers(ctx context.Context, in *pbUser.ListUsersRequest, opts ...grpc.CallOption) (*pbUser.ListUsersResponse, error)
 	UpdateUserRole(ctx context.Context, in *pbUser.UpdateUserRoleRequest, opts ...grpc.CallOption) (*pbUser.UpdateUserRoleResponse, error)
+	DeleteUser(ctx context.Context, in *pbUser.DeleteUserRequest, opts ...grpc.CallOption) (*pbUser.DeleteUserResponse, error)
 }
 
 func NewAdminHandler(rejudgeService RejudgeClient, userService UserAdminClient) *AdminHandler {
@@ -65,6 +66,8 @@ func writeAdminGRPCError(w http.ResponseWriter, err error) {
 		httpStatus = http.StatusBadRequest
 	case codes.AlreadyExists:
 		httpStatus = http.StatusConflict
+	case codes.FailedPrecondition:
+		httpStatus = http.StatusPreconditionFailed
 	}
 
 	http.Error(w, `{"error": "`+st.Message()+`"}`, httpStatus)
@@ -133,6 +136,19 @@ func (h *AdminHandler) UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		UserId: userID,
 		Role:   req.Role,
 	})
+	if err != nil {
+		writeAdminGRPCError(w, err)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// DeleteUser deletes a user.
+func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "id")
+
+	_, err := h.userService.DeleteUser(grpcContextFromRequest(r), &pbUser.DeleteUserRequest{UserId: userID})
 	if err != nil {
 		writeAdminGRPCError(w, err)
 		return
@@ -314,6 +330,7 @@ func (h *AdminHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/admin", func(r chi.Router) {
 		r.Get("/users", h.ListUsers)
 		r.Put("/users/{id}/role", h.UpdateUserRole)
+		r.Delete("/users/{id}", h.DeleteUser)
 
 		// Rejudge routes
 		r.Route("/rejudges", func(r chi.Router) {

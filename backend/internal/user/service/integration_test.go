@@ -7,11 +7,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/slhmy/online-judge/backend/internal/user/store"
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	pb "github.com/slhmy/online-judge/gen/go/user/v1"
 )
+
+func adminCtx(userID string) context.Context {
+	return metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		"x-user-role", "admin",
+		"x-user-id", userID,
+	))
+}
 
 func TestUserService_GetUserProfile(t *testing.T) {
 	tests := []struct {
@@ -480,4 +490,86 @@ func TestUserService_Integration_ProfileFlow(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(10), statsResp.Stats.SolvedCount)
 	assert.Equal(t, 0.5, statsResp.Stats.AcceptanceRate)
+}
+
+func TestUserService_DeleteUser(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		setup    func(*store.MockUserStore)
+		request  *pb.DeleteUserRequest
+		wantCode codes.Code
+		wantOK   bool
+	}{
+		{
+			name: "delete regular user succeeds",
+			ctx:  adminCtx("admin-1"),
+			setup: func(m *store.MockUserStore) {
+				m.Profiles["admin-1"] = &store.UserProfile{UserID: "admin-1", Username: "admin1", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+				m.Profiles["user-1"] = &store.UserProfile{UserID: "user-1", Username: "user1", Role: "user", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+			},
+			request:  &pb.DeleteUserRequest{UserId: "user-1"},
+			wantCode: codes.OK,
+			wantOK:   true,
+		},
+		{
+			name: "cannot delete self",
+			ctx:  adminCtx("admin-1"),
+			setup: func(m *store.MockUserStore) {
+				m.Profiles["admin-1"] = &store.UserProfile{UserID: "admin-1", Username: "admin1", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+				m.Profiles["admin-2"] = &store.UserProfile{UserID: "admin-2", Username: "admin2", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+			},
+			request:  &pb.DeleteUserRequest{UserId: "admin-1"},
+			wantCode: codes.FailedPrecondition,
+			wantOK:   false,
+		},
+		{
+			name: "cannot delete last admin",
+			ctx:  adminCtx("admin-2"),
+			setup: func(m *store.MockUserStore) {
+				m.Profiles["admin-1"] = &store.UserProfile{UserID: "admin-1", Username: "admin1", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+				m.Profiles["user-1"] = &store.UserProfile{UserID: "user-1", Username: "user1", Role: "user", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+			},
+			request:  &pb.DeleteUserRequest{UserId: "admin-1"},
+			wantCode: codes.FailedPrecondition,
+			wantOK:   false,
+		},
+		{
+			name: "delete admin succeeds when another admin exists",
+			ctx:  adminCtx("admin-2"),
+			setup: func(m *store.MockUserStore) {
+				m.Profiles["admin-1"] = &store.UserProfile{UserID: "admin-1", Username: "admin1", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+				m.Profiles["admin-2"] = &store.UserProfile{UserID: "admin-2", Username: "admin2", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+				m.Profiles["user-1"] = &store.UserProfile{UserID: "user-1", Username: "user1", Role: "user", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+			},
+			request:  &pb.DeleteUserRequest{UserId: "admin-1"},
+			wantCode: codes.OK,
+			wantOK:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockStore := store.NewMockUserStore()
+			tt.setup(mockStore)
+
+			service := NewUserService(mockStore)
+			resp, err := service.DeleteUser(tt.ctx, tt.request)
+
+			if tt.wantCode == codes.OK {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				assert.Equal(t, tt.wantOK, resp.Success)
+				_, exists := mockStore.Profiles[tt.request.UserId]
+				assert.False(t, exists)
+				return
+			}
+
+			require.Error(t, err)
+			assert.Nil(t, resp)
+			st, ok := status.FromError(err)
+			require.True(t, ok)
+			assert.Equal(t, tt.wantCode, st.Code())
+		})
+	}
 }

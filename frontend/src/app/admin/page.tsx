@@ -145,6 +145,34 @@ export default function AdminPage() {
     }
   }
 
+  const deleteUser = async (userId: string, username: string) => {
+    const confirmed = window.confirm(`Delete user ${username}? This will remove related submissions and contest records.`)
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      const res = await fetch(`${BFF_URL}/api/v1/admin/users/${userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (res.status === 401) {
+        logout()
+        router.replace('/login')
+        return
+      }
+      if (res.status === 403) {
+        router.replace('/')
+        return
+      }
+      if (res.ok) {
+        fetchUsers()
+      }
+    } catch (err) {
+      console.error('Failed to delete user:', err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="px-4 py-6">
@@ -206,21 +234,29 @@ export default function AdminPage() {
                     <div>Solved: {u.solved_count} / Submissions: {u.submission_count}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {u.role === 'user' ? (
+                    <div className="flex items-center gap-4">
+                      {u.role === 'user' ? (
+                        <button
+                          onClick={() => updateRole(u.id, 'admin')}
+                          className="text-primary hover:text-primary"
+                        >
+                          Make Admin
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateRole(u.id, 'user')}
+                          className="text-red-600 hover:text-red-900 dark:text-red-400"
+                        >
+                          Remove Admin
+                        </button>
+                      )}
                       <button
-                        onClick={() => updateRole(u.id, 'admin')}
-                        className="text-primary hover:text-primary "
-                      >
-                        Make Admin
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => updateRole(u.id, 'user')}
+                        onClick={() => deleteUser(u.id, u.username)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400"
                       >
-                        Remove Admin
+                        Delete
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
