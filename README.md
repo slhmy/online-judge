@@ -204,7 +204,7 @@ Key environment variables:
 - `DATABASE_URL` - PostgreSQL connection string
 - `REDIS_URL` - Redis connection
 - `IDENTRA_GRPC_HOST` - Identra gRPC service address
-- `PROBLEM_SERVICE_ADDR`, `SUBMISSION_SERVICE_ADDR`, etc. - Backend service addresses
+- `BACKEND_SERVICE_ADDR` - Unified backend gRPC service address for BFF
 - `S3_*` - MinIO/S3 configuration for object storage
 
 ## Documentation
