@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
+import { Button } from '@/components/ui/button'
 
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
@@ -183,7 +184,7 @@ export default function AdminPage() {
 
   return (
     <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6 text-foreground">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-foreground">Admin - User Management</h1>
 
       <div className="bg-card rounded-xl shadow">
         <div className="p-4 border-b border-border">
@@ -234,28 +235,31 @@ export default function AdminPage() {
                     <div>Solved: {u.solved_count} / Submissions: {u.submission_count}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2">
                       {u.role === 'user' ? (
-                        <button
+                        <Button
+                          size="sm"
+                          variant="secondary"
                           onClick={() => updateRole(u.id, 'admin')}
-                          className="text-primary hover:text-primary"
                         >
                           Make Admin
-                        </button>
+                        </Button>
                       ) : (
-                        <button
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => updateRole(u.id, 'user')}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400"
                         >
                           Remove Admin
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        size="sm"
+                        variant="destructive"
                         onClick={() => deleteUser(u.id, u.username)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

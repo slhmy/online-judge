@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clsx } from 'clsx'
@@ -24,6 +24,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
   const [darkMode, setDarkMode] = useState(true)
+  const shellRef = useRef<HTMLDivElement | null>(null)
+  const headerRef = useRef<HTMLElement | null>(null)
+  const footerRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     // Check localStorage for saved preference
@@ -44,6 +47,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
     localStorage.setItem('darkMode', String(darkMode))
   }, [darkMode])
 
+  useEffect(() => {
+    const updateLayoutHeights = () => {
+      const shell = shellRef.current
+      const header = headerRef.current
+      const footer = footerRef.current
+      if (!shell) {
+        return
+      }
+
+      const headerHeight = header?.offsetHeight ?? 0
+      const footerHeight = footer?.offsetHeight ?? 0
+      shell.style.setProperty('--app-header-h', `${headerHeight}px`)
+      shell.style.setProperty('--app-footer-h', `${footerHeight}px`)
+    }
+
+    updateLayoutHeights()
+    window.addEventListener('resize', updateLayoutHeights)
+
+    const header = headerRef.current
+    const footer = footerRef.current
+    let observer: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(updateLayoutHeights)
+      if (header) observer.observe(header)
+      if (footer) observer.observe(footer)
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateLayoutHeights)
+      observer?.disconnect()
+    }
+  }, [])
+
   const handleLogout = () => {
     logout()
     router.push('/')
@@ -55,9 +91,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: '/submissions', label: 'Submissions' },
   ]
 
+  const currentYear = new Date().getFullYear()
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+    <div ref={shellRef} className="flex min-h-screen flex-col bg-background text-foreground">
+      <header ref={headerRef} className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <div className="flex items-center">
@@ -160,9 +198,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 min-h-0 flex-col px-4 py-6 sm:px-6 lg:px-8">
         {children}
       </main>
+      <footer ref={footerRef} className="border-t bg-background/95">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-3 px-4 py-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:px-6 lg:px-8">
+          <p>© {currentYear} Online Judge. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/problems" className="hover:text-foreground transition-colors">
+              Problems
+            </Link>
+            <Link href="/submissions" className="hover:text-foreground transition-colors">
+              Submissions
+            </Link>
+            <Link href="/contests" className="hover:text-foreground transition-colors">
+              Contests
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

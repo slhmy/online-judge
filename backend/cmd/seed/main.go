@@ -54,7 +54,6 @@ var sampleProblems = []SampleProblem{
 		MemoryLimit: 262144, // 256 MB
 		Points:      100,
 		ProblemStatement: `
-<h1>A + B</h1>
 <h2>Problem Description</h2>
 <p>Given two integers A and B, your task is to calculate their sum.</p>
 <h2>Input</h2>
@@ -65,14 +64,6 @@ var sampleProblems = []SampleProblem{
 </ul>
 <h2>Output</h2>
 <p>Output a single line containing the sum of A and B.</p>
-<h2>Sample Input 1</h2>
-<pre>1 2</pre>
-<h2>Sample Output 1</h2>
-<pre>3</pre>
-<h2>Sample Input 2</h2>
-<pre>-5 10</pre>
-<h2>Sample Output 2</h2>
-<pre>5</pre>
 <h2>Hint</h2>
 <p>This is the simplest problem. Just add the two numbers together.</p>
 `,
@@ -91,7 +82,6 @@ var sampleProblems = []SampleProblem{
 		MemoryLimit: 262144,
 		Points:      100,
 		ProblemStatement: `
-<h1>Sum of Array</h1>
 <h2>Problem Description</h2>
 <p>Given an array of N integers, calculate the sum of all elements.</p>
 <h2>Input</h2>
@@ -102,18 +92,7 @@ var sampleProblems = []SampleProblem{
 <li>Each element is between -10<sup>6</sup> and 10<sup>6</sup></li>
 </ul>
 <h2>Output</h2>
-<p>Output a single integer representing the sum of all elements.</p>
-<h2>Sample Input 1</h2>
-<pre>5
-1 2 3 4 5</pre>
-<h2>Sample Output 1</h2>
-<pre>15</pre>
-<h2>Sample Input 2</h2>
-<pre>3
--1 5 -3</pre>
-<h2>Sample Output 2</h2>
-<pre>1</pre>
-`,
+<p>Output a single integer representing the sum of all elements.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "5\n1 2 3 4 5\n", Output: "15\n", Description: "Simple positive numbers"},
 			{Rank: 2, IsSample: true, Input: "3\n-1 5 -3\n", Output: "1\n", Description: "Mixed numbers"},
@@ -128,7 +107,6 @@ var sampleProblems = []SampleProblem{
 		MemoryLimit: 262144,
 		Points:      100,
 		ProblemStatement: `
-<h1>Fibonacci Number</h1>
 <h2>Problem Description</h2>
 <p>The Fibonacci sequence is defined as follows:</p>
 <ul>
@@ -141,14 +119,6 @@ var sampleProblems = []SampleProblem{
 <p>A single integer n (0 ≤ n ≤ 30).</p>
 <h2>Output</h2>
 <p>Output F(n).</p>
-<h2>Sample Input 1</h2>
-<pre>0</pre>
-<h2>Sample Output 1</h2>
-<pre>0</pre>
-<h2>Sample Input 2</h2>
-<pre>10</pre>
-<h2>Sample Output 2</h2>
-<pre>55</pre>
 <h2>Hint</h2>
 <p>You can use recursion, iteration, or dynamic programming.</p>
 `,
@@ -167,7 +137,6 @@ var sampleProblems = []SampleProblem{
 		MemoryLimit: 262144,
 		Points:      200,
 		ProblemStatement: `
-<h1>Binary Search</h1>
 <h2>Problem Description</h2>
 <p>Given a sorted array of N distinct integers and a target value, find the index of the target in the array using binary search.</p>
 <p>If the target is not found, output -1.</p>
@@ -177,18 +146,6 @@ var sampleProblems = []SampleProblem{
 <p>The third line contains the target value to search for.</p>
 <h2>Output</h2>
 <p>Output the index of the target (0-based), or -1 if not found.</p>
-<h2>Sample Input 1</h2>
-<pre>5
-1 3 5 7 9
-5</pre>
-<h2>Sample Output 1</h2>
-<pre>2</pre>
-<h2>Sample Input 2</h2>
-<pre>5
-1 3 5 7 9
-4</pre>
-<h2>Sample Output 2</h2>
-<pre>-1</pre>
 <h2>Hint</h2>
 <p>Implement binary search with O(log N) time complexity.</p>
 `,
@@ -208,7 +165,6 @@ var sampleProblems = []SampleProblem{
 		MemoryLimit: 262144,
 		Points:      200,
 		ProblemStatement: `
-<h1>Two Sum</h1>
 <h2>Problem Description</h2>
 <p>Given an array of N integers and a target sum, find two numbers in the array that add up to the target.</p>
 <p>Return their indices (0-based). There is exactly one solution, and you cannot use the same element twice.</p>
@@ -218,18 +174,6 @@ var sampleProblems = []SampleProblem{
 <p>The third line contains the target sum.</p>
 <h2>Output</h2>
 <p>Output two indices i and j (i < j) separated by a space.</p>
-<h2>Sample Input 1</h2>
-<pre>4
-2 7 11 15
-9</pre>
-<h2>Sample Output 1</h2>
-<pre>0 1</pre>
-<h2>Sample Input 2</h2>
-<pre>3
-3 2 4
-6</pre>
-<h2>Sample Output 2</h2>
-<pre>1 2</pre>
 <h2>Hint</h2>
 <p>Use a hash map for O(N) time complexity.</p>
 `,
@@ -247,7 +191,6 @@ var sampleProblems = []SampleProblem{
 		MemoryLimit: 524288, // 512 MB
 		Points:      300,
 		ProblemStatement: `
-<h1>Longest Common Subsequence</h1>
 <h2>Problem Description</h2>
 <p>Given two strings, find the length of their longest common subsequence (LCS).</p>
 <p>A subsequence is a sequence that can be derived from another sequence by deleting some elements without changing the order of the remaining elements.</p>
@@ -261,16 +204,6 @@ var sampleProblems = []SampleProblem{
 </ul>
 <h2>Output</h2>
 <p>Output the length of the LCS.</p>
-<h2>Sample Input 1</h2>
-<pre>abcde
-ace</pre>
-<h2>Sample Output 1</h2>
-<pre>3</pre>
-<h2>Sample Input 2</h2>
-<pre>abc
-abc</pre>
-<h2>Sample Output 2</h2>
-<pre>3</pre>
 <h2>Hint</h2>
 <p>Use dynamic programming. Create a 2D table where dp[i][j] represents the LCS length of S1[0..i] and S2[0..j].</p>
 `,
@@ -289,7 +222,6 @@ abc</pre>
 		MemoryLimit: 262144,
 		Points:      300,
 		ProblemStatement: `
-<h1>Shortest Path</h1>
 <h2>Problem Description</h2>
 <p>Given a weighted directed graph with N nodes and M edges, find the shortest path from node 1 to node N.</p>
 <p>If there is no path, output -1.</p>
@@ -304,19 +236,6 @@ abc</pre>
 </ul>
 <h2>Output</h2>
 <p>Output the shortest distance from node 1 to node N, or -1 if unreachable.</p>
-<h2>Sample Input 1</h2>
-<pre>4 4
-1 2 1
-2 3 2
-3 4 3
-1 4 10</pre>
-<h2>Sample Output 1</h2>
-<pre>6</pre>
-<h2>Sample Input 2</h2>
-<pre>3 1
-1 2 5</pre>
-<h2>Sample Output 2</h2>
-<pre>-1</pre>
 <h2>Hint</h2>
 <p>Use Dijkstra's algorithm with a priority queue for O((N+M) log N) time complexity.</p>
 `,
@@ -334,7 +253,6 @@ abc</pre>
 		MemoryLimit: 262144,
 		Points:      200,
 		ProblemStatement: `
-<h1>Maximum Subarray</h1>
 <h2>Problem Description</h2>
 <p>Given an array of N integers, find the contiguous subarray with the largest sum.</p>
 <h2>Input</h2>
@@ -343,16 +261,6 @@ abc</pre>
 <p>Each integer is between -10<sup>4</sup> and 10<sup>4</sup>.</p>
 <h2>Output</h2>
 <p>Output the maximum sum of a contiguous subarray.</p>
-<h2>Sample Input 1</h2>
-<pre>9
--2 1 -3 4 -1 2 1 -5 4</pre>
-<h2>Sample Output 1</h2>
-<pre>6</pre>
-<h2>Sample Input 2</h2>
-<pre>1
--1</pre>
-<h2>Sample Output 2</h2>
-<pre>-1</pre>
 <h2>Hint</h2>
 <p>Use Kadane's algorithm for O(N) time complexity.</p>
 `,
@@ -370,23 +278,13 @@ abc</pre>
 		MemoryLimit: 262144,
 		Points:      100,
 		ProblemStatement: `
-<h1>Palindrome Check</h1>
 <h2>Problem Description</h2>
 <p>Given a string, determine if it is a palindrome. A palindrome reads the same forward and backward.</p>
 <p>Ignore spaces and consider only alphanumeric characters. Ignore case differences.</p>
 <h2>Input</h2>
 <p>A single line containing the string (length ≤ 1000).</p>
 <h2>Output</h2>
-<p>Output "true" if the string is a palindrome, "false" otherwise.</p>
-<h2>Sample Input 1</h2>
-<pre>A man a plan a canal Panama</pre>
-<h2>Sample Output 1</h2>
-<pre>true</pre>
-<h2>Sample Input 2</h2>
-<pre>race a car</pre>
-<h2>Sample Output 2</h2>
-<pre>false</pre>
-`,
+<p>Output "true" if the string is a palindrome, "false" otherwise.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "A man a plan a canal Panama\n", Output: "true\n", Description: "Classic palindrome"},
 			{Rank: 2, IsSample: true, Input: "race a car\n", Output: "false\n", Description: "Not palindrome"},
@@ -401,7 +299,6 @@ abc</pre>
 		MemoryLimit: 262144,
 		Points:      200,
 		ProblemStatement: `
-<h1>Prime Factorization</h1>
 <h2>Problem Description</h2>
 <p>Given a positive integer N, find its prime factorization.</p>
 <p>Output the prime factors in increasing order, with their exponents.</p>
@@ -409,16 +306,6 @@ abc</pre>
 <p>A single integer N (2 ≤ N ≤ 10<sup>12</sup>).</p>
 <h2>Output</h2>
 <p>Output each prime factor and its exponent, separated by a space, one per line.</p>
-<h2>Sample Input 1</h2>
-<pre>12</pre>
-<h2>Sample Output 1</h2>
-<pre>2 2
-3 1</pre>
-<h2>Sample Input 2</h2>
-<pre>100</pre>
-<h2>Sample Output 2</h2>
-<pre>2 2
-5 2</pre>
 <h2>Hint</h2>
 <p>Use trial division up to sqrt(N).</p>
 `,
@@ -436,7 +323,7 @@ abc</pre>
 		TimeLimit:        1.0,
 		MemoryLimit:      262144,
 		Points:           100,
-		ProblemStatement: `<h1>Stack Implementation</h1><p>Implement a stack.</p>`,
+		ProblemStatement: `<p>Implement a stack.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "5\npush 10\ntop\n", Output: "10\n", Description: "test"},
 		},
@@ -447,7 +334,7 @@ abc</pre>
 		TimeLimit:        1.0,
 		MemoryLimit:      262144,
 		Points:           200,
-		ProblemStatement: `<h1>String Match</h1><p>Find pattern.</p>`,
+		ProblemStatement: `<p>Find pattern.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "abab\nab\n", Output: "0 2\n", Description: "test"},
 		},
@@ -458,7 +345,7 @@ abc</pre>
 		TimeLimit:        2.0,
 		MemoryLimit:      262144,
 		Points:           100,
-		ProblemStatement: `<h1>Sorting</h1><p>Sort array.</p>`,
+		ProblemStatement: `<p>Sort array.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "3\n3 1 2\n", Output: "1 2 3\n", Description: "test"},
 		},
@@ -469,7 +356,7 @@ abc</pre>
 		TimeLimit:        2.0,
 		MemoryLimit:      524288,
 		Points:           300,
-		ProblemStatement: `<h1>Tree</h1><p>Tree traversal.</p>`,
+		ProblemStatement: `<p>Tree traversal.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "3\n2 1 3\n1 2 3\n", Output: "2 3 1\n", Description: "test"},
 		},
@@ -480,7 +367,7 @@ abc</pre>
 		TimeLimit:        1.0,
 		MemoryLimit:      262144,
 		Points:           200,
-		ProblemStatement: `<h1>DFS</h1><p>DFS traversal.</p>`,
+		ProblemStatement: `<p>DFS traversal.</p>`,
 		TestCases: []SampleTestCase{
 			{Rank: 1, IsSample: true, Input: "3 2\n1 2\n2 3\n", Output: "1 2 3\n", Description: "test"},
 		},

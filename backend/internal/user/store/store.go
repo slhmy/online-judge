@@ -228,7 +228,9 @@ func (s *UserStore) DeleteProfile(ctx context.Context, userID string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	// Remove judging details for this user's submissions first.
 	if _, err := tx.Exec(ctx, `

@@ -380,7 +380,7 @@ export default function AdminProblemsPage() {
     <div className="px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">
-          Problem Management
+          Admin - Problem Management
         </h1>
         <button
           onClick={() => setShowForm(!showForm)}

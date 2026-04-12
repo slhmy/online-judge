@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { useTestCases, useCreateTestCase, useUpdateTestCase, useDeleteTestCase, useToggleTestCaseSample, useBatchUploadTestCases } from '@/hooks/useApi'
+import { Button } from '@/components/ui/button'
 
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
@@ -223,7 +224,7 @@ export default function AdminTestCasesPage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Admin: Test Case Management</h1>
+        <h1 className="text-2xl font-bold text-foreground">Admin - Test Case Management</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -361,76 +362,79 @@ export default function AdminTestCasesPage() {
                     {tc.rank}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <button
+                    <Button
+                      size="sm"
+                      variant={tc.is_sample ? 'secondary' : 'outline'}
                       onClick={() => handleToggleSample(tc)}
                       disabled={toggleSampleMutation.isPending}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        tc.is_sample
-                          ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 hover:bg-green-200'
-                          : 'bg-muted text-muted-foreground hover:bg-muted'
-                      }`}
                     >
                       {tc.is_sample ? 'Sample' : 'Hidden'}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-4 py-3 text-sm text-foreground font-mono">
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[200px]">{truncateContent(tc.input_content)}</span>
-                      <button
+                      <Button
+                        size="xs"
+                        variant="ghost"
                         onClick={() => openPreview(tc, 'input')}
-                        className="text-primary hover:text-primary   text-xs"
                       >
                         View
-                      </button>
+                      </Button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-foreground font-mono">
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[200px]">{truncateContent(tc.output_content)}</span>
-                      <button
+                      <Button
+                        size="xs"
+                        variant="ghost"
                         onClick={() => openPreview(tc, 'output')}
-                        className="text-primary hover:text-primary   text-xs"
                       >
                         View
-                      </button>
+                      </Button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-foreground">
                     {tc.description || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="flex gap-2">
-                      <button
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => {
                           setEditingTestCase(tc)
                           setShowEditModal(true)
                         }}
-                        className="text-primary hover:text-primary   font-medium"
                       >
                         Edit
-                      </button>
+                      </Button>
                       {deleteConfirmId === tc.id ? (
-                        <div className="flex gap-1">
-                          <button
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
                             onClick={() => handleDelete(tc.id)}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
                           >
                             Confirm
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={() => setDeleteConfirmId(null)}
-                            className="text-muted-foreground hover:text-foreground dark:text-muted-foreground  font-medium"
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       ) : (
-                        <button
+                        <Button
+                          size="sm"
+                          variant="destructive"
                           onClick={() => setDeleteConfirmId(tc.id)}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
                         >
                           Delete
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </td>
