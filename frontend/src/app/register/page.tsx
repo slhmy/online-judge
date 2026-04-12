@@ -8,6 +8,9 @@ import { useAuthError, parseAuthResponse, createTimeoutController } from '@/hook
 import { ErrorAlert, FieldError } from '@/components/auth/ErrorAlert'
 import { cn } from '@/lib/utils'
 import { ErrorCode, ParsedError, ErrorType } from '@/types/auth'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -76,18 +79,24 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-gray-100">Register</h1>
+    <div className="flex min-h-[80vh] items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-center text-2xl">Register</CardTitle>
+          <CardDescription className="text-center">
+            Create your account to start submitting solutions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
 
         <ErrorAlert error={error} onDismiss={clearError} className="mb-4" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Username
             </label>
-            <input
+            <Input
               type="text"
               value={username}
               onChange={(e) => {
@@ -95,10 +104,7 @@ export default function RegisterPage() {
                 clearFieldError('username')
               }}
               className={cn(
-                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                hasFieldError('username')
-                  ? 'border-red-500 dark:border-red-400'
-                  : 'border-gray-300 dark:border-gray-600'
+                hasFieldError('username') && 'border-destructive ring-destructive/20'
               )}
               placeholder="Optional"
             />
@@ -106,10 +112,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Email
             </label>
-            <input
+            <Input
               type="email"
               value={email}
               onChange={(e) => {
@@ -117,10 +123,7 @@ export default function RegisterPage() {
                 clearFieldError('email')
               }}
               className={cn(
-                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                hasFieldError('email')
-                  ? 'border-red-500 dark:border-red-400'
-                  : 'border-gray-300 dark:border-gray-600'
+                hasFieldError('email') && 'border-destructive ring-destructive/20'
               )}
               required
             />
@@ -128,10 +131,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Password
             </label>
-            <input
+            <Input
               type="password"
               value={password}
               onChange={(e) => {
@@ -139,10 +142,7 @@ export default function RegisterPage() {
                 clearFieldError('password')
               }}
               className={cn(
-                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                hasFieldError('password')
-                  ? 'border-red-500 dark:border-red-400'
-                  : 'border-gray-300 dark:border-gray-600'
+                hasFieldError('password') && 'border-destructive ring-destructive/20'
               )}
               required
               minLength={6}
@@ -151,10 +151,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Confirm Password
             </label>
-            <input
+            <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => {
@@ -162,32 +162,30 @@ export default function RegisterPage() {
                 clearFieldError('confirm_password')
               }}
               className={cn(
-                'w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                hasFieldError('confirm_password')
-                  ? 'border-red-500 dark:border-red-400'
-                  : 'border-gray-300 dark:border-gray-600'
+                hasFieldError('confirm_password') && 'border-destructive ring-destructive/20'
               )}
               required
             />
             <FieldError error={fieldErrors['confirm_password']} />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+            className="w-full"
           >
             {loading ? 'Creating account...' : 'Register'}
-          </button>
+          </Button>
         </form>
 
-        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
+            <Link href="/login" className="font-medium text-primary hover:underline">
             Login
           </Link>
         </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

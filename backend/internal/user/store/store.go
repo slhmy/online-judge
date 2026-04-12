@@ -34,7 +34,7 @@ func (s *UserStore) ListProfiles(ctx context.Context, page, pageSize int32) ([]*
 
 	offset := (page - 1) * pageSize
 	rows, err := s.db.Query(ctx, `
-		SELECT user_id, username, display_name, rating, solved_count, submission_count,
+		SELECT user_id, username, email, display_name, rating, solved_count, submission_count,
 		       avatar_url, bio, country, role, created_at, updated_at
 		FROM user_profiles
 		ORDER BY created_at DESC
@@ -49,11 +49,11 @@ func (s *UserStore) ListProfiles(ctx context.Context, page, pageSize int32) ([]*
 	for rows.Next() {
 		var p UserProfile
 		var uid pgtype.UUID
-		var displayName, avatarURL, bio, country, role pgtype.Text
+		var email, displayName, avatarURL, bio, country, role pgtype.Text
 		var createdAt, updatedAt pgtype.Timestamp
 		var rating, solvedCount, submissionCount pgtype.Int4
 
-		if err := rows.Scan(&uid, &p.Username, &displayName, &rating, &solvedCount, &submissionCount,
+		if err := rows.Scan(&uid, &p.Username, &email, &displayName, &rating, &solvedCount, &submissionCount,
 			&avatarURL, &bio, &country, &role, &createdAt, &updatedAt); err != nil {
 			return nil, 0, err
 		}
@@ -63,6 +63,9 @@ func (s *UserStore) ListProfiles(ctx context.Context, page, pageSize int32) ([]*
 		}
 		if displayName.Valid {
 			p.DisplayName = displayName.String
+		}
+		if email.Valid {
+			p.Email = email.String
 		}
 		if rating.Valid {
 			p.Rating = rating.Int32
@@ -124,15 +127,15 @@ func (s *UserStore) GetProfile(ctx context.Context, userID string) (*UserProfile
 
 	var profile UserProfile
 	var id, uid pgtype.UUID
-	var displayName, avatarURL, bio, country, role pgtype.Text
+	var email, displayName, avatarURL, bio, country, role pgtype.Text
 	var createdAt, updatedAt pgtype.Timestamp
 	var rating, solvedCount, submissionCount pgtype.Int4
 
 	err = s.db.QueryRow(ctx, `
-		SELECT id, user_id, username, display_name, rating, solved_count, submission_count,
+		SELECT id, user_id, username, email, display_name, rating, solved_count, submission_count,
 		       avatar_url, bio, country, created_at, updated_at, role
 		FROM user_profiles WHERE user_id = $1
-	`, parsedUserID).Scan(&id, &uid, &profile.Username, &displayName, &rating, &solvedCount,
+	`, parsedUserID).Scan(&id, &uid, &profile.Username, &email, &displayName, &rating, &solvedCount,
 		&submissionCount, &avatarURL, &bio, &country, &createdAt, &updatedAt, &role)
 	if err != nil {
 		return nil, err
@@ -143,6 +146,9 @@ func (s *UserStore) GetProfile(ctx context.Context, userID string) (*UserProfile
 	}
 	if displayName.Valid {
 		profile.DisplayName = displayName.String
+	}
+	if email.Valid {
+		profile.Email = email.String
 	}
 	if rating.Valid {
 		profile.Rating = rating.Int32
@@ -444,6 +450,19 @@ func (s *UserStore) EnsureProfile(ctx context.Context, userID, email, username, 
 			}
 		}
 
+		// Keep email in sync with auth provider when available.
+		if strings.TrimSpace(email) != "" && !strings.EqualFold(strings.TrimSpace(profile.Email), strings.TrimSpace(email)) {
+			parsedUserID, parseErr := uuid.Parse(userID)
+			if parseErr == nil {
+				_, _ = s.db.Exec(ctx, `
+					UPDATE user_profiles
+					SET email = $2,
+					    updated_at = NOW()
+					WHERE user_id = $1
+				`, parsedUserID, email)
+			}
+		}
+
 		// Profile exists – update avatar if provided
 		if avatarURL != "" && avatarURL != profile.AvatarURL {
 			_ = s.UpdateProfile(ctx, userID, "", avatarURL, "", "")
@@ -468,10 +487,10 @@ func (s *UserStore) EnsureProfile(ctx context.Context, userID, email, username, 
 	}
 
 	_, err = s.db.Exec(ctx, `
-		INSERT INTO user_profiles (user_id, username, role, avatar_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
+		INSERT INTO user_profiles (user_id, username, email, role, avatar_url, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
 		ON CONFLICT (user_id) DO NOTHING
-	`, parsedUserID, username, role, avatarURL)
+	`, parsedUserID, username, email, role, avatarURL)
 	if err != nil {
 		return nil, false, err
 	}

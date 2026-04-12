@@ -22,7 +22,6 @@ export default function AdminPage() {
   const { logout } = useAuthStore()
   const [hydrated, setHydrated] = useState(false)
   const [users, setUsers] = useState<User[]>([])
-  const [contestCount, setContestCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const initializedRef = useRef(false)
 
@@ -79,7 +78,7 @@ export default function AdminPage() {
           return
         }
 
-        await Promise.all([fetchUsers(), fetchContests()])
+        await fetchUsers()
       } catch (err) {
         console.error('Failed to initialize admin page:', err)
       } finally {
@@ -119,17 +118,6 @@ export default function AdminPage() {
     }
   }
 
-  const fetchContests = async () => {
-    try {
-      const res = await fetch(`${BFF_URL}/api/v1/contests?page=1&page_size=1`)
-      if (!res.ok) return
-      const data = await res.json()
-      setContestCount(data?.pagination?.total || 0)
-    } catch (err) {
-      console.error('Failed to fetch contests:', err)
-    }
-  }
-
   const updateRole = async (userId: string, newRole: string) => {
     try {
       const res = await fetch(`${BFF_URL}/api/v1/admin/users/${userId}/role`, {
@@ -160,79 +148,60 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="px-4 py-6">
-        <div className="text-center py-10 text-gray-600 dark:text-gray-400">Loading...</div>
+        <div className="text-center py-10 text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   return (
     <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-foreground">Admin Dashboard</h1>
 
-      {/* Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <button
-          onClick={() => router.push('/admin/problems')}
-          className="p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition-colors"
-        >
-          <div className="text-lg font-semibold">Problem Management</div>
-          <div className="text-sm opacity-80">Create, edit, and delete problems</div>
-        </button>
-        <button
-          onClick={() => router.push('/contests')}
-          className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-        >
-          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contest Overview</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total contests: {contestCount}</div>
-          <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">Open contest list and scoreboard</div>
-        </button>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Management</h2>
+      <div className="bg-card rounded-xl shadow">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">User Management</h2>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+            <thead className="bg-muted/40">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Stats
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((u) => (
                 <tr key={u.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{u.username}</div>
+                    <div className="text-sm font-medium text-foreground">{u.username}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{u.email}</div>
+                    <div className="text-sm text-muted-foreground">{u.email || '-'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       u.role === 'admin'
                         ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                        : 'bg-muted text-foreground'
                     }`}>
                       {u.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     <div>Rating: {u.rating}</div>
                     <div>Solved: {u.solved_count} / Submissions: {u.submission_count}</div>
                   </td>
@@ -240,7 +209,7 @@ export default function AdminPage() {
                     {u.role === 'user' ? (
                       <button
                         onClick={() => updateRole(u.id, 'admin')}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400"
+                        className="text-primary hover:text-primary "
                       >
                         Make Admin
                       </button>

@@ -141,7 +141,7 @@ export default function AdminProblemsPage() {
 
   const renderStatementPreview = () => {
     if (!statementContent.trim()) {
-      return <p className="text-gray-500 dark:text-gray-400">No content to preview.</p>
+      return <p className="text-muted-foreground">No content to preview.</p>
     }
 
     if (statementFormat === 'html') {
@@ -323,10 +323,10 @@ export default function AdminProblemsPage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin: Problem Management</h1>
+        <h1 className="text-2xl font-bold text-foreground">Problem Management</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors"
         >
           {showForm ? 'Cancel' : 'Create Problem'}
         </button>
@@ -334,8 +334,8 @@ export default function AdminProblemsPage() {
 
       {/* Problem Form */}
       {showForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
+        <div className="bg-card rounded-xl shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4 text-foreground">
             {editingProblem ? `Edit Problem: ${editingProblem.name}` : 'Create New Problem'}
           </h2>
 
@@ -343,13 +343,13 @@ export default function AdminProblemsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Problem Name
                 </label>
                 <input
                   {...register('name')}
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   placeholder="Two Sum"
                 />
                 {errors.name && (
@@ -359,14 +359,14 @@ export default function AdminProblemsPage() {
 
               {/* Time Limit */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Time Limit (seconds)
                 </label>
                 <input
                   {...register('time_limit')}
                   type="number"
                   step="0.1"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   placeholder="2"
                 />
                 {errors.time_limit && (
@@ -376,31 +376,31 @@ export default function AdminProblemsPage() {
 
               {/* Memory Limit */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Memory Limit (KB)
                 </label>
                 <input
                   {...register('memory_limit')}
                   type="number"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   placeholder="262144"
                 />
                 {errors.memory_limit && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.memory_limit.message}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Common values: 262144 (256MB), 524288 (512MB)
                 </p>
               </div>
 
               {/* Difficulty */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Difficulty
                 </label>
                 <select
                   {...register('difficulty')}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                 >
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
@@ -413,13 +413,13 @@ export default function AdminProblemsPage() {
 
               {/* Points */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Points
                 </label>
                 <input
                   {...register('points')}
                   type="number"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   placeholder="100"
                 />
                 {errors.points && (
@@ -430,17 +430,17 @@ export default function AdminProblemsPage() {
 
             {/* Problem Statement Editor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Problem Statement
               </label>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Format</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Format</label>
                   <select
                     value={statementFormat}
                     onChange={(e) => setStatementFormat(e.target.value as 'markdown' | 'html' | 'plain' | 'pdf')}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   >
                     <option value="markdown">markdown</option>
                     <option value="html">html</option>
@@ -449,22 +449,22 @@ export default function AdminProblemsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Language</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Language</label>
                   <input
                     type="text"
                     value={statementLanguage}
                     onChange={(e) => setStatementLanguage(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                     placeholder="en"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Title</label>
                   <input
                     type="text"
                     value={statementTitle}
                     onChange={(e) => setStatementTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                     placeholder="Problem title"
                   />
                 </div>
@@ -474,21 +474,21 @@ export default function AdminProblemsPage() {
                 <button
                   type="button"
                   onClick={() => setPreviewMode('edit')}
-                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'edit' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'edit' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
                 >
                   Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => setPreviewMode('preview')}
-                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'preview' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'preview' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
                 >
                   Preview
                 </button>
                 <button
                   type="button"
                   onClick={() => setPreviewMode('split')}
-                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'split' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}
+                  className={`px-3 py-1.5 rounded text-sm ${previewMode === 'split' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
                 >
                   Split
                 </button>
@@ -496,7 +496,7 @@ export default function AdminProblemsPage() {
 
               <div className={`grid gap-3 ${previewMode === 'split' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                 {previewMode !== 'preview' && (
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                  <div className="border border-border rounded-xl overflow-hidden">
                     <Editor
                       height="320px"
                       defaultLanguage="markdown"
@@ -517,7 +517,7 @@ export default function AdminProblemsPage() {
                 )}
 
                 {previewMode !== 'edit' && (
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40 overflow-auto min-h-[320px]">
+                  <div className="border border-border rounded-xl p-4 bg-muted/40 overflow-auto min-h-[320px]">
                     <div className="prose max-w-none dark:prose-invert">
                       {renderStatementPreview()}
                     </div>
@@ -525,7 +525,7 @@ export default function AdminProblemsPage() {
                 )}
               </div>
 
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Supports multiple statement formats and live preview.
               </p>
             </div>
@@ -535,7 +535,7 @@ export default function AdminProblemsPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || createMutation.isPending || updateMutation?.isPending}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
               >
                 {isSubmitting || createMutation.isPending || updateMutation?.isPending
                   ? 'Saving...'
@@ -546,7 +546,7 @@ export default function AdminProblemsPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -554,7 +554,7 @@ export default function AdminProblemsPage() {
 
             {/* Error Messages */}
             {(createMutation.isError || updateMutation?.isError) && (
-              <div className="p-3 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg">
+              <div className="p-3 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400 rounded-xl">
                 Failed to save problem. Please try again.
               </div>
             )}
@@ -570,49 +570,49 @@ export default function AdminProblemsPage() {
       )}
 
       {isLoading ? (
-        <div className="text-center py-10 text-gray-600 dark:text-gray-400">Loading...</div>
+        <div className="text-center py-10 text-muted-foreground">Loading...</div>
       ) : problems.length === 0 ? (
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-10 text-muted-foreground">
           No problems available. Create one above.
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow">
-            <thead className="bg-gray-100 dark:bg-gray-700">
+          <table className="min-w-full bg-card rounded-xl shadow">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Difficulty</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Time</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Memory</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Points</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Difficulty</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Time</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Memory</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Points</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {problems.map((problem) => (
-                <tr key={problem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                <tr key={problem.id} className="hover:bg-muted/60">
+                  <td className="px-4 py-3 text-sm text-foreground">
                     {problem.name}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyColors[problem.difficulty as keyof typeof difficultyColors] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyColors[problem.difficulty as keyof typeof difficultyColors] || 'bg-muted text-foreground'}`}>
                       {problem.difficulty}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  <td className="px-4 py-3 text-sm text-foreground">
                     {problem.time_limit}s
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  <td className="px-4 py-3 text-sm text-foreground">
                     {(problem.memory_limit / 1024).toFixed(0)} MB
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  <td className="px-4 py-3 text-sm text-foreground">
                     {problem.points}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(problem)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                        className="text-primary hover:text-primary   font-medium"
                       >
                         Edit
                       </button>
@@ -632,7 +632,7 @@ export default function AdminProblemsPage() {
                           </button>
                           <button
                             onClick={() => setDeleteConfirmId(null)}
-                            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 font-medium"
+                            className="text-muted-foreground hover:text-foreground dark:text-muted-foreground  font-medium"
                           >
                             Cancel
                           </button>
@@ -647,7 +647,7 @@ export default function AdminProblemsPage() {
                       )}
                       <button
                         onClick={() => router.push(`/problems/${problem.id}`)}
-                        className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 font-medium"
+                        className="text-muted-foreground hover:text-foreground dark:text-muted-foreground  font-medium"
                       >
                         View
                       </button>
@@ -664,7 +664,7 @@ export default function AdminProblemsPage() {
       <div className="mt-6">
         <button
           onClick={() => router.push('/admin')}
-          className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+          className="text-muted-foreground hover:text-foreground dark:text-muted-foreground "
         >
           ← Back to Admin Dashboard
         </button>

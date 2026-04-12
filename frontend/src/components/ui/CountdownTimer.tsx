@@ -49,18 +49,18 @@ export function CountdownTimer({ targetTime, onEnd, showDays = true }: Countdown
   const pad = (n: number) => n.toString().padStart(2, '0')
 
   return (
-    <span className="font-mono text-lg text-gray-900 dark:text-gray-100">
+    <span className="font-mono text-lg text-foreground">
       {showDays && timeLeft.days > 0 && (
         <span className="mr-1">
-          <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{timeLeft.days}</span>
-          <span className="text-gray-500 dark:text-gray-400 mx-1">d</span>
+          <span className="bg-muted px-2 py-1 rounded">{timeLeft.days}</span>
+          <span className="text-muted-foreground mx-1">d</span>
         </span>
       )}
-      <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{pad(timeLeft.hours)}</span>
-      <span className="text-gray-500 dark:text-gray-400 mx-1">:</span>
-      <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{pad(timeLeft.minutes)}</span>
-      <span className="text-gray-500 dark:text-gray-400 mx-1">:</span>
-      <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{pad(timeLeft.seconds)}</span>
+      <span className="bg-muted px-2 py-1 rounded">{pad(timeLeft.hours)}</span>
+      <span className="text-muted-foreground mx-1">:</span>
+      <span className="bg-muted px-2 py-1 rounded">{pad(timeLeft.minutes)}</span>
+      <span className="text-muted-foreground mx-1">:</span>
+      <span className="bg-muted px-2 py-1 rounded">{pad(timeLeft.seconds)}</span>
     </span>
   )
 }

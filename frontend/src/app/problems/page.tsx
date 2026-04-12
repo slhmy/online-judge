@@ -1,6 +1,9 @@
 'use client'
 
 import { useProblems } from '@/hooks/useApi'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 interface Problem {
   id: string
@@ -29,16 +32,16 @@ export default function ProblemsPage() {
   const problems: Problem[] = data?.problems || []
 
   const difficultyColors = {
-    easy: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50',
-    medium: 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/50',
-    hard: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50',
+    easy: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
+    medium: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+    hard: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300',
   }
 
   if (error) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Problems</h1>
-        <div className="text-center py-10 text-red-400">
+        <h1 className="mb-6 font-heading text-2xl font-bold text-foreground">Problems</h1>
+        <div className="py-10 text-center text-destructive">
           Error loading problems: {error.message}
         </div>
       </div>
@@ -47,47 +50,49 @@ export default function ProblemsPage() {
 
   return (
     <div className="px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Problems</h1>
+      <h1 className="mb-6 font-heading text-2xl font-bold text-foreground">Problems</h1>
 
       {isLoading ? (
-        <div className="text-center py-10 text-gray-600 dark:text-gray-400">Loading...</div>
+        <div className="py-10 text-center text-muted-foreground">Loading...</div>
       ) : problems.length === 0 ? (
-        <div className="text-center py-10 text-gray-500">
+        <div className="py-10 text-center text-muted-foreground">
           No problems available.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow">
-            <thead className="bg-gray-100 dark:bg-gray-700">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">#</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Difficulty</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Time Limit</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Memory Limit</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Points</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="px-4">#</TableHead>
+                  <TableHead className="px-4">Name</TableHead>
+                  <TableHead className="px-4">Difficulty</TableHead>
+                  <TableHead className="px-4">Time Limit</TableHead>
+                  <TableHead className="px-4">Memory Limit</TableHead>
+                  <TableHead className="px-4">Points</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {problems.map((problem, index) => (
-                <tr key={problem.id} className="hover:bg-gray-100 dark:bg-gray-700/50 cursor-pointer" onClick={() => window.location.href = `/problems/${problem.id}`}>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{index + 1}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                <TableRow key={problem.id} className="cursor-pointer" onClick={() => window.location.href = `/problems/${problem.id}`}>
+                  <TableCell className="px-4 text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="px-4 text-sm font-medium text-primary">
                     {problem.name}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyColors[problem.difficulty as keyof typeof difficultyColors] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <Badge className={difficultyColors[problem.difficulty as keyof typeof difficultyColors] || 'bg-muted text-foreground'}>
                       {problem.difficulty}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{problem.time_limit}s</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{(problem.memory_limit / 1024).toFixed(0)} MB</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{problem.points}</td>
-                </tr>
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-4">{problem.time_limit}s</TableCell>
+                  <TableCell className="px-4">{(problem.memory_limit / 1024).toFixed(0)} MB</TableCell>
+                  <TableCell className="px-4">{problem.points}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

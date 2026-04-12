@@ -49,9 +49,9 @@ export function RegistrationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+      <div className="bg-card rounded-xl shadow-xl max-w-md w-full mx-4">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">
             Register for {contestName}
           </h2>
         </div>
@@ -61,7 +61,7 @@ export function RegistrationModal({
           <div>
             <label
               htmlFor="teamName"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Team Name *
             </label>
@@ -70,7 +70,7 @@ export function RegistrationModal({
               id="teamName"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-md bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Enter your team name"
               disabled={registerMutation.isPending}
             />
@@ -80,7 +80,7 @@ export function RegistrationModal({
           <div>
             <label
               htmlFor="affiliation"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Affiliation (optional)
             </label>
@@ -89,7 +89,7 @@ export function RegistrationModal({
               id="affiliation"
               value={affiliation}
               onChange={(e) => setAffiliation(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-md bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="School/Company/Organization"
               disabled={registerMutation.isPending}
             />
@@ -108,14 +108,14 @@ export function RegistrationModal({
               type="button"
               onClick={onClose}
               disabled={registerMutation.isPending}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-50"
+              className="px-4 py-2 text-foreground hover:text-foreground  disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={registerMutation.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {registerMutation.isPending ? 'Registering...' : 'Register'}
             </button>

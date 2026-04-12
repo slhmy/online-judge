@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import TestRunPanel from '@/components/TestRunPanel'
+import { Badge } from '@/components/ui/badge'
 import { TestRunResult } from '@/types'
 import 'katex/dist/katex.min.css'
 
@@ -47,6 +48,12 @@ interface Problem {
 interface ProblemResponse {
   problem: Problem
   sample_test_cases: TestCase[]
+}
+
+const DIFFICULTY_BADGE_CLASS: Record<string, string> = {
+  easy: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300',
+  medium: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+  hard: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300',
 }
 
 export default function ProblemDetailPage() {
@@ -175,7 +182,7 @@ export default function ProblemDetailPage() {
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-400">Loading problem...</div>
+        <div className="text-muted-foreground">Loading problem...</div>
       </div>
     )
   }
@@ -191,7 +198,7 @@ export default function ProblemDetailPage() {
   if (!problem) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-500">Problem not found</div>
+        <div className="text-muted-foreground dark:text-muted-foreground">Problem not found</div>
       </div>
     )
   }
@@ -199,36 +206,32 @@ export default function ProblemDetailPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Problem Description */}
-      <div className="w-1/2 p-4 overflow-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">{problem.name}</h1>
+      <div className="w-1/2 p-4 overflow-auto border-r border-border bg-card">
+        <h1 className="text-2xl font-bold mb-2 text-foreground">{problem.name}</h1>
         <div className="flex gap-2 mb-4">
-          <span className={`px-2 py-1 rounded text-xs font-medium ${
-            problem.difficulty === 'easy' ? 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/50' :
-            problem.difficulty === 'medium' ? 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/50' :
-            'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/50'
-          }`}>
+          <Badge className={DIFFICULTY_BADGE_CLASS[problem.difficulty] || 'bg-muted text-foreground'}>
             {problem.difficulty}
-          </span>
-          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
+          </Badge>
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
             {problem.points} points
-          </span>
+          </Badge>
         </div>
 
-        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="mb-4 text-sm text-muted-foreground">
           <span className="mr-4">Time Limit: {problem.time_limit}s</span>
           <span>Memory Limit: {(problem.memory_limit / 1024).toFixed(0)} MB</span>
         </div>
 
-        <div className="prose max-w-none text-gray-800 dark:text-gray-200 dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-li:text-gray-700 dark:prose-li:text-gray-300">
+        <div className="prose max-w-none text-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground">
           {problemStatement ? (
             problemStatement.format === 'html' ? (
               <div dangerouslySetInnerHTML={{ __html: problemStatement.content }} />
             ) : problemStatement.format === 'pdf' ? (
-              <div className="text-gray-500">
+              <div className="text-muted-foreground">
                 <p>Problem statement is available as a PDF file.</p>
                 <a
                   href={`${BFF_URL}/api/v1/problems/${problemId}/statement/pdf?language=en`}
-                  className="text-blue-500 hover:underline"
+                  className="text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -244,27 +247,27 @@ export default function ProblemDetailPage() {
               </ReactMarkdown>
             )
           ) : (
-            <p className="text-gray-500">No problem statement available.</p>
+            <p className="text-muted-foreground">No problem statement available.</p>
           )}
 
-          <h2 className="text-gray-700 dark:text-gray-200">Sample Test Cases ({testCases.length})</h2>
+          <h2 className="text-foreground">Sample Test Cases ({testCases.length})</h2>
           {testCases.length > 0 ? (
             testCases.map((tc, idx) => (
-              <div key={tc.id} className="mb-6 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Sample {idx + 1}</h3>
+              <div key={tc.id} className="mb-6 p-4 bg-muted/50 rounded-xl border border-border">
+                <h3 className="font-semibold text-foreground mb-2">Sample {idx + 1}</h3>
                 {tc.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{tc.description}</p>
+                  <p className="text-sm text-muted-foreground mb-3">{tc.description}</p>
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Input</label>
-                    <pre className="bg-gray-200 dark:bg-gray-900 p-3 rounded text-sm text-gray-800 dark:text-gray-200 overflow-auto max-h-40 font-mono">
+                    <label className="text-sm font-medium text-foreground mb-1 block">Input</label>
+                    <pre className="bg-muted p-3 rounded text-sm text-foreground overflow-auto max-h-40 font-mono">
                       {tc.input_content || 'No input data'}
                     </pre>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Output</label>
-                    <pre className="bg-gray-200 dark:bg-gray-900 p-3 rounded text-sm text-gray-800 dark:text-gray-200 overflow-auto max-h-40 font-mono">
+                    <label className="text-sm font-medium text-foreground mb-1 block">Output</label>
+                    <pre className="bg-muted p-3 rounded text-sm text-foreground overflow-auto max-h-40 font-mono">
                       {tc.output_content || 'No output data'}
                     </pre>
                   </div>
@@ -272,18 +275,18 @@ export default function ProblemDetailPage() {
               </div>
             ))
           ) : (
-            <p className="text-gray-500">No sample test cases available.</p>
+            <p className="text-muted-foreground">No sample test cases available.</p>
           )}
         </div>
       </div>
 
       {/* Code Editor */}
-      <div className="w-1/2 flex flex-col bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="w-1/2 flex flex-col bg-muted/40">
+        <div className="flex items-center justify-between p-2 border-b border-border bg-card">
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+            className="border border-border rounded px-2 py-1 bg-white text-foreground"
           >
             {LANGUAGES.map((lang) => (
               <option key={lang.id} value={lang.id}>
@@ -296,14 +299,14 @@ export default function ProblemDetailPage() {
             <button
               onClick={handleRun}
               disabled={running}
-              className="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700 disabled:bg-gray-600"
+              className="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700 disabled:opacity-50"
             >
               {running ? 'Running...' : 'Run'}
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 disabled:bg-gray-600"
+              className="bg-primary text-white px-4 py-1.5 rounded hover:bg-primary/90 disabled:opacity-50"
             >
               {submitting ? 'Submitting...' : 'Submit'}
             </button>

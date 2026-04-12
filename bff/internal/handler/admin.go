@@ -83,6 +83,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	type User struct {
 		ID              string `json:"id"`
 		Username        string `json:"username"`
+		Email           string `json:"email"`
 		Role            string `json:"role"`
 		Rating          int    `json:"rating"`
 		SolvedCount     int    `json:"solved_count"`
@@ -95,6 +96,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		u := User{
 			ID:              p.UserId,
 			Username:        p.Username,
+			Email:           p.Email,
 			Role:            p.Role,
 			Rating:          int(p.Rating),
 			SolvedCount:     int(p.SolvedCount),

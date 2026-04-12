@@ -223,23 +223,23 @@ export default function AdminTestCasesPage() {
   return (
     <div className="px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin: Test Case Management</h1>
+        <h1 className="text-2xl font-bold text-foreground">Admin: Test Case Management</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors"
           >
             {showCreateForm ? 'Cancel' : 'Add Test Case'}
           </button>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors"
           >
             Batch Upload
           </button>
           <button
             onClick={() => router.push(`/admin/problems`)}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+            className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-colors"
           >
             Back to Problems
           </button>
@@ -248,39 +248,39 @@ export default function AdminTestCasesPage() {
 
       {/* Single Test Case Create Form */}
       {showCreateForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Create New Test Case</h2>
+        <div className="bg-card rounded-xl shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4 text-foreground">Create New Test Case</h2>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Rank</label>
                 <input
                   type="number"
                   value={newRank}
                   onChange={(e) => setNewRank(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   min="1"
                 />
               </div>
               <div className="flex items-center">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={newIsSample}
                     onChange={(e) => setNewIsSample(e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600"
+                    className="rounded border-border"
                   />
                   Sample Test Case (visible to users)
                 </label>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description (optional)</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Description (optional)</label>
                 <input
                   type="text"
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   placeholder="e.g., 'Edge case with empty input'"
                 />
               </div>
@@ -288,21 +288,21 @@ export default function AdminTestCasesPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Input Content</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Input Content</label>
                 <textarea
                   value={newInputContent}
                   onChange={(e) => setNewInputContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground font-mono"
                   rows={6}
                   placeholder="Enter test input..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Output Content</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Output Content</label>
                 <textarea
                   value={newOutputContent}
                   onChange={(e) => setNewOutputContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground font-mono"
                   rows={6}
                   placeholder="Enter expected output..."
                 />
@@ -313,13 +313,13 @@ export default function AdminTestCasesPage() {
               <button
                 onClick={handleCreate}
                 disabled={createMutation.isPending}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
               >
                 {createMutation.isPending ? 'Creating...' : 'Create Test Case'}
               </button>
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -336,28 +336,28 @@ export default function AdminTestCasesPage() {
       )}
 
       {isLoading ? (
-        <div className="text-center py-10 text-gray-600 dark:text-gray-400">Loading...</div>
+        <div className="text-center py-10 text-muted-foreground">Loading...</div>
       ) : testCases.length === 0 ? (
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-10 text-muted-foreground">
           No test cases. Add one above or use batch upload.
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow">
-            <thead className="bg-gray-100 dark:bg-gray-700">
+          <table className="min-w-full bg-card rounded-xl shadow">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Rank</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Sample</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Input Preview</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Output Preview</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Rank</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Sample</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Input Preview</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Output Preview</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Description</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {testCases.map((tc) => (
-                <tr key={tc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                <tr key={tc.id} className="hover:bg-muted/60">
+                  <td className="px-4 py-3 text-sm font-medium text-foreground">
                     {tc.rank}
                   </td>
                   <td className="px-4 py-3 text-sm">
@@ -367,35 +367,35 @@ export default function AdminTestCasesPage() {
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                         tc.is_sample
                           ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 hover:bg-green-200'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
+                          : 'bg-muted text-muted-foreground hover:bg-muted'
                       }`}
                     >
                       {tc.is_sample ? 'Sample' : 'Hidden'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-mono">
+                  <td className="px-4 py-3 text-sm text-foreground font-mono">
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[200px]">{truncateContent(tc.input_content)}</span>
                       <button
                         onClick={() => openPreview(tc, 'input')}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
+                        className="text-primary hover:text-primary   text-xs"
                       >
                         View
                       </button>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-mono">
+                  <td className="px-4 py-3 text-sm text-foreground font-mono">
                     <div className="flex items-center gap-2">
                       <span className="truncate max-w-[200px]">{truncateContent(tc.output_content)}</span>
                       <button
                         onClick={() => openPreview(tc, 'output')}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs"
+                        className="text-primary hover:text-primary   text-xs"
                       >
                         View
                       </button>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  <td className="px-4 py-3 text-sm text-foreground">
                     {tc.description || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm">
@@ -405,7 +405,7 @@ export default function AdminTestCasesPage() {
                           setEditingTestCase(tc)
                           setShowEditModal(true)
                         }}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                        className="text-primary hover:text-primary   font-medium"
                       >
                         Edit
                       </button>
@@ -419,7 +419,7 @@ export default function AdminTestCasesPage() {
                           </button>
                           <button
                             onClick={() => setDeleteConfirmId(null)}
-                            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 font-medium"
+                            className="text-muted-foreground hover:text-foreground dark:text-muted-foreground  font-medium"
                           >
                             Cancel
                           </button>
@@ -444,30 +444,30 @@ export default function AdminTestCasesPage() {
       {/* Batch Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-lg w-full mx-4">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Batch Upload Test Cases</h2>
+          <div className="bg-card rounded-xl shadow-lg p-6 max-w-lg w-full mx-4">
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Batch Upload Test Cases</h2>
 
             <div className="space-y-4">
               {/* Upload Mode Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Mode</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Upload Mode</label>
                 <div className="flex gap-4">
                   <button
                     onClick={() => setUploadMode('zip')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-xl font-medium transition-colors ${
                       uploadMode === 'zip'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-foreground'
                     }`}
                   >
                     ZIP File
                   </button>
                   <button
                     onClick={() => setUploadMode('files')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-xl font-medium transition-colors ${
                       uploadMode === 'files'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted text-foreground'
                     }`}
                   >
                     Separate Files
@@ -478,7 +478,7 @@ export default function AdminTestCasesPage() {
               {/* ZIP Upload */}
               {uploadMode === 'zip' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     ZIP File (contains numbered pairs like 1.in, 1.out)
                   </label>
                   <input
@@ -486,9 +486,9 @@ export default function AdminTestCasesPage() {
                     type="file"
                     accept=".zip"
                     onChange={(e) => setZipFile(e.target.files?.[0] || null)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                   />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     ZIP should contain files named like: 1.in, 1.out, 2.in, 2.out, etc.
                   </p>
                 </div>
@@ -498,7 +498,7 @@ export default function AdminTestCasesPage() {
               {uploadMode === 'files' && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Input Files (named like 1.in, 2.in, etc.)
                     </label>
                     <input
@@ -507,16 +507,16 @@ export default function AdminTestCasesPage() {
                       multiple
                       accept=".in,.txt"
                       onChange={(e) => setInputFiles(Array.from(e.target.files || []))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                     />
                     {inputFiles.length > 0 && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Selected: {inputFiles.map(f => f.name).join(', ')}
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Output Files (named like 1.out, 2.out, etc.)
                     </label>
                     <input
@@ -525,10 +525,10 @@ export default function AdminTestCasesPage() {
                       multiple
                       accept=".out,.txt"
                       onChange={(e) => setOutputFiles(Array.from(e.target.files || []))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                     />
                     {outputFiles.length > 0 && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Selected: {outputFiles.map(f => f.name).join(', ')}
                       </p>
                     )}
@@ -538,12 +538,12 @@ export default function AdminTestCasesPage() {
 
               {/* Default is_sample */}
               <div className="flex items-center">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={defaultIsSample}
                     onChange={(e) => setDefaultIsSample(e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600"
+                    className="rounded border-border"
                   />
                   Mark all as sample test cases (visible to users)
                 </label>
@@ -553,14 +553,14 @@ export default function AdminTestCasesPage() {
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowUploadModal(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleBatchUpload}
                   disabled={uploading || batchUploadMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
                 >
                   {uploading || batchUploadMutation.isPending ? 'Uploading...' : 'Upload'}
                 </button>
@@ -573,28 +573,28 @@ export default function AdminTestCasesPage() {
       {/* Edit Modal */}
       {showEditModal && editingTestCase && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-lg w-full mx-4">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Test Case #{editingTestCase.rank}</h2>
+          <div className="bg-card rounded-xl shadow-lg p-6 max-w-lg w-full mx-4">
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Edit Test Case #{editingTestCase.rank}</h2>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rank</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Rank</label>
                   <input
                     type="number"
                     value={editingTestCase.rank}
                     onChange={(e) => setEditingTestCase({ ...editingTestCase, rank: parseInt(e.target.value) || 1 })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                     min="1"
                   />
                 </div>
                 <div className="flex items-center">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                     <input
                       type="checkbox"
                       checked={editingTestCase.is_sample}
                       onChange={(e) => setEditingTestCase({ ...editingTestCase, is_sample: e.target.checked })}
-                      className="rounded border-gray-300 dark:border-gray-600"
+                      className="rounded border-border"
                     />
                     Sample Test Case
                   </label>
@@ -602,12 +602,12 @@ export default function AdminTestCasesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Description</label>
                 <input
                   type="text"
                   value={editingTestCase.description || ''}
                   onChange={(e) => setEditingTestCase({ ...editingTestCase, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-border rounded-xl bg-white text-foreground"
                 />
               </div>
 
@@ -617,14 +617,14 @@ export default function AdminTestCasesPage() {
                     setShowEditModal(false)
                     setEditingTestCase(null)
                   }}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleUpdate}
                   disabled={updateMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
                 >
                   {updateMutation.isPending ? 'Saving...' : 'Save'}
                 </button>
@@ -637,28 +637,28 @@ export default function AdminTestCasesPage() {
       {/* Preview Modal */}
       {showPreviewModal && previewTestCase && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-2xl w-full mx-4">
+          <div className="bg-card rounded-xl shadow-lg p-6 max-w-2xl w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-lg font-semibold text-foreground">
                 Test Case #{previewTestCase.rank} - {previewType === 'input' ? 'Input' : 'Output'}
               </h2>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPreviewType('input')}
-                  className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-1 rounded-xl font-medium transition-colors ${
                     previewType === 'input'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground'
                   }`}
                 >
                   Input
                 </button>
                 <button
                   onClick={() => setPreviewType('output')}
-                  className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-1 rounded-xl font-medium transition-colors ${
                     previewType === 'output'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground'
                   }`}
                 >
                   Output
@@ -666,8 +666,8 @@ export default function AdminTestCasesPage() {
               </div>
             </div>
 
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 max-h-[400px] overflow-auto">
-              <pre className="font-mono text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+            <div className="bg-muted rounded-xl p-4 max-h-[400px] overflow-auto">
+              <pre className="font-mono text-sm text-foreground whitespace-pre-wrap">
                 {previewType === 'input' ? previewTestCase.input_content : previewTestCase.output_content}
               </pre>
             </div>
@@ -678,7 +678,7 @@ export default function AdminTestCasesPage() {
                   setShowPreviewModal(false)
                   setPreviewTestCase(null)
                 }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-colors"
               >
                 Close
               </button>

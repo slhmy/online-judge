@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Layout } from '@/components/layout/Layout'
 import { Providers } from '@/components/providers/Providers'
+import { cn } from '@/lib/utils'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn('font-sans')}>
       <body className={inter.className}>
         <Providers>
           <Layout>{children}</Layout>

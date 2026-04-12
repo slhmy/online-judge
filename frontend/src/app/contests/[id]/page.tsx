@@ -74,7 +74,7 @@ function getContestStatus(contest: Contest) {
   if (now > end) {
     return {
       label: 'Ended',
-      color: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-500/50',
+      color: 'bg-muted text-foreground border-border dark:bg-muted/40',
       isEnded: true,
     }
   }
@@ -118,7 +118,7 @@ export default function ContestDetailPage() {
   if (contestError) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contest</h1>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Contest</h1>
         <div className="text-center py-10 text-red-600 dark:text-red-400">
           Error loading contest: {contestError.message}
         </div>
@@ -129,8 +129,8 @@ export default function ContestDetailPage() {
   if (contestLoading) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contest</h1>
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400">Loading contest...</div>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Contest</h1>
+        <div className="text-center py-10 text-muted-foreground">Loading contest...</div>
       </div>
     )
   }
@@ -138,8 +138,8 @@ export default function ContestDetailPage() {
   if (!contest) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Contest</h1>
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400">Contest not found</div>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Contest</h1>
+        <div className="text-center py-10 text-muted-foreground">Contest not found</div>
       </div>
     )
   }
@@ -168,21 +168,21 @@ export default function ContestDetailPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <Link href="/contests" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link href="/contests" className="text-primary hover:underline">
             Contests
           </Link>
-          <span className="text-gray-500 dark:text-gray-400">/</span>
-          <span className="text-gray-700 dark:text-gray-300">{contest.short_name}</span>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-foreground">{contest.short_name}</span>
         </div>
       </div>
 
       {/* Contest Info Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-700">
+      <div className="bg-card rounded-xl shadow mb-6 border border-border">
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">{contest.name}</h1>
-              <p className="text-gray-600 dark:text-gray-400">{contest.short_name}</p>
+              <h1 className="text-2xl font-bold text-foreground mb-1">{contest.name}</h1>
+              <p className="text-muted-foreground">{contest.short_name}</p>
             </div>
             <div className="flex items-center gap-3">
               {status && (
@@ -191,7 +191,7 @@ export default function ContestDetailPage() {
                 </span>
               )}
               {!contest.public && (
-                <span className="text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Private</span>
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">Private</span>
               )}
             </div>
           </div>
@@ -199,29 +199,29 @@ export default function ContestDetailPage() {
           {/* Time info and countdown */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">Start</label>
-              <div className="text-gray-800 dark:text-gray-200">{formatDateTime(contest.start_time)}</div>
+              <label className="text-muted-foreground text-xs uppercase tracking-wide">Start</label>
+              <div className="text-foreground">{formatDateTime(contest.start_time)}</div>
             </div>
             <div>
-              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">End</label>
-              <div className="text-gray-800 dark:text-gray-200">{formatDateTime(contest.end_time)}</div>
+              <label className="text-muted-foreground text-xs uppercase tracking-wide">End</label>
+              <div className="text-foreground">{formatDateTime(contest.end_time)}</div>
             </div>
             <div>
-              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">Duration</label>
-              <div className="text-gray-800 dark:text-gray-200">{formatDuration(contest.start_time, contest.end_time)}</div>
+              <label className="text-muted-foreground text-xs uppercase tracking-wide">Duration</label>
+              <div className="text-foreground">{formatDuration(contest.start_time, contest.end_time)}</div>
             </div>
             <div>
-              <label className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
+              <label className="text-muted-foreground text-xs uppercase tracking-wide">
                 {status?.isRunning ? 'Remaining' : status?.isUpcoming ? 'Starts in' : 'Ended'}
               </label>
-              <div className="text-gray-800 dark:text-gray-200">
+              <div className="text-foreground">
                 {status?.isRunning && (
                   <CountdownTimer targetTime={contest.end_time} showDays={true} />
                 )}
                 {status?.isUpcoming && (
                   <CountdownTimer targetTime={contest.start_time} showDays={true} />
                 )}
-                {status?.isEnded && <span className="text-gray-500 dark:text-gray-400">-</span>}
+                {status?.isEnded && <span className="text-muted-foreground">-</span>}
               </div>
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function ContestDetailPage() {
           {isAuthenticated && !isRegistered && status && !status.isEnded && (
             <button
               onClick={() => setShowRegisterModal(true)}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
             >
               Register for Contest
             </button>
@@ -244,13 +244,13 @@ export default function ContestDetailPage() {
       </div>
 
       {/* Problems Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 border border-gray-200 dark:border-gray-700">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Problems</h2>
+      <div className="bg-card rounded-xl shadow mb-6 border border-border">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">Problems</h2>
         </div>
         <div className="p-4">
           {problems.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 dark:text-gray-400">No problems available</div>
+            <div className="text-center py-6 text-muted-foreground">No problems available</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {problems
@@ -259,10 +259,10 @@ export default function ContestDetailPage() {
                   <Link
                     key={problem.problem_id}
                     href={`/problems/${problem.problem_id}?contest=${contestId}`}
-                    className={`block p-4 rounded-lg border transition-all hover:shadow-md ${
+                    className={`block p-4 rounded-xl border transition-all hover:shadow-sm ${
                       problem.allow_submit
-                        ? 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-500 hover:bg-gray-100 dark:hover:bg-gray-600'
-                        : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+                        ? 'bg-muted/40 border-border hover:border-primary hover:bg-muted'
+                        : 'bg-muted border-border opacity-50 cursor-not-allowed'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -272,11 +272,11 @@ export default function ContestDetailPage() {
                           style={{ backgroundColor: problem.color }}
                         />
                       )}
-                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      <span className="text-lg font-bold text-foreground">
                         {problem.short_name}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-muted-foreground">
                       {problem.points} points
                     </div>
                     {!problem.allow_submit && (
@@ -290,11 +290,11 @@ export default function ContestDetailPage() {
       </div>
 
       {/* Scoreboard Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-card rounded-xl shadow border border-border">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Scoreboard</h2>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Auto-updates every 5s</span>
+            <h2 className="text-lg font-semibold text-foreground">Scoreboard</h2>
+            <span className="text-xs text-muted-foreground">Auto-updates every 5s</span>
           </div>
         </div>
         <div className="p-4">

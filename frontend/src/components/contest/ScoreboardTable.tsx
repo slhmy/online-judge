@@ -36,8 +36,8 @@ interface ScoreboardTableProps {
 function ProblemCell({ score }: { score: ProblemScore | undefined }) {
   if (!score) {
     return (
-      <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-700">
-        <span className="text-gray-400">-</span>
+      <td className="px-2 py-1 text-center bg-muted">
+        <span className="text-muted-foreground">-</span>
       </td>
     )
   }
@@ -75,8 +75,8 @@ function ProblemCell({ score }: { score: ProblemScore | undefined }) {
 
   // Not attempted: gray
   return (
-    <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-700">
-      <span className="text-gray-400">-</span>
+    <td className="px-2 py-1 text-center bg-muted">
+      <span className="text-muted-foreground">-</span>
     </td>
   )
 }
@@ -84,7 +84,7 @@ function ProblemCell({ score }: { score: ProblemScore | undefined }) {
 export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTableProps) {
   if (isLoading) {
     return (
-      <div className="text-center py-8 text-gray-400">
+      <div className="text-center py-8 text-muted-foreground">
         Loading scoreboard...
       </div>
     )
@@ -92,7 +92,7 @@ export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTab
 
   if (!data || !data.entries || data.entries.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted-foreground">
         No scoreboard entries yet
       </div>
     )
@@ -104,7 +104,7 @@ export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTab
     <div className="overflow-x-auto">
       {/* Frozen indicator */}
       {data.is_frozen && (
-        <div className="mb-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded inline-flex items-center gap-2">
+        <div className="mb-2 px-3 py-1 bg-primary/20 text-primary rounded inline-flex items-center gap-2">
           <span className="animate-pulse">❄️</span>
           <span className="text-sm font-medium">Scoreboard Frozen</span>
         </div>
@@ -112,26 +112,26 @@ export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTab
 
       <table className="min-w-full border-collapse">
         <thead>
-          <tr className="bg-gray-200 dark:bg-gray-700">
-            <th className="px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">
+          <tr className="bg-muted">
+            <th className="px-3 py-2 text-left text-sm font-medium text-foreground border-b border-border">
               Rank
             </th>
-            <th className="px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">
+            <th className="px-3 py-2 text-left text-sm font-medium text-foreground border-b border-border">
               Team
             </th>
-            <th className="px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">
+            <th className="px-3 py-2 text-left text-sm font-medium text-foreground border-b border-border">
               Affiliation
             </th>
-            <th className="px-3 py-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">
+            <th className="px-3 py-2 text-center text-sm font-medium text-foreground border-b border-border">
               Solved
             </th>
-            <th className="px-3 py-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">
+            <th className="px-3 py-2 text-center text-sm font-medium text-foreground border-b border-border">
               Time
             </th>
             {problemNames.map((name) => (
               <th
                 key={name}
-                className="px-2 py-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600 w-16"
+                className="px-2 py-2 text-center text-sm font-medium text-foreground border-b border-border w-16"
               >
                 {name}
               </th>
@@ -143,23 +143,23 @@ export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTab
             <tr
               key={entry.team_id}
               className={cn(
-                idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/60',
-                'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+                idx % 2 === 0 ? 'bg-card' : 'bg-muted/40',
+                'hover:bg-muted transition-colors'
               )}
             >
-              <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+              <td className="px-3 py-2 text-sm font-medium text-foreground">
                 {entry.rank}
               </td>
-              <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+              <td className="px-3 py-2 text-sm text-foreground">
                 {entry.team_name}
               </td>
-              <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
+              <td className="px-3 py-2 text-sm text-muted-foreground">
                 {entry.affiliation || '-'}
               </td>
               <td className="px-3 py-2 text-center text-sm font-medium text-green-600 dark:text-green-400">
                 {entry.num_solved}
               </td>
-              <td className="px-3 py-2 text-center text-sm text-gray-900 dark:text-gray-100">
+              <td className="px-3 py-2 text-center text-sm text-foreground">
                 {entry.total_time}
               </td>
               {problemNames.map((name) => {
@@ -173,7 +173,7 @@ export function ScoreboardTable({ data, isLoading, problemNames }: ScoreboardTab
 
       {/* Contest time display */}
       {data.contest_time && (
-        <div className="mt-4 text-sm text-gray-500 dark:text-gray-400 text-right">
+        <div className="mt-4 text-sm text-muted-foreground text-right">
           Contest time: {data.contest_time}
         </div>
       )}

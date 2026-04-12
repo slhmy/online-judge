@@ -37,7 +37,7 @@ interface JudgingRunsResponse {
 
 // Verdict icon component
 function VerdictIcon({ verdict, size = 'md' }: { verdict: Verdict; size?: 'sm' | 'md' | 'lg' }) {
-  const config = VERDICT_CONFIG[verdict] || { color: 'bg-gray-500', icon: '?', bgColor: 'bg-gray-50' }
+  const config = VERDICT_CONFIG[verdict] || { color: 'bg-muted', icon: '?', bgColor: 'bg-muted/40' }
 
   const sizeClasses = {
     sm: 'w-6 h-6 text-xs',
@@ -69,70 +69,70 @@ function TestCaseResult({
   problemMemoryLimit?: number
 }) {
   const verdictKey = getVerdictKey(run.verdict)
-  const config = VERDICT_CONFIG[verdictKey as Verdict] || { color: 'bg-gray-500', label: 'Unknown', bgColor: 'bg-gray-50' }
+  const config = VERDICT_CONFIG[verdictKey as Verdict] || { color: 'bg-muted', label: 'Unknown', bgColor: 'bg-muted/40' }
 
   const isTimeLimitExceeded = problemTimeLimit && run.runtime > problemTimeLimit
   const isMemoryLimitExceeded = problemMemoryLimit && run.memory > problemMemoryLimit * 1024
 
   return (
-    <div className={`border rounded-lg ${config.bgColor} mb-2`}>
+    <div className={`border rounded-xl ${config.bgColor} mb-2`}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/60 transition-colors"
       >
         <div className="flex items-center gap-3">
           <VerdictIcon verdict={verdictKey as Verdict} size="sm" />
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <span className="text-sm font-medium text-foreground">
             Test Case #{run.rank}
           </span>
           {run.testCaseId && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+            <span className="text-xs text-muted-foreground font-mono">
               ({run.testCaseId.slice(0, 8)})
             </span>
           )}
         </div>
         <div className="flex items-center gap-4 text-sm">
-          <span className={`${isTimeLimitExceeded ? 'text-red-600 font-semibold' : 'text-gray-600 dark:text-gray-400'}`}>
+          <span className={`${isTimeLimitExceeded ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
             {formatRuntime(run.runtime)}
           </span>
-          <span className={`${isMemoryLimitExceeded ? 'text-red-600 font-semibold' : 'text-gray-600 dark:text-gray-400'}`}>
+          <span className={`${isMemoryLimitExceeded ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
             {formatMemory(run.memory)}
           </span>
-          <span className="text-gray-400">
+          <span className="text-muted-foreground">
             {isExpanded ? '▼' : '▶'}
           </span>
         </div>
       </button>
 
       {isExpanded && (
-        <div className="px-3 pb-3 border-t border-gray-200 dark:border-gray-600">
+        <div className="px-3 pb-3 border-t border-border">
           {/* Show diff/error output for failed cases */}
           {verdictKey !== 'correct' && (
             <div className="mt-2">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Details:</div>
-              <div className="bg-gray-900 rounded p-3 text-sm overflow-auto max-h-48">
+              <div className="text-xs text-muted-foreground mb-1">Details:</div>
+              <div className="bg-zinc-950 rounded p-3 text-sm overflow-auto max-h-48">
                 {verdictKey === 'wrong-answer' && (
                   <div className="text-yellow-300">
-                    <p className="text-gray-400 mb-2">Your output differs from expected output.</p>
+                    <p className="text-muted-foreground mb-2">Your output differs from expected output.</p>
                     <p className="text-red-400">Check your logic for edge cases.</p>
                   </div>
                 )}
                 {verdictKey === 'run-error' && (
                   <div className="text-red-300">
                     <p>Runtime error occurred during execution.</p>
-                    <p className="text-gray-400 mt-1">Common causes: division by zero, null pointer, array index out of bounds</p>
+                    <p className="text-muted-foreground mt-1">Common causes: division by zero, null pointer, array index out of bounds</p>
                   </div>
                 )}
                 {verdictKey === 'timelimit' && (
                   <div className="text-yellow-300">
                     <p>Your solution took too long.</p>
-                    <p className="text-gray-400 mt-1">Consider optimizing your algorithm or checking for infinite loops.</p>
+                    <p className="text-muted-foreground mt-1">Consider optimizing your algorithm or checking for infinite loops.</p>
                   </div>
                 )}
                 {verdictKey === 'memory-limit' && (
                   <div className="text-orange-300">
                     <p>Memory limit exceeded.</p>
-                    <p className="text-gray-400 mt-1">Reduce data structure sizes or check for memory leaks.</p>
+                    <p className="text-muted-foreground mt-1">Reduce data structure sizes or check for memory leaks.</p>
                   </div>
                 )}
               </div>
@@ -142,8 +142,8 @@ function TestCaseResult({
           {/* Runtime/Memory breakdown */}
           <div className="mt-2 grid grid-cols-2 gap-4">
             <div>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Runtime</span>
-              <div className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+              <span className="text-xs text-muted-foreground">Runtime</span>
+              <div className="text-sm text-foreground font-medium">
                 {formatRuntime(run.runtime)}
                 {isTimeLimitExceeded && (
                   <span className="text-xs text-red-600 ml-1">(exceeds {problemTimeLimit}s)</span>
@@ -151,8 +151,8 @@ function TestCaseResult({
               </div>
             </div>
             <div>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Memory</span>
-              <div className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+              <span className="text-xs text-muted-foreground">Memory</span>
+              <div className="text-sm text-foreground font-medium">
                 {formatMemory(run.memory)}
                 {isMemoryLimitExceeded && (
                   <span className="text-xs text-red-600 ml-1">(exceeds {problemMemoryLimit}MB)</span>
@@ -183,15 +183,15 @@ function JudgingProgressIndicator({
   const estimatedTotal = totalCases || status.total_cases || runs.length || 0
 
   return (
-    <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 mb-6 border-2 border-blue-200 dark:border-blue-700">
+    <div className="bg-primary/10 rounded-xl p-4 mb-6 border-2 border-primary/20">
       <div className="flex items-center gap-3 mb-3">
-        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
         <div>
-          <p className="font-medium text-blue-800 dark:text-blue-200 capitalize">
+          <p className="font-medium text-primary capitalize">
             {status.status}...
           </p>
           {status.status === 'running' && (
-            <p className="text-sm text-blue-600 dark:text-blue-300">
+            <p className="text-sm text-primary">
               Running test case {currentCase} of {estimatedTotal}
             </p>
           )}
@@ -199,9 +199,9 @@ function JudgingProgressIndicator({
       </div>
 
       {/* Progress bar */}
-      <div className="h-2 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
+      <div className="h-2 bg-primary/20 rounded-full overflow-hidden">
         <div
-          className="h-full bg-blue-600 transition-all duration-300 ease-out"
+          className="h-full bg-primary transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -220,9 +220,9 @@ function JudgingProgressIndicator({
           {estimatedTotal > runs.length && Array.from({ length: estimatedTotal - runs.length }).map((_, idx) => (
             <div
               key={`pending-${idx}`}
-              className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center"
+              className="w-6 h-6 rounded-full bg-muted/80 flex items-center justify-center"
             >
-              <span className="text-xs text-gray-500">?</span>
+              <span className="text-xs text-muted-foreground">?</span>
             </div>
           ))}
         </div>
@@ -308,7 +308,7 @@ export default function SubmissionDetailPage() {
   if (error) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Submission</h1>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Submission</h1>
         <div className="text-center py-10 text-red-400">
           Error loading submission: {error.message}
         </div>
@@ -319,8 +319,8 @@ export default function SubmissionDetailPage() {
   if (isLoading) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Submission</h1>
-        <div className="text-center py-10 text-gray-600 dark:text-gray-400">Loading...</div>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Submission</h1>
+        <div className="text-center py-10 text-muted-foreground">Loading...</div>
       </div>
     )
   }
@@ -328,8 +328,8 @@ export default function SubmissionDetailPage() {
   if (!data || !data.submission) {
     return (
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Submission</h1>
-        <div className="text-center py-10 text-gray-500">Submission not found</div>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">Submission</h1>
+        <div className="text-center py-10 text-muted-foreground">Submission not found</div>
       </div>
     )
   }
@@ -342,11 +342,11 @@ export default function SubmissionDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Link href="/submissions" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link href="/submissions" className="text-primary hover:underline">
             Submissions
           </Link>
-          <span className="text-gray-500">/</span>
-          <span className="text-gray-900 dark:text-gray-100 font-mono">{submission.id.slice(0, 8)}</span>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-foreground font-mono">{submission.id.slice(0, 8)}</span>
         </div>
 
         {/* Rejudge button for admins */}
@@ -354,7 +354,7 @@ export default function SubmissionDetailPage() {
           <button
             onClick={handleRejudge}
             disabled={isRejudging}
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white rounded-lg text-sm font-medium transition-colors"
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white rounded-xl text-sm font-medium transition-colors"
           >
             {isRejudging ? 'Rejudging...' : 'Rejudge'}
           </button>
@@ -371,8 +371,8 @@ export default function SubmissionDetailPage() {
       )}
 
       {/* Main info card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-card rounded-xl shadow mb-6">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {/* Large verdict icon */}
@@ -380,10 +380,10 @@ export default function SubmissionDetailPage() {
                 <VerdictIcon verdict={verdictKey as Verdict} size="lg" />
               )}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                <h2 className="text-xl font-semibold text-foreground">
                   {verdictInfo?.label || 'Pending'}
                 </h2>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-muted-foreground">
                   {submission.language_id} • {formatTime(submission.submit_time)}
                 </div>
               </div>
@@ -393,14 +393,14 @@ export default function SubmissionDetailPage() {
             {judging && !isJudging && (
               <div className="text-right">
                 <div className="text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Time: </span>
-                  <span className="text-gray-900 dark:text-gray-100 font-medium">
+                  <span className="text-muted-foreground">Time: </span>
+                  <span className="text-foreground font-medium">
                     {formatRuntime(judging.max_runtime)}
                   </span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Memory: </span>
-                  <span className="text-gray-900 dark:text-gray-100 font-medium">
+                  <span className="text-muted-foreground">Memory: </span>
+                  <span className="text-foreground font-medium">
                     {formatMemory(judging.max_memory)}
                   </span>
                 </div>
@@ -412,37 +412,37 @@ export default function SubmissionDetailPage() {
         {/* Submission details grid */}
         <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label className="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">ID</label>
-            <span className="text-gray-900 dark:text-gray-100 font-mono text-sm block">{submission.id.slice(0, 8)}</span>
+            <label className="text-muted-foreground text-xs uppercase tracking-wide">ID</label>
+            <span className="text-foreground font-mono text-sm block">{submission.id.slice(0, 8)}</span>
           </div>
           <div>
-            <label className="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Problem</label>
-            <Link href={`/problems/${submission.problem_id}`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm block">
+            <label className="text-muted-foreground text-xs uppercase tracking-wide">Problem</label>
+            <Link href={`/problems/${submission.problem_id}`} className="text-primary hover:underline text-sm block">
               {submission.problem_id.slice(0, 8)}
             </Link>
           </div>
           <div>
-            <label className="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">User</label>
-            <span className="text-gray-900 dark:text-gray-100 text-sm block">{submission.user_id.slice(0, 8)}</span>
+            <label className="text-muted-foreground text-xs uppercase tracking-wide">User</label>
+            <span className="text-foreground text-sm block">{submission.user_id.slice(0, 8)}</span>
           </div>
           <div>
-            <label className="text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wide">Language</label>
-            <span className="text-gray-900 dark:text-gray-100 text-sm block capitalize">{submission.language_id}</span>
+            <label className="text-muted-foreground text-xs uppercase tracking-wide">Language</label>
+            <span className="text-foreground text-sm block capitalize">{submission.language_id}</span>
           </div>
         </div>
       </div>
 
       {/* Compilation output */}
       {judging && !judging.compile_success && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-xl shadow mb-6">
+          <div className="p-4 border-b border-border">
             <div className="flex items-center gap-2">
               <VerdictIcon verdict="compiler-error" size="sm" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Compilation Error</h3>
+              <h3 className="text-lg font-semibold text-foreground">Compilation Error</h3>
             </div>
           </div>
           <div className="p-4">
-            <pre className="bg-gray-900 p-4 rounded text-sm text-red-300 overflow-auto max-h-64 font-mono">
+            <pre className="bg-zinc-950 p-4 rounded text-sm text-red-300 overflow-auto max-h-64 font-mono">
               {judging.compile_output_path || 'Compilation failed. Check your code for syntax errors.'}
             </pre>
           </div>
@@ -450,12 +450,12 @@ export default function SubmissionDetailPage() {
       )}
 
       {/* Source code display */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Source Code</h3>
+      <div className="bg-card rounded-xl shadow mb-6">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">Source Code</h3>
         </div>
         <div className="p-4">
-          <pre className="bg-gray-900 p-4 rounded text-sm text-gray-300 overflow-auto max-h-[500px] font-mono whitespace-pre-wrap">
+          <pre className="bg-zinc-950 p-4 rounded text-sm text-zinc-300 overflow-auto max-h-[500px] font-mono whitespace-pre-wrap">
             {submission.source_path && submission.source_path !== 'stored-in-db'
               ? submission.source_path
               : 'Source code not available'}
@@ -465,10 +465,10 @@ export default function SubmissionDetailPage() {
 
       {/* Test case results */}
       {displayRuns.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-xl shadow mb-6">
+          <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h3 className="text-lg font-semibold text-foreground">
                 Test Cases ({displayRuns.length})
               </h3>
               {/* Summary verdict icons */}
