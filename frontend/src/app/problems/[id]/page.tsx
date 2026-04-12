@@ -218,6 +218,21 @@ export default function ProblemDetailPage() {
       {/* Problem Description */}
       <div className="w-1/2 p-4 overflow-auto border-r border-border bg-card">
         <div className="prose max-w-none text-foreground dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground">
+          <h1 className="text-2xl font-bold mb-2 text-foreground">{problem.name}</h1>
+          <div className="flex gap-2 mb-4">
+            <Badge className={DIFFICULTY_BADGE_CLASS[problem.difficulty] || 'bg-muted text-foreground'}>
+              {problem.difficulty}
+            </Badge>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+              {problem.points} points
+            </Badge>
+          </div>
+
+          <div className="mb-4 text-sm text-muted-foreground">
+            <span className="mr-4">Time Limit: {problem.time_limit}s</span>
+            <span>Memory Limit: {(problem.memory_limit / 1024).toFixed(0)} MB</span>
+          </div>
+
           {hasInlineStatement ? (
             problemStatement!.format === 'html' ? (
               <div dangerouslySetInnerHTML={{ __html: problemStatement!.content }} />
@@ -229,67 +244,48 @@ export default function ProblemDetailPage() {
                 {problemStatement!.content}
               </ReactMarkdown>
             )
+          ) : problemStatement?.format === 'pdf' ? (
+            <div className="text-muted-foreground">
+              <p>Problem statement is available as a PDF file.</p>
+              <a
+                href={`${BFF_URL}/api/v1/problems/${problemId}/statement/pdf?language=en`}
+                className="text-primary hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View PDF
+              </a>
+            </div>
           ) : (
-            <>
-              <h1 className="text-2xl font-bold mb-2 text-foreground">{problem.name}</h1>
-              <div className="flex gap-2 mb-4">
-                <Badge className={DIFFICULTY_BADGE_CLASS[problem.difficulty] || 'bg-muted text-foreground'}>
-                  {problem.difficulty}
-                </Badge>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  {problem.points} points
-                </Badge>
-              </div>
+            <p className="text-muted-foreground">No problem statement available.</p>
+          )}
 
-              <div className="mb-4 text-sm text-muted-foreground">
-                <span className="mr-4">Time Limit: {problem.time_limit}s</span>
-                <span>Memory Limit: {(problem.memory_limit / 1024).toFixed(0)} MB</span>
-              </div>
-
-              {problemStatement?.format === 'pdf' ? (
-                <div className="text-muted-foreground">
-                  <p>Problem statement is available as a PDF file.</p>
-                  <a
-                    href={`${BFF_URL}/api/v1/problems/${problemId}/statement/pdf?language=en`}
-                    className="text-primary hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View PDF
-                  </a>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No problem statement available.</p>
-              )}
-
-              <h2 className="text-foreground">Sample Test Cases ({testCases.length})</h2>
-              {testCases.length > 0 ? (
-                testCases.map((tc, idx) => (
-                  <div key={tc.id} className="mb-6 p-4 bg-muted/50 rounded-xl border border-border">
-                    <h3 className="font-semibold text-foreground mb-2">Sample {idx + 1}</h3>
-                    {tc.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{tc.description}</p>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Input</label>
-                        <pre className="bg-muted p-3 rounded text-sm text-foreground overflow-auto max-h-40 font-mono">
-                          {tc.input_content || 'No input data'}
-                        </pre>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Output</label>
-                        <pre className="bg-muted p-3 rounded text-sm text-foreground overflow-auto max-h-40 font-mono">
-                          {tc.output_content || 'No output data'}
-                        </pre>
-                      </div>
-                    </div>
+          <h2 className="text-foreground">Sample Test Cases ({testCases.length})</h2>
+          {testCases.length > 0 ? (
+            testCases.map((tc, idx) => (
+              <div key={tc.id} className="mb-6 p-4 bg-muted/50 rounded-xl border border-border">
+                <h3 className="font-semibold text-foreground mb-2">Sample {idx + 1}</h3>
+                {tc.description && (
+                  <p className="text-sm text-muted-foreground mb-3">{tc.description}</p>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Input</label>
+                    <pre className="bg-muted p-3 rounded text-sm text-foreground overflow-auto max-h-40 font-mono">
+                      {tc.input_content || 'No input data'}
+                    </pre>
                   </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground">No sample test cases available.</p>
-              )}
-            </>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Output</label>
+                    <pre className="bg-muted p-3 rounded text-sm text-foreground overflow-auto max-h-40 font-mono">
+                      {tc.output_content || 'No output data'}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-muted-foreground">No sample test cases available.</p>
           )}
         </div>
       </div>
@@ -314,7 +310,7 @@ export default function ProblemDetailPage() {
               onClick={handleRun}
               disabled={running}
               size="sm"
-              className="min-w-24 bg-green-600 text-white hover:bg-green-700 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300"
+              className="min-w-24 rounded-md bg-green-600 text-white hover:bg-green-700 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300"
             >
               {running ? 'Running...' : 'Run'}
             </Button>
@@ -322,7 +318,7 @@ export default function ProblemDetailPage() {
               onClick={handleSubmit}
               disabled={submitting}
               size="sm"
-              className="min-w-24 bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
+              className="min-w-24 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
             >
               {submitting ? 'Submitting...' : 'Submit'}
             </Button>

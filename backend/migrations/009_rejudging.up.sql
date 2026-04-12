@@ -2,7 +2,7 @@
 -- Rejudging system for selective rejudging with apply/revert support
 
 -- rejudgings: tracks rejudging operations
-CREATE TABLE rejudgings (
+CREATE TABLE IF NOT EXISTS rejudgings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL,            -- admin who created it
     contest_id UUID,                  -- optional, for contest rejudges
@@ -29,7 +29,7 @@ CREATE TABLE rejudgings (
 );
 
 -- rejudging_submissions: tracks individual submissions in a rejudge
-CREATE TABLE rejudging_submissions (
+CREATE TABLE IF NOT EXISTS rejudging_submissions (
     rejudging_id UUID REFERENCES rejudgings(id) ON DELETE CASCADE,
     submission_id UUID REFERENCES submissions(id),
     original_judging_id UUID REFERENCES judgings(id),
@@ -47,15 +47,15 @@ CREATE TABLE rejudging_submissions (
 );
 
 -- Indexes
-CREATE INDEX idx_rejudgings_status ON rejudgings(status);
-CREATE INDEX idx_rejudgings_user ON rejudgings(user_id);
-CREATE INDEX idx_rejudgings_contest ON rejudgings(contest_id);
-CREATE INDEX idx_rejudgings_problem ON rejudgings(problem_id);
-CREATE INDEX idx_rejudgings_created ON rejudgings(created_at DESC);
-CREATE INDEX idx_rejudging_submissions_rejudging ON rejudging_submissions(rejudging_id);
-CREATE INDEX idx_rejudging_submissions_submission ON rejudging_submissions(submission_id);
-CREATE INDEX idx_rejudging_submissions_status ON rejudging_submissions(status);
+CREATE INDEX IF NOT EXISTS idx_rejudgings_status ON rejudgings(status);
+CREATE INDEX IF NOT EXISTS idx_rejudgings_user ON rejudgings(user_id);
+CREATE INDEX IF NOT EXISTS idx_rejudgings_contest ON rejudgings(contest_id);
+CREATE INDEX IF NOT EXISTS idx_rejudgings_problem ON rejudgings(problem_id);
+CREATE INDEX IF NOT EXISTS idx_rejudgings_created ON rejudgings(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rejudging_submissions_rejudging ON rejudging_submissions(rejudging_id);
+CREATE INDEX IF NOT EXISTS idx_rejudging_submissions_submission ON rejudging_submissions(submission_id);
+CREATE INDEX IF NOT EXISTS idx_rejudging_submissions_status ON rejudging_submissions(status);
 
 -- Add rejudge_id to judgings table to link judgings to rejudging operations
-ALTER TABLE judgings ADD COLUMN rejudging_id UUID REFERENCES rejudgings(id);
-CREATE INDEX idx_judgings_rejudging ON judgings(rejudging_id);
+ALTER TABLE judgings ADD COLUMN IF NOT EXISTS rejudging_id UUID REFERENCES rejudgings(id);
+CREATE INDEX IF NOT EXISTS idx_judgings_rejudging ON judgings(rejudging_id);

@@ -118,9 +118,16 @@ full-logs:
 
 migrate-up:
 	@echo "Running migrations..."
+	@docker-compose exec -T postgres psql -U oj -d oj -c "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW());"
 	@for f in backend/migrations/*.up.sql; do \
-		echo "Applying $$f..."; \
+		version=$$(basename "$$f" .up.sql); \
+		echo "Applying $$f (version=$$version)..."; \
+		if docker-compose exec -T postgres psql -U oj -d oj -tAc "SELECT 1 FROM schema_migrations WHERE version='$$version'" | grep -q 1; then \
+			echo "Skipping $$f (already recorded)."; \
+			continue; \
+		fi; \
 		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj; \
+		docker-compose exec -T postgres psql -U oj -d oj -c "INSERT INTO schema_migrations (version) VALUES ('$$version') ON CONFLICT (version) DO NOTHING;"; \
 	done
 
 migrate-down:
