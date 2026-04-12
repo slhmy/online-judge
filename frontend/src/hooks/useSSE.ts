@@ -42,7 +42,7 @@ export function useSSE(submissionId: string | null, options?: UseSSEOptions) {
   const connect = useCallback(() => {
     if (!submissionId || eventSourceRef.current) return
 
-    const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+    const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
     const url = `${BFF_URL}/api/v1/submissions/${submissionId}/stream`
 
     const eventSource = new EventSource(url)

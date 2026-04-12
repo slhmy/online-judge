@@ -15,7 +15,7 @@ import 'katex/dist/katex.min.css'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
 const LANGUAGES = [
   { id: 'cpp', name: 'C++ 17', monacoLang: 'cpp' },

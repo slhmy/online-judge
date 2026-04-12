@@ -9,7 +9,7 @@ import { ScoreboardTable } from '@/components/contest/ScoreboardTable'
 import { RegistrationModal } from '@/components/contest/RegistrationModal'
 import { useAuthStore } from '@/stores/authStore'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
 interface Contest {
   id: string
