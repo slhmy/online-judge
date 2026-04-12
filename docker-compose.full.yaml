@@ -135,11 +135,18 @@ services:
       args:
         BFF_URL: http://bff:8080
     container_name: oj-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_BFF_URL=http://localhost:8080
     depends_on:
+      - bff
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: oj-gateway
+    ports:
+      - "3000:80"
+    volumes:
+      - ./configs/gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
       - bff
 
   # ============================================

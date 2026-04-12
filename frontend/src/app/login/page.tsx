@@ -61,9 +61,14 @@ export default function LoginPage() {
 
     try {
       const res = await fetch('/api/v1/auth/oauth/url?provider=github')
-      const data = await parseAuthResponse<{ authorization_url: string }>(res)
+      const data = await parseAuthResponse<{ authorization_url?: string; url?: string }>(res)
+      const redirectURL = data.authorization_url || data.url
 
-      window.location.href = data.authorization_url
+      if (!redirectURL) {
+        throw new Error('OAuth URL missing in response')
+      }
+
+      window.location.href = redirectURL
     } catch (err) {
       setError(parseError(err))
       setGithubLoading(false)

@@ -504,10 +504,21 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 // Me returns current user info.
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	if _, session, err := h.getSessionFromRequest(r); err == nil && session != nil && session.User != nil {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(session.User)
-		return
+	if sessionID, session, err := h.getSessionFromRequest(r); err == nil && session != nil {
+		if strings.TrimSpace(session.AccessToken) == "" {
+			if sessionID != "" && h.redis != nil {
+				_ = h.redis.Del(r.Context(), sessionKeyPrefix+sessionID).Err()
+			}
+			h.clearSessionCookie(w)
+			writeAuthErrorSimple(w, AuthErrorCodeUnauthorized, "登录已过期，请重新登录")
+			return
+		}
+
+		if session.User != nil {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(session.User)
+			return
+		}
 	}
 
 	authHeader := r.Header.Get("Authorization")
