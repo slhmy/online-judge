@@ -161,7 +161,10 @@ func main() {
 		})
 
 		// Submissions (mixed - some public, some protected)
-		r.With(rateLimiter.SubmissionRateLimitMiddleware).Post("/submissions", submissionHandler.Create)
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.RequireAuth)
+			r.With(rateLimiter.SubmissionRateLimitMiddleware).Post("/submissions", submissionHandler.Create)
+		})
 		r.Get("/submissions", submissionHandler.List)
 		r.Get("/submissions/{id}", submissionHandler.Get)
 		r.Get("/submissions/{id}/judging", submissionHandler.GetJudging)

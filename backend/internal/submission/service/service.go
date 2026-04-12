@@ -235,7 +235,8 @@ func (s *SubmissionService) ListSubmissions(ctx context.Context, req *pb.ListSub
 			ProblemId:   sub.ProblemID,
 			ProblemName: sub.ProblemName,
 			User: &commonv1.UserRef{
-				Id: sub.UserID,
+				Id:       sub.UserID,
+				Username: sub.Username,
 			},
 			LanguageId: sub.LanguageID,
 			SubmitTime: sub.SubmitTime.Format(time.RFC3339),

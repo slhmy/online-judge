@@ -110,6 +110,7 @@ func (s *SubmissionStore) GetByID(ctx context.Context, id string) (*Submission, 
 type SubmissionSummary struct {
 	ID          string
 	UserID      string
+	Username    string
 	ProblemID   string
 	ProblemName string
 	LanguageID  string
@@ -118,9 +119,10 @@ type SubmissionSummary struct {
 
 func (s *SubmissionStore) List(ctx context.Context, userID, problemID, contestID string, page, pageSize int32) ([]*SubmissionSummary, int32, error) {
 	query := `
-		SELECT s.id, s.user_id, s.problem_id, p.name, s.language_id, s.submit_time
+		SELECT s.id, s.user_id, COALESCE(up.username, ''), s.problem_id, p.name, s.language_id, s.submit_time
 		FROM submissions s
 		LEFT JOIN problems p ON s.problem_id = p.id
+		LEFT JOIN user_profiles up ON s.user_id = up.user_id
 		WHERE 1=1
 	`
 	args := []interface{}{}
@@ -165,10 +167,11 @@ func (s *SubmissionStore) List(ctx context.Context, userID, problemID, contestID
 	for rows.Next() {
 		var sub SubmissionSummary
 		var subID, uID, pID pgtype.UUID
+		var username pgtype.Text
 		var problemName pgtype.Text
 		var submitTime pgtype.Timestamp
 
-		err := rows.Scan(&subID, &uID, &pID, &problemName, &sub.LanguageID, &submitTime)
+		err := rows.Scan(&subID, &uID, &username, &pID, &problemName, &sub.LanguageID, &submitTime)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -178,6 +181,9 @@ func (s *SubmissionStore) List(ctx context.Context, userID, problemID, contestID
 		}
 		if uID.Valid {
 			sub.UserID = uuid.UUID(uID.Bytes).String()
+		}
+		if username.Valid {
+			sub.Username = username.String
 		}
 		if pID.Valid {
 			sub.ProblemID = uuid.UUID(pID.Bytes).String()
