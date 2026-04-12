@@ -7,15 +7,15 @@ services:
     image: postgres:16-alpine
     container_name: oj-postgres
     environment:
-      POSTGRES_USER: oj
-      POSTGRES_PASSWORD: oj
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: oj
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U oj"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -52,8 +52,8 @@ services:
     image: postgres:16-alpine
     container_name: oj-identra-db-init
     environment:
-      PGUSER: oj
-      PGPASSWORD: oj
+      PGUSER: postgres
+      PGPASSWORD: postgres
       PGHOST: postgres
     depends_on:
       postgres:
@@ -90,7 +90,7 @@ services:
   #     - "8002:8002"
   #   environment:
   #     - GRPC_PORT=8002
-  #     - DATABASE_URL=postgres://oj:oj@postgres:5432/oj?sslmode=disable
+  #     - DATABASE_URL=postgres://postgres:postgres@postgres:5432/oj?sslmode=disable
   #     - REDIS_URL=redis:6379
   #     - IDENTRA_JWKS_URL=http://identra-grpc:50051/.well-known/jwks.json
   #   depends_on:
