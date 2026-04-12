@@ -3,6 +3,14 @@
 # Default target
 all: proto build
 
+# Database defaults (override via: make <target> DB_USER=... DB_PASSWORD=...)
+DB_USER ?= postgres
+DB_PASSWORD ?= postgres
+DB_NAME ?= oj
+DB_HOST ?= localhost
+DB_PORT ?= 5432
+DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+
 # ============================================
 # Judge Runtime Image (Multi-language compilers)
 # ============================================
@@ -118,23 +126,23 @@ full-logs:
 
 migrate-up:
 	@echo "Running migrations..."
-	@docker-compose exec -T postgres psql -U oj -d oj -c "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW());"
+	@docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW());"
 	@for f in backend/migrations/*.up.sql; do \
 		version=$$(basename "$$f" .up.sql); \
 		echo "Applying $$f (version=$$version)..."; \
-		if docker-compose exec -T postgres psql -U oj -d oj -tAc "SELECT 1 FROM schema_migrations WHERE version='$$version'" | grep -q 1; then \
+		if docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -tAc "SELECT 1 FROM schema_migrations WHERE version='$$version'" | grep -q 1; then \
 			echo "Skipping $$f (already recorded)."; \
 			continue; \
 		fi; \
-		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj; \
-		docker-compose exec -T postgres psql -U oj -d oj -c "INSERT INTO schema_migrations (version) VALUES ('$$version') ON CONFLICT (version) DO NOTHING;"; \
+		cat "$$f" | docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME); \
+		docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "INSERT INTO schema_migrations (version) VALUES ('$$version') ON CONFLICT (version) DO NOTHING;"; \
 	done
 
 migrate-down:
 	@echo "Running down migrations..."
 	@for f in backend/migrations/*.down.sql; do \
 		echo "Applying $$f..."; \
-		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj; \
+		cat "$$f" | docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME); \
 	done
 
 migrate-create:
@@ -147,18 +155,18 @@ migrate-create:
 
 seed:
 	@echo "Running database seed..."
-	cd backend && go run ./cmd/seed
+	cd backend && DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed
 
 seed-docker:
 	@echo "Running migrations and seeding..."
 	@for f in backend/migrations/*.up.sql; do \
-		cat "$$f" | docker-compose exec -T postgres psql -U oj -d oj 2>/dev/null || true; \
+		cat "$$f" | docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) 2>/dev/null || true; \
 	done
-	cd backend && go run ./cmd/seed
+	cd backend && DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed
 
 seed-reset:
 	@echo "Resetting and re-seeding database..."
-	docker-compose exec -T postgres psql -U oj -d oj -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	docker-compose exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	$(MAKE) migrate-up
 	$(MAKE) seed
 
@@ -338,7 +346,7 @@ restore:
 backup-pg:
 	@echo "Quick PostgreSQL backup..."
 	@mkdir -p backups
-	docker compose exec -T postgres pg_dump -U oj -d oj --no-owner --clean --if-exists > backups/postgres_oj_$$(date +%Y%m%d_%H%M%S).sql
+	docker compose exec -T postgres pg_dump -U $(DB_USER) -d $(DB_NAME) --no-owner --clean --if-exists > backups/postgres_$(DB_NAME)_$$(date +%Y%m%d_%H%M%S).sql
 	@echo "Done."
 
 # ============================================

@@ -36,7 +36,7 @@ func LoadWithPrefix(prefix string) (*Config, error) {
 	// Set defaults
 	v.SetDefault("grpc_port", "8002")
 	v.SetDefault("http_port", "8080")
-	v.SetDefault("database_url", "postgres://oj:oj@localhost:5432/oj?sslmode=disable")
+	v.SetDefault("database_url", "postgres://postgres:postgres@localhost:5432/oj?sslmode=disable")
 	v.SetDefault("redis_url", "localhost:6379")
 	v.SetDefault("identra_jwks_url", "http://localhost:8081/.well-known/jwks.json")
 	// Queue migration defaults: during migration, enable both queues

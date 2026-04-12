@@ -10,6 +10,8 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 BACKUP_DIR="${BACKUP_ROOT}/${TIMESTAMP}"
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}"
+PGUSER="${PGUSER:-postgres}"
+PGDATABASE="${PGDATABASE:-oj}"
 
 echo "=== Online Judge Backup ==="
 echo "Timestamp : ${TIMESTAMP}"
@@ -25,13 +27,13 @@ mkdir -p "${BACKUP_DIR}"
 echo "[1/3] Backing up PostgreSQL..."
 
 docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-  pg_dump -U oj -d oj --no-owner --clean --if-exists \
+  pg_dump -U "${PGUSER}" -d "${PGDATABASE}" --no-owner --clean --if-exists \
   > "${BACKUP_DIR}/postgres_oj.sql"
 echo "  - oj database dumped"
 
 # identra database may not exist in dev setups; ignore errors
 if docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-  pg_dump -U oj -d identra --no-owner --clean --if-exists \
+  pg_dump -U "${PGUSER}" -d identra --no-owner --clean --if-exists \
   > "${BACKUP_DIR}/postgres_identra.sql" 2>/dev/null; then
   echo "  - identra database dumped"
 else

@@ -411,7 +411,7 @@ var sampleContests = []SampleContest{
 func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		databaseURL = "postgres://oj:oj@localhost:5432/oj?sslmode=disable"
+		databaseURL = "postgres://postgres:postgres@localhost:5432/oj?sslmode=disable"
 	}
 
 	ctx := context.Background()

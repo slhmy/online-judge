@@ -6,6 +6,8 @@ set -euo pipefail
 
 BACKUP_DIR="${1:?Usage: $0 <backup_dir>}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}"
+PGUSER="${PGUSER:-postgres}"
+PGDATABASE="${PGDATABASE:-oj}"
 
 if [ ! -d "${BACKUP_DIR}" ]; then
   echo "Error: backup directory '${BACKUP_DIR}' does not exist"
@@ -29,7 +31,7 @@ fi
 if [ -f "${BACKUP_DIR}/postgres_oj.sql" ]; then
   echo "[1/3] Restoring PostgreSQL (oj)..."
   docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-    psql -U oj -d oj < "${BACKUP_DIR}/postgres_oj.sql"
+    psql -U "${PGUSER}" -d "${PGDATABASE}" < "${BACKUP_DIR}/postgres_oj.sql"
   echo "  - oj database restored"
 else
   echo "[1/3] No oj database dump found, skipped"
@@ -39,9 +41,9 @@ if [ -f "${BACKUP_DIR}/postgres_identra.sql" ]; then
   echo "      Restoring PostgreSQL (identra)..."
   # Ensure identra database exists
   docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-    psql -U oj -c "CREATE DATABASE identra;" 2>/dev/null || true
+    psql -U "${PGUSER}" -c "CREATE DATABASE identra;" 2>/dev/null || true
   docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-    psql -U oj -d identra < "${BACKUP_DIR}/postgres_identra.sql"
+    psql -U "${PGUSER}" -d identra < "${BACKUP_DIR}/postgres_identra.sql"
   echo "  - identra database restored"
 fi
 

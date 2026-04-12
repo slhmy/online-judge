@@ -31,7 +31,7 @@ make build-seed
 The `migrations/seed.sql` file provides SQL-based seeding as a fallback:
 ```bash
 # After running migrations, apply seed.sql manually
-psql -U oj -d oj -f backend/migrations/seed.sql
+psql -U postgres -d oj -f backend/migrations/seed.sql
 ```
 
 ## Sample Problems
@@ -63,7 +63,7 @@ Sample test cases are stored inline in the database (`input_content`, `output_co
 
 ## Environment Variables
 
-- `DATABASE_URL`: PostgreSQL connection string (default: `postgres://oj:oj@localhost:5432/oj?sslmode=disable`)
+- `DATABASE_URL`: PostgreSQL connection string (default: `postgres://postgres:postgres@localhost:5432/oj?sslmode=disable`)
 
 ## Extending
 

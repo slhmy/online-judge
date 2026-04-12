@@ -46,7 +46,7 @@ func Load() (*Config, error) {
 	// Set defaults
 	v.SetDefault("http_port", "8080")
 	v.SetDefault("redis_url", "localhost:6379")
-	v.SetDefault("database_url", "postgres://oj:oj@localhost:5432/oj?sslmode=disable")
+	v.SetDefault("database_url", "postgres://postgres:postgres@localhost:5432/oj?sslmode=disable")
 	v.SetDefault("backend_service_addr", "localhost:8002")
 	v.SetDefault("identra_grpc_host", "localhost:50051")
 	v.SetDefault("admin_email", "")
