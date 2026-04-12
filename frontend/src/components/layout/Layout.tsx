@@ -18,34 +18,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { useAppearance } from '@/components/providers/AppearanceProvider'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
-  const [darkMode, setDarkMode] = useState(true)
+  const { darkMode, toggleDarkMode } = useAppearance()
   const shellRef = useRef<HTMLDivElement | null>(null)
   const headerRef = useRef<HTMLElement | null>(null)
   const footerRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    // Check localStorage for saved preference
-    const saved = localStorage.getItem('darkMode')
-    if (saved !== null) {
-      setDarkMode(saved === 'true')
-    }
-  }, [])
-
-  useEffect(() => {
-    // Apply dark mode class
-    if (darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-    // Save preference
-    localStorage.setItem('darkMode', String(darkMode))
-  }, [darkMode])
 
   useEffect(() => {
     const updateLayoutHeights = () => {
@@ -126,7 +108,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Button
               variant="ghost"
               size="icon"
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleDarkMode}
                 title="Toggle theme"
               >
                 {darkMode ? (

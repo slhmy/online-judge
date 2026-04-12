@@ -296,7 +296,7 @@ export default function ProblemDetailPage() {
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            className="h-9 rounded-[var(--radius)] border border-border bg-background px-3 text-sm text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
           >
             {LANGUAGES.map((lang) => (
               <option key={lang.id} value={lang.id}>
@@ -310,7 +310,7 @@ export default function ProblemDetailPage() {
               onClick={handleRun}
               disabled={running}
               size="sm"
-              className="min-w-24 rounded-md bg-green-600 text-white hover:bg-green-700 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300"
+              className="min-w-24 !rounded-[var(--radius)] bg-green-600 text-white hover:bg-green-700 dark:bg-emerald-400 dark:text-emerald-950 dark:hover:bg-emerald-300"
             >
               {running ? 'Running...' : 'Run'}
             </Button>
@@ -318,7 +318,7 @@ export default function ProblemDetailPage() {
               onClick={handleSubmit}
               disabled={submitting}
               size="sm"
-              className="min-w-24 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
+              className="min-w-24 !rounded-[var(--radius)] bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-sky-400 dark:text-slate-950 dark:hover:bg-sky-300"
             >
               {submitting ? 'Submitting...' : 'Submit'}
             </Button>

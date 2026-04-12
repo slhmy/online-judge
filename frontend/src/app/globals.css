@@ -32,7 +32,7 @@
 
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 
 .dark ::-webkit-scrollbar-thumb {
