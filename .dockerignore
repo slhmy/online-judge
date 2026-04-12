@@ -1,0 +1,30 @@
+# VCS and editor metadata
+.git
+.gitignore
+.vscode
+.idea
+
+# OS files
+.DS_Store
+
+# Local env/secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts and caches
+**/node_modules
+**/.next
+**/dist
+**/build
+**/coverage
+**/.cache
+**/bin
+
+# Runtime data and backups
+data
+backups
+tmp
+
+# Frontend is built from its own context
+frontend

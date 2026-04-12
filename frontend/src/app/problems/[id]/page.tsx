@@ -264,7 +264,7 @@ export default function ProblemDetailPage() {
           {testCases.length > 0 ? (
             testCases.map((tc, idx) => (
               <div key={tc.id} className="mb-6 p-4 bg-muted/50 rounded-xl border border-border">
-                <h3 className="font-semibold text-foreground mb-2">Sample {idx + 1}</h3>
+                <h3 className="!mt-0 mb-1 font-semibold text-foreground">Sample {idx + 1}</h3>
                 {tc.description && (
                   <p className="text-sm text-muted-foreground mb-3">{tc.description}</p>
                 )}
