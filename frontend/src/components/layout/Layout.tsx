@@ -40,7 +40,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/problems', label: 'Problems' },
-    { href: '/contests', label: 'Contests' },
     { href: '/submissions', label: 'Submissions' },
   ]
 

@@ -11,6 +11,8 @@ import (
 	pb "github.com/slhmy/online-judge/gen/go/judge/v1"
 	pbUser "github.com/slhmy/online-judge/gen/go/user/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -44,13 +46,37 @@ func NewAdminHandler(rejudgeService RejudgeClient, userService UserAdminClient) 
 	}
 }
 
+func writeAdminGRPCError(w http.ResponseWriter, err error) {
+	st, ok := status.FromError(err)
+	if !ok {
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	httpStatus := http.StatusInternalServerError
+	switch st.Code() {
+	case codes.Unauthenticated:
+		httpStatus = http.StatusUnauthorized
+	case codes.PermissionDenied:
+		httpStatus = http.StatusForbidden
+	case codes.NotFound:
+		httpStatus = http.StatusNotFound
+	case codes.InvalidArgument:
+		httpStatus = http.StatusBadRequest
+	case codes.AlreadyExists:
+		httpStatus = http.StatusConflict
+	}
+
+	http.Error(w, `{"error": "`+st.Message()+`"}`, httpStatus)
+}
+
 // ListUsers returns all users
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.userService.ListUsers(grpcContextFromRequest(r), &pbUser.ListUsersRequest{
 		Pagination: &commonv1.Pagination{Page: 1, PageSize: 200},
 	})
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		writeAdminGRPCError(w, err)
 		return
 	}
 
@@ -106,7 +132,7 @@ func (h *AdminHandler) UpdateUserRole(w http.ResponseWriter, r *http.Request) {
 		Role:   req.Role,
 	})
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		writeAdminGRPCError(w, err)
 		return
 	}
 

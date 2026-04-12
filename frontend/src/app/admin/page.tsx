@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
 interface User {
   id: string
@@ -19,29 +19,97 @@ interface User {
 
 export default function AdminPage() {
   const router = useRouter()
-  const { user, isAuthenticated, token } = useAuthStore()
+  const { logout } = useAuthStore()
+  const [hydrated, setHydrated] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [contestCount, setContestCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    // Check if user is admin
-    if (!isAuthenticated || user?.role !== 'admin') {
-      router.push('/')
-      return
+    setHydrated(useAuthStore.persist.hasHydrated())
+    const unsubFinish = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
+    return () => {
+      unsubFinish()
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    const init = async () => {
+      if (!hydrated || initializedRef.current) {
+        return
+      }
+      initializedRef.current = true
+
+      const { isAuthenticated, user } = useAuthStore.getState()
+
+      if (!isAuthenticated || !user) {
+        router.replace('/login')
+        if (active) {
+          setLoading(false)
+        }
+        return
+      }
+
+      try {
+        const meRes = await fetch(`${BFF_URL}/api/v1/auth/me`, {
+          credentials: 'include',
+        })
+
+        if (!meRes.ok) {
+          logout()
+          router.replace('/login')
+          return
+        }
+
+        const meData = await meRes.json()
+        const currentUser = (meData?.user ?? meData) as Partial<User>
+        const currentRole = String(currentUser?.role || '').toLowerCase()
+
+        if (!currentUser || currentRole !== 'admin') {
+          router.replace('/')
+          return
+        }
+
+        if (!currentUser.id || !currentUser.email) {
+          logout()
+          router.replace('/login')
+          return
+        }
+
+        await Promise.all([fetchUsers(), fetchContests()])
+      } catch (err) {
+        console.error('Failed to initialize admin page:', err)
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
     }
 
-    // Fetch dashboard data
-    Promise.all([fetchUsers(), fetchContests()]).finally(() => setLoading(false))
-  }, [isAuthenticated, user, router])
+    init()
+
+    return () => {
+      active = false
+    }
+  }, [hydrated, router, logout])
 
   const fetchUsers = async () => {
     try {
       const res = await fetch(`${BFF_URL}/api/v1/admin/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
       })
+      if (res.status === 401) {
+        logout()
+        router.replace('/login')
+        return
+      }
+      if (res.status === 403) {
+        router.replace('/')
+        return
+      }
       if (res.ok) {
         const data = await res.json()
         setUsers(data.users || [])
@@ -51,27 +119,36 @@ export default function AdminPage() {
     }
   }
 
-    const fetchContests = async () => {
-      try {
-        const res = await fetch(`${BFF_URL}/api/v1/contests?page=1&page_size=1`)
-        if (!res.ok) return
-        const data = await res.json()
-        setContestCount(data?.pagination?.total || 0)
-      } catch (err) {
-        console.error('Failed to fetch contests:', err)
-      }
+  const fetchContests = async () => {
+    try {
+      const res = await fetch(`${BFF_URL}/api/v1/contests?page=1&page_size=1`)
+      if (!res.ok) return
+      const data = await res.json()
+      setContestCount(data?.pagination?.total || 0)
+    } catch (err) {
+      console.error('Failed to fetch contests:', err)
     }
+  }
 
   const updateRole = async (userId: string, newRole: string) => {
     try {
       const res = await fetch(`${BFF_URL}/api/v1/admin/users/${userId}/role`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ role: newRole }),
       })
+      if (res.status === 401) {
+        logout()
+        router.replace('/login')
+        return
+      }
+      if (res.status === 403) {
+        router.replace('/')
+        return
+      }
       if (res.ok) {
         fetchUsers()
       }

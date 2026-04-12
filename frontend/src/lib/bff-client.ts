@@ -2,9 +2,12 @@
 // In production, NEXT_PUBLIC_BFF_URL can be set if needed for standalone deployments
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
+import { useAuthStore } from '@/stores/authStore'
+
 export class BFFClient {
   private baseUrl: string
   private token: string | null = null
+  private refreshPromise: Promise<boolean> | null = null
 
   constructor(baseUrl: string = BFF_URL) {
     this.baseUrl = baseUrl
@@ -14,18 +17,93 @@ export class BFFClient {
     this.token = token
   }
 
-  private async fetch<T>(path: string, options?: RequestInit): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
+  private getAccessToken() {
+    return useAuthStore.getState().token || this.token
+  }
+
+  private async refreshAccessToken(): Promise<boolean> {
+    if (this.refreshPromise) {
+      return this.refreshPromise
     }
 
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      ...options,
-      headers,
-    })
+    this.refreshPromise = (async () => {
+      const auth = useAuthStore.getState()
+
+      try {
+        const res = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        })
+
+        if (!res.ok) {
+          auth.logout()
+          return false
+        }
+
+        const data = await res.json() as { access_token?: string; refresh_token?: string }
+        if (data?.access_token) {
+          useAuthStore.getState().setTokens(data.access_token, data.refresh_token)
+          this.token = data.access_token
+        }
+
+        return true
+      } catch {
+        auth.logout()
+        return false
+      } finally {
+        this.refreshPromise = null
+      }
+    })()
+
+    return this.refreshPromise
+  }
+
+  private async fetch<T>(path: string, options?: RequestInit): Promise<T> {
+    const buildHeaders = (token?: string | null): HeadersInit => {
+      const merged: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (options?.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          merged[key] = value
+        })
+      } else if (Array.isArray(options?.headers)) {
+        for (const [key, value] of options.headers) {
+          merged[key] = value
+        }
+      } else if (options?.headers) {
+        Object.assign(merged, options.headers as Record<string, string>)
+      }
+
+      if (token) {
+        merged['Authorization'] = `Bearer ${token}`
+      }
+
+      return merged
+    }
+
+    const attempt = async (token?: string | null) =>
+      fetch(`${this.baseUrl}${path}`, {
+        ...options,
+        credentials: 'include',
+        headers: buildHeaders(token),
+      })
+
+    let accessToken = this.getAccessToken()
+    let res = await attempt(accessToken)
+
+    if (res.status === 401) {
+      const refreshed = await this.refreshAccessToken()
+      if (refreshed) {
+        accessToken = this.getAccessToken()
+        res = await attempt(accessToken)
+      }
+    }
 
     if (!res.ok) {
       throw new Error(`BFF error: ${res.status}`)
@@ -266,12 +344,14 @@ export class BFFClient {
 
   async batchUploadTestCases(problemId: string, data: FormData) {
     const headers: HeadersInit = {}
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
+    const accessToken = this.getAccessToken()
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`
     }
 
     const res = await fetch(`${this.baseUrl}/api/v1/problems/${problemId}/testcases/batch`, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: data,
     })

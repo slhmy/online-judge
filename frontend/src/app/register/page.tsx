@@ -64,9 +64,9 @@ export default function RegisterPage() {
 
       window.clearTimeout(timeoutId)
 
-      const data = await parseAuthResponse<{ user: any; access_token: string; refresh_token: string }>(res)
+      const data = await parseAuthResponse<{ user: any }>(res)
 
-      login(data.user, data.access_token, data.refresh_token)
+      login(data.user)
       router.push('/')
     } catch (err) {
       setError(parseError(err))

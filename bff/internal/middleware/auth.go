@@ -2,8 +2,11 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // contextKey is the type for context keys
@@ -18,12 +21,24 @@ const (
 // Auth middleware validates JWT token and extracts user info
 type Auth struct {
 	jwksURL string
+	redis   *redis.Client
 }
 
 // NewAuth creates a new auth middleware
-func NewAuth(jwksURL string) *Auth {
+const (
+	sessionCookieName = "oj_session"
+	sessionKeyPrefix  = "auth:session:"
+)
+
+type userSession struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+func NewAuth(jwksURL string, redisClient *redis.Client) *Auth {
 	return &Auth{
 		jwksURL: jwksURL,
+		redis:   redisClient,
 	}
 }
 
@@ -31,6 +46,20 @@ func NewAuth(jwksURL string) *Auth {
 func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" && a.redis != nil {
+			if cookie, err := r.Cookie(sessionCookieName); err == nil && strings.TrimSpace(cookie.Value) != "" {
+				raw, redisErr := a.redis.Get(r.Context(), sessionKeyPrefix+strings.TrimSpace(cookie.Value)).Result()
+				if redisErr == nil {
+					var sess userSession
+					if jsonErr := json.Unmarshal([]byte(raw), &sess); jsonErr == nil && strings.TrimSpace(sess.AccessToken) != "" {
+						authHeader = "Bearer " + strings.TrimSpace(sess.AccessToken)
+						r = r.Clone(r.Context())
+						r.Header.Set("Authorization", authHeader)
+					}
+				}
+			}
+		}
+
 		if authHeader == "" {
 			http.Error(w, `{"error": "missing authorization header"}`, http.StatusUnauthorized)
 			return

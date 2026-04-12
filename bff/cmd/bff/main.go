@@ -79,7 +79,7 @@ func main() {
 	sseHub := sse.NewHub(rdb)
 
 	// Create auth middleware
-	authMiddleware := middleware.NewAuth("")
+	authMiddleware := middleware.NewAuth("", rdb)
 
 	// Create rate limiter
 	rateLimitConfig := middleware.RateLimitConfig{

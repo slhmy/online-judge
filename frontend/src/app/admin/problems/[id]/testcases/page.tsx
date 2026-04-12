@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { useTestCases, useCreateTestCase, useUpdateTestCase, useDeleteTestCase, useToggleTestCaseSample, useBatchUploadTestCases } from '@/hooks/useApi'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
 interface TestCase {
   id: string
@@ -28,7 +28,8 @@ export default function AdminTestCasesPage() {
   const params = useParams()
   const router = useRouter()
   const problemId = params.id as string
-  const { user, isAuthenticated, token } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
+  const [hydrated, setHydrated] = useState(false)
 
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -72,12 +73,24 @@ export default function AdminTestCasesPage() {
   const outputFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    setHydrated(useAuthStore.persist.hasHydrated())
+    const unsubFinish = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
+    return () => {
+      unsubFinish()
+    }
+  }, [])
+
+  useEffect(() => {
     // Check if user is admin
+    if (!hydrated) {
+      return
+    }
+
     if (!isAuthenticated || user?.role !== 'admin') {
       router.push('/')
       return
     }
-  }, [isAuthenticated, user, router])
+  }, [hydrated, isAuthenticated, user, router])
 
   // Auto-set new rank based on existing test cases
   useEffect(() => {
@@ -203,7 +216,7 @@ export default function AdminTestCasesPage() {
     return content.substring(0, maxLength) + '...'
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!hydrated || !isAuthenticated || user?.role !== 'admin') {
     return null
   }
 

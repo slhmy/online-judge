@@ -2,8 +2,11 @@ package handler
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -16,7 +19,7 @@ import (
 	userpb "github.com/slhmy/online-judge/gen/go/user/v1"
 )
 
-// AuthErrorCode represents structured error codes for auth operations
+// AuthErrorCode represents structured error codes for auth operations.
 type AuthErrorCode string
 
 const (
@@ -34,18 +37,20 @@ const (
 )
 
 const (
+	sessionCookieName      = "oj_session"
+	sessionKeyPrefix       = "auth:session:"
+	sessionTTL             = 7 * 24 * time.Hour
 	loginMaxFailedAttempts = 5
 	loginLockoutDuration   = 15 * time.Minute
 )
 
-// AuthErrorResponse represents a structured error response
+// AuthErrorResponse represents a structured error response.
 type AuthErrorResponse struct {
 	ErrorCode AuthErrorCode `json:"error_code"`
 	Message   string        `json:"message"`
 	Field     string        `json:"field,omitempty"`
 }
 
-// authErrorHTTPStatus maps error codes to HTTP status codes
 var authErrorHTTPStatus = map[AuthErrorCode]int{
 	AuthErrorCodeInvalidCredentials: http.StatusUnauthorized,
 	AuthErrorCodeEmailExists:        http.StatusConflict,
@@ -60,19 +65,13 @@ var authErrorHTTPStatus = map[AuthErrorCode]int{
 	AuthErrorCodeTooManyAttempts:    http.StatusTooManyRequests,
 }
 
-// writeAuthError writes a structured auth error response
-func writeAuthError(w http.ResponseWriter, errorCode AuthErrorCode, message string, field string) {
-	resp := AuthErrorResponse{
-		ErrorCode: errorCode,
-		Message:   message,
-		Field:     field,
-	}
+func writeAuthError(w http.ResponseWriter, errorCode AuthErrorCode, message, field string) {
+	resp := AuthErrorResponse{ErrorCode: errorCode, Message: message, Field: field}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(authErrorHTTPStatus[errorCode])
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-// writeAuthErrorSimple writes a structured auth error response without a field
 func writeAuthErrorSimple(w http.ResponseWriter, errorCode AuthErrorCode, message string) {
 	writeAuthError(w, errorCode, message, "")
 }
@@ -86,6 +85,12 @@ type identraClientInterface interface {
 	LoginByOAuth(ctx context.Context, code, state string) (*pb.LoginByOAuthResponse, error)
 }
 
+type userSession struct {
+	AccessToken  string                 `json:"access_token"`
+	RefreshToken string                 `json:"refresh_token"`
+	User         map[string]interface{} `json:"user"`
+}
+
 type AuthHandler struct {
 	identraClient    identraClientInterface
 	userClient       userpb.UserServiceClient
@@ -95,7 +100,6 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler(identraGRPCHost string, userClient userpb.UserServiceClient, adminEmail, oauthRedirectURL string, redisClient *redis.Client) *AuthHandler {
-	// Create identra client
 	client, err := identra.NewClient(identraGRPCHost)
 	if err != nil {
 		panic(err)
@@ -110,20 +114,155 @@ func NewAuthHandler(identraGRPCHost string, userClient userpb.UserServiceClient,
 	}
 }
 
-// Register handles new user registration
+func (h *AuthHandler) newSessionID() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func (h *AuthHandler) setSessionCookie(w http.ResponseWriter, sessionID string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(sessionTTL.Seconds()),
+	})
+}
+
+func (h *AuthHandler) clearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+}
+
+func (h *AuthHandler) createSession(ctx context.Context, session userSession) (string, error) {
+	if h.redis == nil {
+		return "", fmt.Errorf("redis unavailable")
+	}
+	id, err := h.newSessionID()
+	if err != nil {
+		return "", err
+	}
+	payload, err := json.Marshal(session)
+	if err != nil {
+		return "", err
+	}
+	if err := h.redis.Set(ctx, sessionKeyPrefix+id, payload, sessionTTL).Err(); err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
+func (h *AuthHandler) getSessionFromRequest(r *http.Request) (string, *userSession, error) {
+	if h.redis == nil {
+		return "", nil, fmt.Errorf("redis unavailable")
+	}
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil || strings.TrimSpace(cookie.Value) == "" {
+		return "", nil, fmt.Errorf("session missing")
+	}
+	id := strings.TrimSpace(cookie.Value)
+	raw, err := h.redis.Get(r.Context(), sessionKeyPrefix+id).Result()
+	if err != nil {
+		return id, nil, err
+	}
+	var session userSession
+	if err := json.Unmarshal([]byte(raw), &session); err != nil {
+		return id, nil, err
+	}
+	return id, &session, nil
+}
+
+func (h *AuthHandler) saveSession(ctx context.Context, sessionID string, session *userSession) error {
+	if h.redis == nil {
+		return fmt.Errorf("redis unavailable")
+	}
+	payload, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+	return h.redis.Set(ctx, sessionKeyPrefix+sessionID, payload, sessionTTL).Err()
+}
+
+func (h *AuthHandler) issueSessionAndRespond(w http.ResponseWriter, r *http.Request, accessToken, refreshToken string, user map[string]interface{}, expiresAt int64) {
+	sessionID, err := h.createSession(r.Context(), userSession{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         user,
+	})
+	if err != nil {
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建会话失败")
+		return
+	}
+
+	h.setSessionCookie(w, sessionID)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"user":       user,
+		"expires_in": expiresAt,
+	})
+}
+
+func loginFailureKey(email string) string {
+	return "auth:login:fail:" + strings.ToLower(strings.TrimSpace(email))
+}
+
+func loginLockKey(email string) string {
+	return "auth:login:lock:" + strings.ToLower(strings.TrimSpace(email))
+}
+
+func (h *AuthHandler) recordFailedLogin(ctx context.Context, email string) {
+	if h.redis == nil {
+		return
+	}
+	failKey := loginFailureKey(email)
+	count, _ := h.redis.Incr(ctx, failKey).Result()
+	_ = h.redis.Expire(ctx, failKey, loginLockoutDuration).Err()
+	if count >= loginMaxFailedAttempts {
+		_ = h.redis.Set(ctx, loginLockKey(email), "1", loginLockoutDuration).Err()
+	}
+}
+
+func (h *AuthHandler) clearFailedLogin(ctx context.Context, email string) {
+	if h.redis == nil {
+		return
+	}
+	_ = h.redis.Del(ctx, loginFailureKey(email), loginLockKey(email)).Err()
+}
+
+func (h *AuthHandler) isLoginLocked(ctx context.Context, email string) (bool, int64) {
+	if h.redis == nil {
+		return false, 0
+	}
+	ttl, err := h.redis.TTL(ctx, loginLockKey(email)).Result()
+	if err != nil || ttl <= 0 {
+		return false, 0
+	}
+	return true, int64(ttl.Seconds())
+}
+
+// Register handles new user registration.
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Username string `json:"username"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "请求格式错误")
 		return
 	}
-
-	// Validate input
 	if req.Email == "" {
 		writeAuthError(w, AuthErrorCodeValidationError, "邮箱不能为空", "email")
 		return
@@ -133,49 +272,34 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.Password) < 6 {
-		writeAuthError(w, AuthErrorCodeValidationError, "密码长度至少为6位", "password")
-		return
-	}
-
 	ctx := context.Background()
-
-	// Call LoginByPassword which auto-creates user if not exists
 	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
 	if err != nil {
-		// If login fails, the user may already exist with a different password
 		writeAuthError(w, AuthErrorCodeEmailExists, "该邮箱已被注册", "email")
 		return
 	}
-
-	if resp.Token == nil || resp.Token.AccessToken == nil {
+	if resp.Token == nil || resp.Token.AccessToken == nil || resp.Token.RefreshToken == nil {
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "注册失败")
 		return
 	}
 
-	// Get user ID from identra via token
 	userInfo, err := h.identraClient.GetCurrentUser(ctx, resp.Token.AccessToken.Token)
 	if err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户信息失败")
 		return
 	}
-	userID := userInfo.UserId
 
-	// Determine role
 	role := "user"
 	if req.Email == h.adminEmail {
 		role = "admin"
 	}
-
-	// Create username
 	username := req.Username
-	if username == "" {
+	if strings.TrimSpace(username) == "" {
 		username = strings.Split(req.Email, "@")[0]
 	}
 
-	// Ensure user profile exists via backend
 	profileResp, err := h.userClient.EnsureUserProfile(ctx, &userpb.EnsureUserProfileRequest{
-		UserId:   userID,
+		UserId:   userInfo.UserId,
 		Email:    req.Email,
 		Username: username,
 		Role:     role,
@@ -184,40 +308,29 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "创建用户资料失败")
 		return
 	}
-
 	if !profileResp.Created {
-		// Profile already existed — user was already registered
 		writeAuthError(w, AuthErrorCodeEmailExists, "该邮箱已被注册", "email")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"access_token":  resp.Token.AccessToken.Token,
-		"refresh_token": resp.Token.RefreshToken.Token,
-		"expires_in":    resp.Token.AccessToken.ExpiresAt,
-		"user": map[string]interface{}{
-			"id":       userID,
-			"email":    req.Email,
-			"username": profileResp.Profile.Username,
-			"role":     profileResp.Profile.Role,
-		},
-	})
+	h.issueSessionAndRespond(w, r, resp.Token.AccessToken.Token, resp.Token.RefreshToken.Token, map[string]interface{}{
+		"id":       userInfo.UserId,
+		"email":    req.Email,
+		"username": profileResp.Profile.Username,
+		"role":     profileResp.Profile.Role,
+	}, resp.Token.AccessToken.ExpiresAt)
 }
 
-// Login handles password login via Identra
+// Login handles password login via Identra.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "请求格式错误")
 		return
 	}
-
-	// Validate input
 	if req.Email == "" {
 		writeAuthError(w, AuthErrorCodeValidationError, "邮箱不能为空", "email")
 		return
@@ -228,193 +341,108 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-
-	// Check if this account is temporarily locked due to too many failed attempts
 	if locked, retryAfter := h.isLoginLocked(ctx, req.Email); locked {
 		w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
 		writeAuthErrorSimple(w, AuthErrorCodeTooManyAttempts, fmt.Sprintf("Too many failed login attempts. Please try again in %d seconds.", retryAfter))
 		return
 	}
 
-	// Login via identra
 	resp, err := h.identraClient.LoginByPassword(ctx, req.Email, req.Password)
 	if err != nil {
 		h.recordFailedLogin(ctx, req.Email)
 		writeAuthError(w, AuthErrorCodeInvalidCredentials, "邮箱或密码错误", "email")
 		return
 	}
-
-	if resp.Token == nil || resp.Token.AccessToken == nil {
+	if resp.Token == nil || resp.Token.AccessToken == nil || resp.Token.RefreshToken == nil {
 		h.recordFailedLogin(ctx, req.Email)
 		writeAuthError(w, AuthErrorCodeInvalidCredentials, "登录失败", "")
 		return
 	}
-
-	// Login succeeded — clear any recorded failures
 	h.clearFailedLogin(ctx, req.Email)
 
-	// Get user ID from identra via token
 	userInfo, err := h.identraClient.GetCurrentUser(ctx, resp.Token.AccessToken.Token)
 	if err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户信息失败")
 		return
 	}
-	userID := userInfo.UserId
 
-	// Determine role
 	role := "user"
 	if req.Email == h.adminEmail {
 		role = "admin"
 	}
 
-	// Ensure user profile exists via backend
 	profileResp, err := h.userClient.EnsureUserProfile(ctx, &userpb.EnsureUserProfileRequest{
-		UserId:   userID,
+		UserId:   userInfo.UserId,
 		Email:    req.Email,
 		Username: strings.Split(req.Email, "@")[0],
 		Role:     role,
 	})
 	if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户资料失败")
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "登录失败")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"access_token":  resp.Token.AccessToken.Token,
-		"refresh_token": resp.Token.RefreshToken.Token,
-		"expires_in":    resp.Token.AccessToken.ExpiresAt,
-		"user": map[string]interface{}{
-			"id":       userID,
-			"email":    req.Email,
-			"username": profileResp.Profile.Username,
-			"role":     profileResp.Profile.Role,
-		},
-	})
+	h.issueSessionAndRespond(w, r, resp.Token.AccessToken.Token, resp.Token.RefreshToken.Token, map[string]interface{}{
+		"id":       userInfo.UserId,
+		"email":    req.Email,
+		"username": profileResp.Profile.Username,
+		"role":     profileResp.Profile.Role,
+	}, resp.Token.AccessToken.ExpiresAt)
 }
 
-// loginAttemptsKey returns the Redis key used to track failed login attempts for an email.
-func loginAttemptsKey(email string) string {
-	return fmt.Sprintf("login:attempts:%s", email)
-}
-
-// isLoginLocked checks whether the given email is temporarily locked due to too many
-// failed login attempts. It returns (true, retryAfterSeconds) when locked.
-func (h *AuthHandler) isLoginLocked(ctx context.Context, email string) (bool, int) {
-	if h.redis == nil {
-		return false, 0
-	}
-
-	key := loginAttemptsKey(email)
-	val, err := h.redis.Get(ctx, key).Int()
-	if err != nil {
-		// Key not found or Redis error — allow the request
-		return false, 0
-	}
-
-	if val >= loginMaxFailedAttempts {
-		ttl, err := h.redis.TTL(ctx, key).Result()
-		if err != nil || ttl <= 0 {
-			return true, int(loginLockoutDuration.Seconds())
-		}
-		return true, int(ttl.Seconds())
-	}
-
-	return false, 0
-}
-
-// recordFailedLogin increments the failed-attempt counter for an email.
-// Each failed attempt refreshes the lockout window so that a persistent attacker
-// must wait the full lockout duration from the last failure.
-func (h *AuthHandler) recordFailedLogin(ctx context.Context, email string) {
-	if h.redis == nil {
-		return
-	}
-
-	key := loginAttemptsKey(email)
-	pipe := h.redis.Pipeline()
-	pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, loginLockoutDuration)
-	_, _ = pipe.Exec(ctx)
-}
-
-// clearFailedLogin removes the failed-attempt counter after a successful login.
-func (h *AuthHandler) clearFailedLogin(ctx context.Context, email string) {
-	if h.redis == nil {
-		return
-	}
-
-	h.redis.Del(ctx, loginAttemptsKey(email))
-}
-
-// OAuthURL returns the OAuth authorization URL
+// OAuthURL returns the OAuth authorization URL.
 func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
-	provider := r.URL.Query().Get("provider")
-	if provider == "" {
-		provider = "github"
+	if strings.TrimSpace(h.oauthRedirectURL) == "" {
+		writeAuthErrorSimple(w, AuthErrorCodeOAuthNotConfigured, "OAuth回调地址未配置")
+		return
 	}
 
 	ctx := context.Background()
-	redirectURL := h.oauthRedirectURL
-	resp, err := h.identraClient.GetOAuthAuthorizationURL(ctx, provider, &redirectURL)
+	resp, err := h.identraClient.GetOAuthAuthorizationURL(ctx, "github", &h.oauthRedirectURL)
 	if err != nil {
-		writeAuthErrorSimple(w, AuthErrorCodeOAuthNotConfigured, "OAuth未配置: "+err.Error())
+		writeAuthError(w, AuthErrorCodeOAuthFailed, "获取OAuth链接失败: "+err.Error(), "")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"authorization_url": resp.Url,
-		"state":             resp.State,
-		"provider":          provider,
-	})
+	_ = json.NewEncoder(w).Encode(map[string]string{"url": resp.Url})
 }
 
-// OAuthCallback handles OAuth callback
+// OAuthCallback handles OAuth callback flow.
 func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
-	code := r.URL.Query().Get("code")
-	state := r.URL.Query().Get("state")
-
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	state := strings.TrimSpace(r.URL.Query().Get("state"))
 	if code == "" || state == "" {
 		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "缺少code或state参数")
 		return
 	}
 
 	ctx := context.Background()
-
-	// Delegate OAuth login to Identra
 	oauthResp, err := h.identraClient.LoginByOAuth(ctx, code, state)
 	if err != nil {
 		writeAuthError(w, AuthErrorCodeOAuthFailed, "OAuth登录失败: "+err.Error(), "")
 		return
 	}
-
-	if oauthResp.Token == nil || oauthResp.Token.AccessToken == nil {
+	if oauthResp.Token == nil || oauthResp.Token.AccessToken == nil || oauthResp.Token.RefreshToken == nil {
 		writeAuthErrorSimple(w, AuthErrorCodeOAuthFailed, "OAuth登录失败")
 		return
 	}
 
-	// Get user ID from identra via token
 	userInfo, err := h.identraClient.GetCurrentUser(ctx, oauthResp.Token.AccessToken.Token)
 	if err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取用户信息失败")
 		return
 	}
-	userID := userInfo.UserId
-	email := oauthResp.Email
-	username := oauthResp.Username
 
-	// Determine role
 	role := "user"
-	if email == h.adminEmail {
+	if oauthResp.Email == h.adminEmail {
 		role = "admin"
 	}
 
-	// Ensure user profile exists via backend
 	profileResp, err := h.userClient.EnsureUserProfile(ctx, &userpb.EnsureUserProfileRequest{
-		UserId:    userID,
-		Email:     email,
-		Username:  username,
+		UserId:    userInfo.UserId,
+		Email:     oauthResp.Email,
+		Username:  oauthResp.Username,
 		Role:      role,
 		AvatarUrl: oauthResp.AvatarUrl,
 	})
@@ -423,42 +451,47 @@ func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"access_token":  oauthResp.Token.AccessToken.Token,
-		"refresh_token": oauthResp.Token.RefreshToken.Token,
-		"expires_in":    oauthResp.Token.AccessToken.ExpiresAt,
-		"user": map[string]interface{}{
-			"id":         userID,
-			"email":      email,
-			"username":   profileResp.Profile.Username,
-			"role":       profileResp.Profile.Role,
-			"avatar_url": profileResp.Profile.AvatarUrl,
-		},
-	})
+	h.issueSessionAndRespond(w, r, oauthResp.Token.AccessToken.Token, oauthResp.Token.RefreshToken.Token, map[string]interface{}{
+		"id":         userInfo.UserId,
+		"email":      oauthResp.Email,
+		"username":   profileResp.Profile.Username,
+		"role":       profileResp.Profile.Role,
+		"avatar_url": profileResp.Profile.AvatarUrl,
+	}, oauthResp.Token.AccessToken.ExpiresAt)
 }
 
-// Refresh refreshes the access token
+// Refresh refreshes the access token.
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 		writeAuthErrorSimple(w, AuthErrorCodeValidationError, "请求格式错误")
 		return
 	}
 
-	if req.RefreshToken == "" {
-		writeAuthError(w, AuthErrorCodeValidationError, "刷新令牌不能为空", "refresh_token")
-		return
+	sessionID, session, sessionErr := h.getSessionFromRequest(r)
+	refreshToken := strings.TrimSpace(req.RefreshToken)
+	if refreshToken == "" {
+		if sessionErr != nil || session == nil || strings.TrimSpace(session.RefreshToken) == "" {
+			writeAuthError(w, AuthErrorCodeValidationError, "刷新令牌不能为空", "refresh_token")
+			return
+		}
+		refreshToken = session.RefreshToken
 	}
 
 	ctx := context.Background()
-	resp, err := h.identraClient.RefreshToken(ctx, req.RefreshToken)
+	resp, err := h.identraClient.RefreshToken(ctx, refreshToken)
 	if err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeTokenInvalid, "无效的刷新令牌")
 		return
+	}
+
+	if session != nil && sessionErr == nil {
+		session.AccessToken = resp.Token.AccessToken.Token
+		session.RefreshToken = resp.Token.RefreshToken.Token
+		_ = h.saveSession(ctx, sessionID, session)
+		h.setSessionCookie(w, sessionID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -469,61 +502,74 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Me returns current user info
+// Me returns current user info.
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	if _, session, err := h.getSessionFromRequest(r); err == nil && session != nil && session.User != nil {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(session.User)
+		return
+	}
+
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		writeAuthErrorSimple(w, AuthErrorCodeUnauthorized, "未授权访问")
 		return
 	}
 
-	// Extract token
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		writeAuthErrorSimple(w, AuthErrorCodeTokenInvalid, "无效的授权头格式")
 		return
 	}
-	token := parts[1]
+	accessToken := parts[1]
 
-	// Get user info from identra
 	ctx := context.Background()
-	userInfo, err := h.identraClient.GetCurrentUser(ctx, token)
+	userInfo, err := h.identraClient.GetCurrentUser(ctx, accessToken)
 	if err != nil {
 		writeAuthErrorSimple(w, AuthErrorCodeTokenInvalid, "无效的令牌")
 		return
 	}
 
-	userID := userInfo.UserId
-	email := userInfo.Email
-
-	// Get user profile via backend
-	profileResp, err := h.userClient.GetUserProfile(ctx, &userpb.GetUserProfileRequest{UserId: userID})
-
-	var username, role string
-	if err != nil {
-		username = strings.Split(email, "@")[0]
-		role = "user"
-	} else {
+	profileResp, err := h.userClient.GetUserProfile(ctx, &userpb.GetUserProfileRequest{UserId: userInfo.UserId})
+	username := strings.Split(userInfo.Email, "@")[0]
+	role := "user"
+	if err == nil && profileResp != nil && profileResp.Profile != nil {
 		username = profileResp.Profile.Username
 		role = profileResp.Profile.Role
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":       userID,
-		"email":    email,
+	userPayload := map[string]interface{}{
+		"id":       userInfo.UserId,
+		"email":    userInfo.Email,
 		"username": username,
 		"role":     role,
-	})
+	}
+
+	if sessionID, session, err := h.getSessionFromRequest(r); err == nil && session != nil {
+		session.User = userPayload
+		_ = h.saveSession(ctx, sessionID, session)
+		h.setSessionCookie(w, sessionID)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(userPayload)
 }
 
-// Logout handles logout
+// Logout clears server-side session and cookie.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	if h.redis != nil {
+		if cookie, err := r.Cookie(sessionCookieName); err == nil {
+			sessionID := strings.TrimSpace(cookie.Value)
+			if sessionID != "" {
+				_ = h.redis.Del(r.Context(), sessionKeyPrefix+sessionID).Err()
+			}
+		}
+	}
+	h.clearSessionCookie(w)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "已退出登录"})
 }
 
-// RegisterRoutes registers auth routes
 func (h *AuthHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/auth/register", h.Register)
 	r.Post("/auth/login", h.Login)

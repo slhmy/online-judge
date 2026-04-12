@@ -4,8 +4,6 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
-
 function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -25,7 +23,7 @@ function AuthCallbackContent() {
     }
 
     // Call the BFF OAuth callback endpoint
-    fetch(`${BFF_URL}/api/v1/auth/oauth/callback?code=${code}&state=${state}`)
+    fetch(`/api/v1/auth/oauth/callback?code=${code}&state=${state}`)
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json()
@@ -34,18 +32,9 @@ function AuthCallbackContent() {
         return res.json()
       })
       .then((data) => {
-        // Check if we have tokens or just user info
-        if (data.access_token) {
-          login(data.user, data.access_token, data.refresh_token || '')
-          setStatus('success')
-          // Redirect to home after a brief delay
-          setTimeout(() => router.push('/'), 1000)
-        } else {
-          // User exists but needs to set password
-          setStatus('success')
-          setError(data.message || 'Please set a password to complete registration')
-          setTimeout(() => router.push('/login'), 2000)
-        }
+        login(data.user)
+        setStatus('success')
+        setTimeout(() => router.push('/'), 1000)
       })
       .catch((err) => {
         setStatus('error')

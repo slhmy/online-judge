@@ -14,7 +14,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 
-const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080'
+const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL || ''
 
 // Form schema
 const problemSchema = z.object({
@@ -49,7 +49,8 @@ interface ProblemsResponse {
 
 export default function AdminProblemsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, token } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
+  const [hydrated, setHydrated] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null)
   const [statementContent, setStatementContent] = useState('')
@@ -89,12 +90,24 @@ export default function AdminProblemsPage() {
   })
 
   useEffect(() => {
+    setHydrated(useAuthStore.persist.hasHydrated())
+    const unsubFinish = useAuthStore.persist.onFinishHydration(() => setHydrated(true))
+    return () => {
+      unsubFinish()
+    }
+  }, [])
+
+  useEffect(() => {
     // Check if user is admin
+    if (!hydrated) {
+      return
+    }
+
     if (!isAuthenticated || user?.role !== 'admin') {
       router.push('/')
       return
     }
-  }, [isAuthenticated, user, router])
+  }, [hydrated, isAuthenticated, user, router])
 
   useEffect(() => {
     if (editingProblem) {
@@ -157,9 +170,9 @@ export default function AdminProblemsPage() {
   const upsertProblemStatement = async (problemID: string) => {
     const res = await fetch(`${BFF_URL}/api/v1/problems/${problemID}/statement`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         language: statementLanguage || 'en',
@@ -227,9 +240,7 @@ export default function AdminProblemsPage() {
     // Fetch full problem details including description
     try {
       const res = await fetch(`${BFF_URL}/api/v1/problems/${problem.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
       })
       if (res.ok) {
         const data = await res.json()
@@ -237,9 +248,7 @@ export default function AdminProblemsPage() {
 
         // Fetch the problem statement content
         const statementRes = await fetch(`${BFF_URL}/api/v1/problems/${problem.id}/statement`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          credentials: 'include',
         })
         if (statementRes.ok) {
           const statementData = await statementRes.json()
@@ -301,7 +310,7 @@ export default function AdminProblemsPage() {
     setPreviewMode('split')
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  if (!hydrated || !isAuthenticated || user?.role !== 'admin') {
     return null
   }
 
