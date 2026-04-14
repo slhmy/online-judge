@@ -4,23 +4,62 @@ import (
 	"context"
 	"strings"
 
+	identrapb "github.com/poly-workshop/identra/gen/go/identra/v1"
 	"github.com/slhmy/online-judge/backend/internal/pkg/middleware"
 	"github.com/slhmy/online-judge/backend/internal/user/store"
 	commonv1 "github.com/slhmy/online-judge/gen/go/common/v1"
 	pb "github.com/slhmy/online-judge/gen/go/user/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type UserService struct {
-	pb.UnimplementedUserServiceServer
-	store store.UserStoreInterface
+type identraClientInterface interface {
+	ListOAuthProviders(ctx context.Context, in *identrapb.ListOAuthProvidersRequest, opts ...grpc.CallOption) (*identrapb.ListOAuthProvidersResponse, error)
 }
 
-func NewUserService(s store.UserStoreInterface) *UserService {
-	return &UserService{
-		store: s,
+type UserService struct {
+	pb.UnimplementedUserServiceServer
+	store         store.UserStoreInterface
+	identraClient identraClientInterface
+}
+
+func NewUserService(s store.UserStoreInterface, identraClient ...identraClientInterface) *UserService {
+	var client identraClientInterface
+	if len(identraClient) > 0 {
+		client = identraClient[0]
 	}
+
+	return &UserService{
+		store:         s,
+		identraClient: client,
+	}
+}
+
+func (s *UserService) ListOAuthProviders(ctx context.Context, _ *pb.ListOAuthProvidersRequest) (*pb.ListOAuthProvidersResponse, error) {
+	if s.identraClient == nil {
+		return nil, status.Error(codes.Unavailable, "oauth provider service unavailable")
+	}
+
+	resp, err := s.identraClient.ListOAuthProviders(ctx, &identrapb.ListOAuthProvidersRequest{})
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, "failed to fetch oauth providers")
+	}
+
+	providers := make([]*pb.OAuthProviderStatus, 0, len(resp.GetProviders()))
+	for _, p := range resp.GetProviders() {
+		provider := &pb.OAuthProviderStatus{
+			Name:    p.GetName(),
+			Enabled: p.GetEnabled(),
+		}
+		if p.Reason != nil {
+			reason := p.GetReason()
+			provider.Reason = &reason
+		}
+		providers = append(providers, provider)
+	}
+
+	return &pb.ListOAuthProvidersResponse{Providers: providers}, nil
 }
 
 func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {

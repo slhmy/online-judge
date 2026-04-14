@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [githubLoading, setGithubLoading] = useState(false)
+  const [githubEnabled, setGithubEnabled] = useState(false)
+  const [oauthChecking, setOauthChecking] = useState(true)
 
   const {
     error,
@@ -29,6 +31,22 @@ export default function LoginPage() {
     clearFieldError,
     hasFieldError,
   } = useAuthError()
+
+  useEffect(() => {
+    const checkOAuthProviders = async () => {
+      try {
+        const res = await fetch('/api/v1/auth/oauth/providers')
+        const data = await parseAuthResponse<{ github_enabled?: boolean }>(res)
+        setGithubEnabled(Boolean(data.github_enabled))
+      } catch {
+        setGithubEnabled(false)
+      } finally {
+        setOauthChecking(false)
+      }
+    }
+
+    void checkOAuthProviders()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,6 +157,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
+        {!oauthChecking && githubEnabled && (
         <div className="mt-4">
           <Button
             onClick={handleGitHubLogin}
@@ -152,6 +171,7 @@ export default function LoginPage() {
             {githubLoading ? 'Redirecting...' : 'Login with GitHub'}
           </Button>
         </div>
+        )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}

@@ -68,6 +68,13 @@ service UserService {
       delete: "/api/v1/admin/users/{user_id}"
     };
   }
+
+  // List OAuth provider availability for auth entry rendering.
+  rpc ListOAuthProviders(ListOAuthProvidersRequest) returns (ListOAuthProvidersResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/auth/oauth/providers"
+    };
+  }
 }
 
 // User profile
@@ -194,4 +201,16 @@ message DeleteUserRequest {
 
 message DeleteUserResponse {
   bool success = 1;
+}
+
+message OAuthProviderStatus {
+  string name = 1;
+  bool enabled = 2;
+  optional string reason = 3;
+}
+
+message ListOAuthProvidersRequest {}
+
+message ListOAuthProvidersResponse {
+  repeated OAuthProviderStatus providers = 1;
 }

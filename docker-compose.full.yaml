@@ -62,7 +62,7 @@ services:
       sh -c "psql -c 'CREATE DATABASE identra;' || echo 'Database already exists'"
 
   identra-grpc:
-    image: ghcr.io/poly-workshop/identra-grpc:latest
+    image: ghcr.io/poly-workshop/identra-grpc:v0.1.9
     container_name: oj-identra-grpc
     ports:
       - "50051:50051"
@@ -94,6 +94,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/oj?sslmode=disable
       - REDIS_URL=redis:6379
       - IDENTRA_JWKS_URL=http://identra-grpc:50051/.well-known/jwks.json
+      - IDENTRA_GRPC_HOST=identra-grpc:50051
     depends_on:
       postgres:
         condition: service_healthy

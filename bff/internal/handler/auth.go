@@ -408,6 +408,39 @@ func (h *AuthHandler) OAuthURL(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"url": resp.Url})
 }
 
+// OAuthProviders returns OAuth provider availability from backend.
+func (h *AuthHandler) OAuthProviders(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	resp, err := h.userClient.ListOAuthProviders(ctx, &userpb.ListOAuthProvidersRequest{})
+	if err != nil {
+		writeAuthErrorSimple(w, AuthErrorCodeInternalError, "获取OAuth配置状态失败")
+		return
+	}
+
+	providers := make([]map[string]interface{}, 0, len(resp.GetProviders()))
+	githubEnabled := false
+	for _, p := range resp.GetProviders() {
+		provider := map[string]interface{}{
+			"name":    p.GetName(),
+			"enabled": p.GetEnabled(),
+		}
+		if p.Reason != nil {
+			provider["reason"] = p.GetReason()
+		}
+		providers = append(providers, provider)
+
+		if p.GetName() == "github" && p.GetEnabled() {
+			githubEnabled = true
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"providers":      providers,
+		"github_enabled": githubEnabled,
+	})
+}
+
 // OAuthCallback handles OAuth callback flow.
 func (h *AuthHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
@@ -584,6 +617,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/auth/register", h.Register)
 	r.Post("/auth/login", h.Login)
+	r.Get("/auth/oauth/providers", h.OAuthProviders)
 	r.Get("/auth/oauth/url", h.OAuthURL)
 	r.Get("/auth/oauth/callback", h.OAuthCallback)
 	r.Post("/auth/refresh", h.Refresh)

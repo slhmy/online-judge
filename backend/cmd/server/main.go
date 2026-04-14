@@ -8,8 +8,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
+	identraPB "github.com/poly-workshop/identra/gen/go/identra/v1"
 	contestService "github.com/slhmy/online-judge/backend/internal/contest/service"
 	contestStore "github.com/slhmy/online-judge/backend/internal/contest/store"
 	judgeService "github.com/slhmy/online-judge/backend/internal/judge/service"
@@ -89,7 +91,15 @@ func main() {
 
 	// User service
 	uStore := userStore.NewUserStore(dbpool)
-	uService := userService.NewUserService(uStore)
+	//nolint:staticcheck // grpc.Dial is deprecated but will be supported throughout 1.x
+	identraConn, err := grpc.Dial(cfg.IdentraGRPCHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to identra service: %v", err)
+	}
+	defer func() { _ = identraConn.Close() }()
+
+	identraClient := identraPB.NewIdentraServiceClient(identraConn)
+	uService := userService.NewUserService(uStore, identraClient)
 
 	// Notification service (Redis-only, no PostgreSQL)
 	nService := notificationService.NewNotificationService(rdb)

@@ -62,7 +62,7 @@ services:
       sh -c "psql -c 'CREATE DATABASE identra;' || echo 'Database already exists'"
 
   identra-grpc:
-    image: ghcr.io/poly-workshop/identra-grpc:latest
+    image: ghcr.io/poly-workshop/identra-grpc:v0.1.9
     container_name: oj-identra-grpc
     ports:
       - "50051:50051"

@@ -1231,6 +1231,146 @@ func (x *DeleteUserResponse) GetSuccess() bool {
 	return false
 }
 
+type OAuthProviderStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Reason        *string                `protobuf:"bytes,3,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OAuthProviderStatus) Reset() {
+	*x = OAuthProviderStatus{}
+	mi := &file_user_v1_user_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthProviderStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthProviderStatus) ProtoMessage() {}
+
+func (x *OAuthProviderStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthProviderStatus.ProtoReflect.Descriptor instead.
+func (*OAuthProviderStatus) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *OAuthProviderStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *OAuthProviderStatus) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *OAuthProviderStatus) GetReason() string {
+	if x != nil && x.Reason != nil {
+		return *x.Reason
+	}
+	return ""
+}
+
+type ListOAuthProvidersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOAuthProvidersRequest) Reset() {
+	*x = ListOAuthProvidersRequest{}
+	mi := &file_user_v1_user_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOAuthProvidersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOAuthProvidersRequest) ProtoMessage() {}
+
+func (x *ListOAuthProvidersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOAuthProvidersRequest.ProtoReflect.Descriptor instead.
+func (*ListOAuthProvidersRequest) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{20}
+}
+
+type ListOAuthProvidersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Providers     []*OAuthProviderStatus `protobuf:"bytes,1,rep,name=providers,proto3" json:"providers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOAuthProvidersResponse) Reset() {
+	*x = ListOAuthProvidersResponse{}
+	mi := &file_user_v1_user_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOAuthProvidersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOAuthProvidersResponse) ProtoMessage() {}
+
+func (x *ListOAuthProvidersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_user_v1_user_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOAuthProvidersResponse.ProtoReflect.Descriptor instead.
+func (*ListOAuthProvidersResponse) Descriptor() ([]byte, []int) {
+	return file_user_v1_user_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListOAuthProvidersResponse) GetProviders() []*OAuthProviderStatus {
+	if x != nil {
+		return x.Providers
+	}
+	return nil
+}
+
 var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
@@ -1340,7 +1480,15 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x11DeleteUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\".\n" +
 	"\x12DeleteUserResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xee\a\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"k\n" +
+	"\x13OAuthProviderStatus\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\x12\x1b\n" +
+	"\x06reason\x18\x03 \x01(\tH\x00R\x06reason\x88\x01\x01B\t\n" +
+	"\a_reason\"\x1b\n" +
+	"\x19ListOAuthProvidersRequest\"X\n" +
+	"\x1aListOAuthProvidersResponse\x12:\n" +
+	"\tproviders\x18\x01 \x03(\v2\x1c.user.v1.OAuthProviderStatusR\tproviders2\xf4\b\n" +
 	"\vUserService\x12_\n" +
 	"\tListUsers\x12\x19.user.v1.ListUsersRequest\x1a\x1a.user.v1.ListUsersResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/v1/admin/users\x12z\n" +
 	"\x0eGetUserProfile\x12\x1e.user.v1.GetUserProfileRequest\x1a\x1f.user.v1.GetUserProfileResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/users/{user_id}/profile\x12\x86\x01\n" +
@@ -1350,7 +1498,8 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x11EnsureUserProfile\x12!.user.v1.EnsureUserProfileRequest\x1a\".user.v1.EnsureUserProfileResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/users/ensure-profile\x12\x80\x01\n" +
 	"\x0eUpdateUserRole\x12\x1e.user.v1.UpdateUserRoleRequest\x1a\x1f.user.v1.UpdateUserRoleResponse\"-\x82\xd3\xe4\x93\x02':\x01*\x1a\"/api/v1/admin/users/{user_id}/role\x12l\n" +
 	"\n" +
-	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/admin/users/{user_id}B5Z3github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
+	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/admin/users/{user_id}\x12\x83\x01\n" +
+	"\x12ListOAuthProviders\x12\".user.v1.ListOAuthProvidersRequest\x1a#.user.v1.ListOAuthProvidersResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v1/auth/oauth/providersB5Z3github.com/slhmy/online-judge/gen/go/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once
@@ -1364,7 +1513,7 @@ func file_user_v1_user_proto_rawDescGZIP() []byte {
 	return file_user_v1_user_proto_rawDescData
 }
 
-var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_user_v1_user_proto_goTypes = []any{
 	(*UserProfile)(nil),                 // 0: user.v1.UserProfile
 	(*UserStats)(nil),                   // 1: user.v1.UserStats
@@ -1385,42 +1534,48 @@ var file_user_v1_user_proto_goTypes = []any{
 	(*UpdateUserRoleResponse)(nil),      // 16: user.v1.UpdateUserRoleResponse
 	(*DeleteUserRequest)(nil),           // 17: user.v1.DeleteUserRequest
 	(*DeleteUserResponse)(nil),          // 18: user.v1.DeleteUserResponse
-	(*v1.Pagination)(nil),               // 19: common.v1.Pagination
-	(*v1.PaginatedResponse)(nil),        // 20: common.v1.PaginatedResponse
+	(*OAuthProviderStatus)(nil),         // 19: user.v1.OAuthProviderStatus
+	(*ListOAuthProvidersRequest)(nil),   // 20: user.v1.ListOAuthProvidersRequest
+	(*ListOAuthProvidersResponse)(nil),  // 21: user.v1.ListOAuthProvidersResponse
+	(*v1.Pagination)(nil),               // 22: common.v1.Pagination
+	(*v1.PaginatedResponse)(nil),        // 23: common.v1.PaginatedResponse
 }
 var file_user_v1_user_proto_depIdxs = []int32{
-	19, // 0: user.v1.ListUsersRequest.pagination:type_name -> common.v1.Pagination
+	22, // 0: user.v1.ListUsersRequest.pagination:type_name -> common.v1.Pagination
 	0,  // 1: user.v1.ListUsersResponse.users:type_name -> user.v1.UserProfile
-	20, // 2: user.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginatedResponse
+	23, // 2: user.v1.ListUsersResponse.pagination:type_name -> common.v1.PaginatedResponse
 	0,  // 3: user.v1.GetUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	0,  // 4: user.v1.UpdateUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	1,  // 5: user.v1.GetUserStatsResponse.stats:type_name -> user.v1.UserStats
-	19, // 6: user.v1.ListUserSubmissionsRequest.pagination:type_name -> common.v1.Pagination
+	22, // 6: user.v1.ListUserSubmissionsRequest.pagination:type_name -> common.v1.Pagination
 	2,  // 7: user.v1.ListUserSubmissionsResponse.submissions:type_name -> user.v1.UserSubmissionSummary
-	20, // 8: user.v1.ListUserSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
+	23, // 8: user.v1.ListUserSubmissionsResponse.pagination:type_name -> common.v1.PaginatedResponse
 	0,  // 9: user.v1.EnsureUserProfileResponse.profile:type_name -> user.v1.UserProfile
 	0,  // 10: user.v1.UpdateUserRoleResponse.profile:type_name -> user.v1.UserProfile
-	3,  // 11: user.v1.UserService.ListUsers:input_type -> user.v1.ListUsersRequest
-	5,  // 12: user.v1.UserService.GetUserProfile:input_type -> user.v1.GetUserProfileRequest
-	7,  // 13: user.v1.UserService.UpdateUserProfile:input_type -> user.v1.UpdateUserProfileRequest
-	9,  // 14: user.v1.UserService.GetUserStats:input_type -> user.v1.GetUserStatsRequest
-	11, // 15: user.v1.UserService.ListUserSubmissions:input_type -> user.v1.ListUserSubmissionsRequest
-	13, // 16: user.v1.UserService.EnsureUserProfile:input_type -> user.v1.EnsureUserProfileRequest
-	15, // 17: user.v1.UserService.UpdateUserRole:input_type -> user.v1.UpdateUserRoleRequest
-	17, // 18: user.v1.UserService.DeleteUser:input_type -> user.v1.DeleteUserRequest
-	4,  // 19: user.v1.UserService.ListUsers:output_type -> user.v1.ListUsersResponse
-	6,  // 20: user.v1.UserService.GetUserProfile:output_type -> user.v1.GetUserProfileResponse
-	8,  // 21: user.v1.UserService.UpdateUserProfile:output_type -> user.v1.UpdateUserProfileResponse
-	10, // 22: user.v1.UserService.GetUserStats:output_type -> user.v1.GetUserStatsResponse
-	12, // 23: user.v1.UserService.ListUserSubmissions:output_type -> user.v1.ListUserSubmissionsResponse
-	14, // 24: user.v1.UserService.EnsureUserProfile:output_type -> user.v1.EnsureUserProfileResponse
-	16, // 25: user.v1.UserService.UpdateUserRole:output_type -> user.v1.UpdateUserRoleResponse
-	18, // 26: user.v1.UserService.DeleteUser:output_type -> user.v1.DeleteUserResponse
-	19, // [19:27] is the sub-list for method output_type
-	11, // [11:19] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	19, // 11: user.v1.ListOAuthProvidersResponse.providers:type_name -> user.v1.OAuthProviderStatus
+	3,  // 12: user.v1.UserService.ListUsers:input_type -> user.v1.ListUsersRequest
+	5,  // 13: user.v1.UserService.GetUserProfile:input_type -> user.v1.GetUserProfileRequest
+	7,  // 14: user.v1.UserService.UpdateUserProfile:input_type -> user.v1.UpdateUserProfileRequest
+	9,  // 15: user.v1.UserService.GetUserStats:input_type -> user.v1.GetUserStatsRequest
+	11, // 16: user.v1.UserService.ListUserSubmissions:input_type -> user.v1.ListUserSubmissionsRequest
+	13, // 17: user.v1.UserService.EnsureUserProfile:input_type -> user.v1.EnsureUserProfileRequest
+	15, // 18: user.v1.UserService.UpdateUserRole:input_type -> user.v1.UpdateUserRoleRequest
+	17, // 19: user.v1.UserService.DeleteUser:input_type -> user.v1.DeleteUserRequest
+	20, // 20: user.v1.UserService.ListOAuthProviders:input_type -> user.v1.ListOAuthProvidersRequest
+	4,  // 21: user.v1.UserService.ListUsers:output_type -> user.v1.ListUsersResponse
+	6,  // 22: user.v1.UserService.GetUserProfile:output_type -> user.v1.GetUserProfileResponse
+	8,  // 23: user.v1.UserService.UpdateUserProfile:output_type -> user.v1.UpdateUserProfileResponse
+	10, // 24: user.v1.UserService.GetUserStats:output_type -> user.v1.GetUserStatsResponse
+	12, // 25: user.v1.UserService.ListUserSubmissions:output_type -> user.v1.ListUserSubmissionsResponse
+	14, // 26: user.v1.UserService.EnsureUserProfile:output_type -> user.v1.EnsureUserProfileResponse
+	16, // 27: user.v1.UserService.UpdateUserRole:output_type -> user.v1.UpdateUserRoleResponse
+	18, // 28: user.v1.UserService.DeleteUser:output_type -> user.v1.DeleteUserResponse
+	21, // 29: user.v1.UserService.ListOAuthProviders:output_type -> user.v1.ListOAuthProvidersResponse
+	21, // [21:30] is the sub-list for method output_type
+	12, // [12:21] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_user_proto_init() }
@@ -1428,13 +1583,14 @@ func file_user_v1_user_proto_init() {
 	if File_user_v1_user_proto != nil {
 		return
 	}
+	file_user_v1_user_proto_msgTypes[19].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_user_proto_rawDesc), len(file_user_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

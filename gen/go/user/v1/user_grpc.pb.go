@@ -27,6 +27,7 @@ const (
 	UserService_EnsureUserProfile_FullMethodName   = "/user.v1.UserService/EnsureUserProfile"
 	UserService_UpdateUserRole_FullMethodName      = "/user.v1.UserService/UpdateUserRole"
 	UserService_DeleteUser_FullMethodName          = "/user.v1.UserService/DeleteUser"
+	UserService_ListOAuthProviders_FullMethodName  = "/user.v1.UserService/ListOAuthProviders"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -52,6 +53,8 @@ type UserServiceClient interface {
 	UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*UpdateUserRoleResponse, error)
 	// Delete user profile and related contest/submission records (admin only)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
+	// List OAuth provider availability for auth entry rendering.
+	ListOAuthProviders(ctx context.Context, in *ListOAuthProvidersRequest, opts ...grpc.CallOption) (*ListOAuthProvidersResponse, error)
 }
 
 type userServiceClient struct {
@@ -142,6 +145,16 @@ func (c *userServiceClient) DeleteUser(ctx context.Context, in *DeleteUserReques
 	return out, nil
 }
 
+func (c *userServiceClient) ListOAuthProviders(ctx context.Context, in *ListOAuthProvidersRequest, opts ...grpc.CallOption) (*ListOAuthProvidersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOAuthProvidersResponse)
+	err := c.cc.Invoke(ctx, UserService_ListOAuthProviders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -165,6 +178,8 @@ type UserServiceServer interface {
 	UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
 	// Delete user profile and related contest/submission records (admin only)
 	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
+	// List OAuth provider availability for auth entry rendering.
+	ListOAuthProviders(context.Context, *ListOAuthProvidersRequest) (*ListOAuthProvidersResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -198,6 +213,9 @@ func (UnimplementedUserServiceServer) UpdateUserRole(context.Context, *UpdateUse
 }
 func (UnimplementedUserServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedUserServiceServer) ListOAuthProviders(context.Context, *ListOAuthProvidersRequest) (*ListOAuthProvidersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListOAuthProviders not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -364,6 +382,24 @@ func _UserService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_ListOAuthProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOAuthProvidersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListOAuthProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListOAuthProviders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListOAuthProviders(ctx, req.(*ListOAuthProvidersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -402,6 +438,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUser",
 			Handler:    _UserService_DeleteUser_Handler,
+		},
+		{
+			MethodName: "ListOAuthProviders",
+			Handler:    _UserService_ListOAuthProviders_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

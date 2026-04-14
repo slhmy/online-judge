@@ -16,7 +16,8 @@ type Config struct {
 	RedisURL string `mapstructure:"redis_url"`
 
 	// Auth
-	IdentraJWKSURL string `mapstructure:"identra_jwks_url"`
+	IdentraJWKSURL  string `mapstructure:"identra_jwks_url"`
+	IdentraGRPCHost string `mapstructure:"identra_grpc_host"`
 
 	// Queue Migration
 	// USE_ASYNQ_QUEUE: true = use asynq only, false = use legacy only
@@ -39,6 +40,7 @@ func LoadWithPrefix(prefix string) (*Config, error) {
 	v.SetDefault("database_url", "postgres://postgres:postgres@localhost:5432/oj?sslmode=disable")
 	v.SetDefault("redis_url", "localhost:6379")
 	v.SetDefault("identra_jwks_url", "http://localhost:8081/.well-known/jwks.json")
+	v.SetDefault("identra_grpc_host", "localhost:50051")
 	// Queue migration defaults: during migration, enable both queues
 	v.SetDefault("use_asynq_queue", true)   // Primary queue (asynq)
 	v.SetDefault("use_legacy_queue", false) // Legacy queue (disabled by default after migration)
